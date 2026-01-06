@@ -65,13 +65,26 @@ jobs:
               print(f"✗ Failed to configure Gemini: {e}")
               sys.exit(1)
 
-          # Try models in order
+          # List available models
+          try:
+              available_models = [m.name for m in genai.list_models()]
+              print(f"✓ Available models: {available_models[:5]}")
+          except Exception as e:
+              print(f"⚠ Could not list models: {e}")
+
+          # Try models in order (with correct names)
           model = None
-          models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+          models_to_try = [
+              'models/gemini-1.5-flash-latest',
+              'models/gemini-1.5-pro-latest', 
+              'models/gemini-pro'
+          ]
 
           for model_name in models_to_try:
               try:
                   model = genai.GenerativeModel(model_name)
+                  # Test the model
+                  test_response = model.generate_content("Hello", generation_config={'max_output_tokens': 10})
                   print(f"✓ Using model: {model_name}")
                   break
               except Exception as e:
@@ -123,7 +136,7 @@ jobs:
                   )
               )
               
-              if response and hasattr(response, 'text'):
+              if response and hasattr(response, 'text') and response.text:
                   description = response.text.strip()
                   print(f"✓ Generated description ({len(description)} chars)")
               else:
