@@ -6,6 +6,7 @@ import cors from 'cors'
 import { corsOptions } from '~/configs/cors'
 import cookieParser from 'cookie-parser'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandling.middleware'
+import { APIs_V1 } from '~/routes/v1/index.route'
 
 const START_SERVER = () => {
   const app = express()
@@ -26,9 +27,7 @@ const START_SERVER = () => {
   app.use(express.json())
 
   // App Routes
-  app.get('/', (_req, res) => {
-    res.send(`Hello ${env.AUTHOR_NAME}, Welcome to Sprintos Backend Server! 🚀`)
-  })
+  app.use('/v1', APIs_V1)
 
   // Error Handling Middleware (should be the last middleware)
   app.use(errorHandlingMiddleware)
