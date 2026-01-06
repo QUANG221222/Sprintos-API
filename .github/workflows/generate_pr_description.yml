@@ -25,14 +25,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install google-generativeai requests
+          pip install requests
 
       - name: Get PR data
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
           git log --pretty=format:"%s" origin/${{ github.event.pull_request.base.ref }}...HEAD > commits.txt || echo "No commits" > commits.txt
-          git diff origin/${{ github.event.pull_request.base.ref }} HEAD | head -c 30000 > diff.txt || echo "No diff" > diff.txt
+          git diff origin/${{ github.event.pull_request.base.ref }} HEAD | head -c 20000 > diff.txt || echo "No diff" > diff.txt
 
       - name: Generate and update PR description
         env:
@@ -44,56 +43,10 @@ jobs:
           python << 'EOF'
           import os
           import sys
-          import traceback
-          import google.generativeai as genai
+          import json
           import requests
 
           print("=== Starting PR Description Generation ===")
-
-          # Verify API key
-          api_key = os.environ.get("GEMINI_API_KEY")
-          if not api_key or api_key == "":
-              print("✗ GEMINI_API_KEY is not set!")
-              sys.exit(1)
-          print(f"✓ API Key found (length: {len(api_key)})")
-
-          # Configure Gemini
-          try:
-              genai.configure(api_key=api_key)
-              print("✓ Gemini configured")
-          except Exception as e:
-              print(f"✗ Failed to configure Gemini: {e}")
-              sys.exit(1)
-
-          # List available models
-          try:
-              available_models = [m.name for m in genai.list_models()]
-              print(f"✓ Available models: {available_models[:5]}")
-          except Exception as e:
-              print(f"⚠ Could not list models: {e}")
-
-          # Try models in order (with correct names)
-          model = None
-          models_to_try = [
-              'models/gemini-1.5-flash-latest',
-              'models/gemini-1.5-pro-latest', 
-              'models/gemini-pro'
-          ]
-
-          for model_name in models_to_try:
-              try:
-                  model = genai.GenerativeModel(model_name)
-                  # Test the model
-                  test_response = model.generate_content("Hello", generation_config={'max_output_tokens': 10})
-                  print(f"✓ Using model: {model_name}")
-                  break
-              except Exception as e:
-                  print(f"⚠ Model {model_name} failed: {e}")
-                  continue
-
-          if not model:
-              print("✗ No available model found!")
-              sys.exit(1)
 
           # Read commits and diff
           try:
@@ -106,14 +59,14 @@ jobs:
               print(f"✗ Failed to read files: {e}")
               sys.exit(1)
 
-          # Generate description
-          prompt = f"""Analyze this Pull Request and generate a professional description:
+          # Prepare prompt
+          prompt = f"""Analyze this Pull Request and generate a professional description in English:
 
           Commits:
           {commits[:1000]}
 
           Code Changes Summary:
-          {diff[:5000]}
+          {diff[:4000]}
 
           Generate:
           1. A clear title
@@ -121,32 +74,55 @@ jobs:
           3. Key changes (bullet points)
           4. Technical details if relevant
 
-          Keep it concise and professional. English only."""
+          Keep it concise and professional."""
 
+          # Try Gemini API with REST
           description = ""
-          try:
-              print("🔄 Generating description...")
-              response = model.generate_content(
-                  prompt,
-                  generation_config=genai.GenerationConfig(
-                      temperature=0.7,
-                      max_output_tokens=1500,
-                      top_p=0.8,
-                      top_k=40
-                  )
-              )
-              
-              if response and hasattr(response, 'text') and response.text:
-                  description = response.text.strip()
-                  print(f"✓ Generated description ({len(description)} chars)")
-              else:
-                  raise ValueError("Empty response from API")
+          api_key = os.environ.get("GEMINI_API_KEY")
+
+          # Models to try
+          models = [
+              'gemini-1.5-flash',
+              'gemini-1.5-pro',
+              'gemini-pro'
+          ]
+
+          for model_name in models:
+              try:
+                  print(f"🔄 Trying model: {model_name}")
+                  url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
                   
-          except Exception as e:
-              print(f"⚠ Generation failed: {type(e).__name__}: {e}")
-              traceback.print_exc()
-              
-              # Fallback description
+                  payload = {
+                      "contents": [{
+                          "parts": [{"text": prompt}]
+                      }],
+                      "generationConfig": {
+                          "temperature": 0.7,
+                          "maxOutputTokens": 1500,
+                          "topP": 0.8,
+                          "topK": 40
+                      }
+                  }
+                  
+                  headers = {'Content-Type': 'application/json'}
+                  
+                  r = requests.post(url, json=payload, headers=headers, timeout=60)
+                  
+                  if r.status_code == 200:
+                      result = r.json()
+                      description = result['candidates'][0]['content']['parts'][0]['text'].strip()
+                      print(f"✓ Generated with {model_name} ({len(description)} chars)")
+                      break
+                  else:
+                      print(f"⚠ Model {model_name} failed: {r.status_code} - {r.text[:200]}")
+                      
+              except Exception as e:
+                  print(f"⚠ Model {model_name} error: {e}")
+                  continue
+
+          # Fallback if all models fail
+          if not description:
+              print("⚠ All models failed, using fallback description")
               description = f"""## Pull Request
 
           ### Commits
@@ -156,7 +132,7 @@ jobs:
           This PR contains code changes. Please review the diff for details.
 
           ---
-          *Note: Auto-generation failed. Error: {str(e)[:100]}*"""
+          *Note: Auto-generation failed. Please review changes manually.*"""
 
           # Update PR
           url = f"https://api.github.com/repos/{os.environ['REPO']}/pulls/{os.environ['PR_NUMBER']}"
