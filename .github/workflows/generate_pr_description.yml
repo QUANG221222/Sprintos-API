@@ -19,19 +19,20 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install google-generativeai requests
 
       - name: Get PR data
         run: |
           git fetch origin ${{ github.event.pull_request.base.ref }}
           git log --pretty=format:"%s" origin/${{ github.event.pull_request.base.ref }}...HEAD > commits.txt || echo "No commits" > commits.txt
-          git diff origin/${{ github.event.pull_request.base.ref }} HEAD | head -c 50000 > diff.txt || echo "No diff" > diff.txt
+          git diff origin/${{ github.event.pull_request.base.ref }} HEAD | head -c 30000 > diff.txt || echo "No diff" > diff.txt
 
       - name: Generate and update PR description
         env:
@@ -42,75 +43,127 @@ jobs:
         run: |
           python << 'EOF'
           import os
+          import sys
+          import traceback
           import google.generativeai as genai
-          import json
           import requests
 
-          # Configure Gemini
-          genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+          print("=== Starting PR Description Generation ===")
 
-          # Try to use the latest model, fallback if needed
+          # Verify API key
+          api_key = os.environ.get("GEMINI_API_KEY")
+          if not api_key or api_key == "":
+              print("✗ GEMINI_API_KEY is not set!")
+              sys.exit(1)
+          print(f"✓ API Key found (length: {len(api_key)})")
+
+          # Configure Gemini
           try:
-              model = genai.GenerativeModel('gemini-2.0-flash-exp')
-          except:
+              genai.configure(api_key=api_key)
+              print("✓ Gemini configured")
+          except Exception as e:
+              print(f"✗ Failed to configure Gemini: {e}")
+              sys.exit(1)
+
+          # Try models in order
+          model = None
+          models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+
+          for model_name in models_to_try:
               try:
-                  model = genai.GenerativeModel('gemini-1.5-flash')
-              except:
-                  model = genai.GenerativeModel('gemini-pro')
+                  model = genai.GenerativeModel(model_name)
+                  print(f"✓ Using model: {model_name}")
+                  break
+              except Exception as e:
+                  print(f"⚠ Model {model_name} failed: {e}")
+                  continue
+
+          if not model:
+              print("✗ No available model found!")
+              sys.exit(1)
 
           # Read commits and diff
-          with open('commits.txt', 'r', encoding='utf-8') as f:
-              commits = f.read().strip()
-
-          with open('diff.txt', 'r', encoding='utf-8') as f:
-              diff = f.read().strip()
+          try:
+              with open('commits.txt', 'r', encoding='utf-8') as f:
+                  commits = f.read().strip()
+              with open('diff.txt', 'r', encoding='utf-8') as f:
+                  diff = f.read().strip()
+              print(f"✓ Commits length: {len(commits)}, Diff length: {len(diff)}")
+          except Exception as e:
+              print(f"✗ Failed to read files: {e}")
+              sys.exit(1)
 
           # Generate description
-          prompt = f"""Generate a professional PR description in English based on:
+          prompt = f"""Analyze this Pull Request and generate a professional description:
 
           Commits:
-          {commits}
+          {commits[:1000]}
 
-          Code Changes:
-          {diff}
+          Code Changes Summary:
+          {diff[:5000]}
 
-          Requirements:
-          - Write in English only
-          - Include: PR title, brief summary, detailed changes
-          - Professional tone
-          - No code blocks or markdown fences
-          - Concise and clear"""
+          Generate:
+          1. A clear title
+          2. Brief summary (2-3 sentences)
+          3. Key changes (bullet points)
+          4. Technical details if relevant
 
+          Keep it concise and professional. English only."""
+
+          description = ""
           try:
+              print("🔄 Generating description...")
               response = model.generate_content(
                   prompt,
-                  generation_config={'temperature': 0.7, 'max_output_tokens': 2048}
+                  generation_config=genai.GenerationConfig(
+                      temperature=0.7,
+                      max_output_tokens=1500,
+                      top_p=0.8,
+                      top_k=40
+                  )
               )
-              description = response.text.strip()
-              print("✓ Generated PR description successfully")
+              
+              if response and hasattr(response, 'text'):
+                  description = response.text.strip()
+                  print(f"✓ Generated description ({len(description)} chars)")
+              else:
+                  raise ValueError("Empty response from API")
+                  
           except Exception as e:
-              print(f"⚠ Generation error: {e}")
+              print(f"⚠ Generation failed: {type(e).__name__}: {e}")
+              traceback.print_exc()
+              
+              # Fallback description
               description = f"""## Pull Request
 
-          **Commits:**
-          {commits}
+          ### Commits
+          {commits if commits != "No commits" else "No commit messages available"}
+
+          ### Changes
+          This PR contains code changes. Please review the diff for details.
 
           ---
-          *Note: Auto-generation failed. Please review changes manually.*"""
+          *Note: Auto-generation failed. Error: {str(e)[:100]}*"""
 
-          # Update PR via GitHub API
+          # Update PR
           url = f"https://api.github.com/repos/{os.environ['REPO']}/pulls/{os.environ['PR_NUMBER']}"
           headers = {
               'Authorization': f"token {os.environ['GITHUB_TOKEN']}",
-              'Accept': 'application/vnd.github+json'
+              'Accept': 'application/vnd.github+json',
+              'User-Agent': 'GitHub-Actions'
           }
           data = {'body': description}
 
           try:
-              r = requests.patch(url, headers=headers, json=data)
+              print("🔄 Updating PR...")
+              r = requests.patch(url, headers=headers, json=data, timeout=30)
               r.raise_for_status()
-              print("✓ Updated PR description successfully")
-          except Exception as e:
+              print(f"✓ PR updated successfully! Status: {r.status_code}")
+          except requests.exceptions.RequestException as e:
               print(f"✗ Failed to update PR: {e}")
-              exit(1)
+              if hasattr(e, 'response') and e.response:
+                  print(f"Response: {e.response.text}")
+              sys.exit(1)
+
+          print("=== Completed Successfully ===")
           EOF
