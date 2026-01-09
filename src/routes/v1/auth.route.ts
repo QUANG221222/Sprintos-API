@@ -12,4 +12,6 @@ Router.post('/login', authValidation.login, authController.login)
 
 Router.post('/refresh-token', authController.refreshToken)
 
+Router.post('/logout', authController.logout)
+
 export const authRoute: express.Router = Router
