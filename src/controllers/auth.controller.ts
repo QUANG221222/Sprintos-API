@@ -114,9 +114,29 @@ const refreshToken = async (
   }
 }
 
+/**
+ * User logout
+ * @param _req Express request object (not used)
+ * @param res Express response object
+ * @param next NextFunction for error handling
+ */
+const logout = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Clear cookies - accessToken & refreshToken
+    res.clearCookie('accessToken', cookieOptions)
+    res.clearCookie('refreshToken', cookieOptions)
+    res.clearCookie('userRole', cookieOptions)
+
+    res.status(StatusCodes.OK).json({ message: 'Logout successful' })
+  } catch (error: any) {
+    next(error)
+  }
+}
+
 export const authController = {
   register,
   verifyEmail,
   login,
-  refreshToken
+  refreshToken,
+  logout
 }
