@@ -65,13 +65,15 @@ export default [
       'comma-dangle': 1,
       'comma-spacing': 1,
       'arrow-spacing': 1,
+      'no-useless-catch': 0,
 
       // TypeScript specific
       '@typescript-eslint/no-unused-vars': [
         'warn',
         { argsIgnorePattern: '^_' }
       ],
-      '@typescript-eslint/no-explicit-any': 'never'
+      '@typescript-eslint/no-empty-object-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off'
     }
   }
 ]

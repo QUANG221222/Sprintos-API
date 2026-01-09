@@ -1,12 +1,17 @@
-import { Request, Response, NextFunction } from 'express'
+import e, { Request, Response, NextFunction } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { authService } from '~/services/auth.service'
 import {
   CreateUserResponse,
   CreateUserRequest,
   VerifyEmailRequest,
-  VerifyEmailResponse
+  VerifyEmailResponse,
+  LoginRequest,
+  LoginResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse
 } from '~/types/user.type'
+import { cookieOptions } from '~/configs/cookieOption'
 
 /**
  * Create a new user
@@ -55,7 +60,63 @@ const verifyEmail = async (
   }
 }
 
+/**
+ * User login
+ * @param req LoginRequest object containing login details
+ * @param res LoginResponse object containing response message and data
+ * @param next NextFunction for error handling
+ */
+const login = async (
+  req: Request<{}, {}, LoginRequest, {}>,
+  res: Response<LoginResponse>,
+  next: NextFunction
+) => {
+  try {
+    const result = await authService.login(req)
+
+    res.cookie('userRole', result.role, cookieOptions)
+
+    res.cookie('accessToken', result.accessToken, cookieOptions)
+
+    res.cookie('refreshToken', result.refreshToken, cookieOptions)
+
+    res.status(StatusCodes.OK).json({
+      message: 'Login successful',
+      data: result
+    })
+  } catch (error: any) {
+    next(error)
+  }
+}
+
+/**
+ * Refresh access token
+ * @param req Express request object containing refresh token in cookies
+ * @param res Express response object to send the new access token
+ * @param next NextFunction for error handling
+ */
+const refreshToken = async (
+  req: Request<{}, {}, RefreshTokenRequest, {}>,
+  res: Response<RefreshTokenResponse>,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const result = await authService.refreshToken(req.cookies?.refreshToken)
+
+    res.cookie('accessToken', result.accessToken, cookieOptions)
+
+    res.status(StatusCodes.OK).json({
+      message: 'Token refreshed successfully',
+      accessToken: result.accessToken
+    })
+  } catch (error: any) {
+    next(error)
+  }
+}
+
 export const authController = {
   register,
-  verifyEmail
+  verifyEmail,
+  login,
+  refreshToken
 }

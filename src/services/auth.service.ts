@@ -7,6 +7,8 @@ import { v7 as uuidv7 } from 'uuid'
 import { pickUser } from '~/utils/formatter'
 import { BrevoProvider } from '~/providers/BrevoProvider'
 import { WEBSITE_DOMAIN } from '~/utils/constants'
+import { JwtProvider } from '~/providers/JwtProvider'
+import { env } from '~/configs/environment'
 
 /**
  * Create a new user
@@ -129,7 +131,102 @@ const verifyEmail = async (req: any) => {
   }
 }
 
+const login = async (req: any) => {
+  try {
+    const { email, password } = req.body
+
+    const existingUser = await userModel.findOneByEmail(email)
+
+    if (!existingUser) {
+      throw new ApiError(
+        StatusCodes.NOT_ACCEPTABLE,
+        'Your Email of Password is incorrect!'
+      )
+    }
+
+    if (!existingUser.isActive) {
+      throw new ApiError(
+        StatusCodes.NOT_ACCEPTABLE,
+        'Your account is not active! Please verify your email!'
+      )
+    }
+
+    if (!bcrypt.compareSync(password, existingUser.password)) {
+      throw new ApiError(
+        StatusCodes.NOT_ACCEPTABLE,
+        'Your Email of Password is incorrect!'
+      )
+    }
+
+    const userInfo = {
+      id: existingUser._id,
+      email: existingUser.email,
+      role: existingUser.role
+    }
+
+    const accessToken = await JwtProvider.generateToken(
+      userInfo,
+      env.ACCESS_TOKEN_SECRET_SIGNATURE as string,
+      env.ACCESS_TOKEN_LIFE as string
+      // 5 // 5 seconds for testing access token refresh
+    )
+
+    const refreshToken = await JwtProvider.generateToken(
+      userInfo,
+      env.REFRESH_TOKEN_SECRET_SIGNATURE as string,
+      env.REFRESH_TOKEN_LIFE as string
+      // 15 // 15 seconds for testing refresh token refresh
+    )
+
+    return {
+      accessToken,
+      refreshToken,
+      ...pickUser(existingUser)
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Refresh access token
+ * @param clientRefreshToken The refresh token received from client
+ * @returns New access token
+ */
+const refreshToken = async (clientRefreshToken: string): Promise<any> => {
+  try {
+    // Verify token received from client
+    const refreshTokenDecoded = JwtProvider.verifyToken(
+      clientRefreshToken,
+      env.REFRESH_TOKEN_SECRET_SIGNATURE as string
+    )
+
+    // console.log('refreshTokenDecoded', refreshTokenDecoded)
+
+    // We only store unique, immutable user info in the refresh token (e.g. _id, email),
+    // so we can reuse the decoded payload directly instead of querying the database.
+    const userInfo = {
+      id: (refreshTokenDecoded as any).id as string,
+      email: (refreshTokenDecoded as any).email as string,
+      role: (refreshTokenDecoded as any).role as string
+    }
+
+    // Create new accessToken
+    const accessToken = await JwtProvider.generateToken(
+      userInfo,
+      env.ACCESS_TOKEN_SECRET_SIGNATURE as string,
+      // 5 // 5 seconds for testing access token refresh
+      env.ACCESS_TOKEN_LIFE as string
+    )
+    return { accessToken }
+  } catch (error) {
+    throw error
+  }
+}
+
 export const authService = {
   register,
-  verifyEmail
+  verifyEmail,
+  login,
+  refreshToken
 }
