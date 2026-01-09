@@ -37,10 +37,33 @@ interface VerifyEmailRequest {
   token: string
 }
 
+interface LoginRequest {
+  email: string
+  password: string
+}
+
+interface LoginResponse {
+  message: string
+  data: any
+}
+
+interface RefreshTokenRequest {
+  refreshToken: string
+}
+
+interface RefreshTokenResponse {
+  message: string
+  accessToken: string
+}
+
 export type {
   IUser,
   CreateUserRequest,
   CreateUserResponse,
   VerifyEmailRequest,
-  VerifyEmailResponse
+  VerifyEmailResponse,
+  LoginRequest,
+  LoginResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse
 }
