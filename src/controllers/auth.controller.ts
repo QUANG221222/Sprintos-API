@@ -1,7 +1,12 @@
 import { Request, Response, NextFunction } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { authService } from '~/services/auth.service'
-import { CreateUserResponse, CreateUserRequest } from '~/types/user.type'
+import {
+  CreateUserResponse,
+  CreateUserRequest,
+  VerifyEmailRequest,
+  VerifyEmailResponse
+} from '~/types/user.type'
 
 /**
  * Create a new user
@@ -26,6 +31,31 @@ const register = async (
     next(error)
   }
 }
+
+/**
+ * Verify user email
+ * @param req VerifyEmailRequest object containing email and token
+ * @param res VerifyEmailResponse object containing response message and data
+ * @param next NextFunction for error handling
+ */
+const verifyEmail = async (
+  req: Request<{}, {}, VerifyEmailRequest, {}>,
+  res: Response<VerifyEmailResponse>,
+  next: NextFunction
+) => {
+  try {
+    const result = await authService.verifyEmail(req)
+
+    res.status(StatusCodes.OK).json({
+      message: 'Email verified successfully',
+      data: result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const authController = {
-  register
+  register,
+  verifyEmail
 }

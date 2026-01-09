@@ -35,6 +35,33 @@ const register = async (req: Request, _res: Response, next: NextFunction) => {
   }
 }
 
+/**
+ * Validate verify email request
+ * @param req VerifyEmailRequest object containing email and token
+ * @param _res VerifyEmailResponse object containing response message and data
+ * @param next NextFunction for error handling
+ */
+const verifyEmail = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  const correctCondition = Joi.object({
+    email: Joi.string()
+      .pattern(EMAIL_RULE)
+      .message(EMAIL_RULE_MESSAGE)
+      .required(),
+    token: Joi.string().required()
+  })
+  try {
+    await correctCondition.validateAsync(req.body, { abortEarly: false })
+    next()
+  } catch (error: any) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, error.message))
+  }
+}
+
 export const authValidation = {
-  register
+  register,
+  verifyEmail
 }

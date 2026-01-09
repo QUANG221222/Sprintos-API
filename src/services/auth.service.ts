@@ -81,6 +81,55 @@ const register = async (req: Request): Promise<any> => {
     throw error
   }
 }
+
+/**
+ * Verify user email
+ * @param req Express request object containing email and token
+ * @returns user data after verification
+ */
+const verifyEmail = async (req: any) => {
+  try {
+    const { email, token } = req.body
+
+    const existingUser: any | null = await userModel.findOneByEmail(email)
+
+    if (!existingUser) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    if (existingUser.isActive) {
+      throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'User already verified')
+    }
+
+    if (existingUser.verifyToken !== token) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Invalid verification token')
+    }
+
+    const updateUser = {
+      isActive: true,
+      verifyToken: ''
+    }
+
+    if (!existingUser._id) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'User ID is missing'
+      )
+    }
+
+    // Update user status to active
+    const updatedUser = await userModel.update(
+      existingUser._id.toString(),
+      updateUser
+    )
+
+    return pickUser(updatedUser)
+  } catch (error) {
+    throw error
+  }
+}
+
 export const authService = {
-  register
+  register,
+  verifyEmail
 }
