@@ -9,8 +9,10 @@ import {
   LoginRequest,
   LoginResponse,
   RefreshTokenRequest,
-  RefreshTokenResponse
-} from '~/types/user.type'
+  RefreshTokenResponse,
+  ChangePasswordRequest,
+  ChangePasswordResponse
+} from '~/types/auth.type'
 import { cookieOptions } from '~/configs/cookieOption'
 
 /**
@@ -133,10 +135,33 @@ const logout = async (_req: Request, res: Response, next: NextFunction) => {
   }
 }
 
+/**
+ * Change user password
+ * @param req Request object containing old and new passwords
+ * @param res Response object
+ * @param next NextFunction for error handling
+ */
+const changePassword = async (
+  req: Request<{}, {}, ChangePasswordRequest, {}>,
+  res: Response<ChangePasswordResponse>,
+  next: NextFunction
+) => {
+  try {
+    const result = await authService.changePassword(req)
+    res.status(StatusCodes.OK).json({
+      message: 'Password changed successfully',
+      data: result
+    })
+  } catch (error: any) {
+    next(error)
+  }
+}
+
 export const authController = {
   register,
   verifyEmail,
   login,
   refreshToken,
-  logout
+  logout,
+  changePassword
 }
