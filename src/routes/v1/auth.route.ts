@@ -6,4 +6,6 @@ const Router = express.Router()
 
 Router.post('/register', authValidation.register, authController.register)
 
+Router.post('/verify', authValidation.verifyEmail, authController.verifyEmail)
+
 export const authRoute: express.Router = Router

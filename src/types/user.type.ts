@@ -27,4 +27,20 @@ interface CreateUserResponse {
   data: Partial<IUser>
 }
 
-export type { IUser, CreateUserRequest, CreateUserResponse }
+interface VerifyEmailResponse {
+  message: string
+  data: any
+}
+
+interface VerifyEmailRequest {
+  email: string
+  token: string
+}
+
+export type {
+  IUser,
+  CreateUserRequest,
+  CreateUserResponse,
+  VerifyEmailRequest,
+  VerifyEmailResponse
+}
