@@ -17,4 +17,21 @@ interface IUser {
   updatedAt: Date | number | null
 }
 
-export type { IUser }
+interface UpdateUserRequest {
+  displayName?: string
+  gender?: string
+  dob?: Date
+  heightCm?: number
+  weightKg?: number
+}
+
+interface UpdateUserResponse {
+  message: string
+  data: Partial<IUser>
+}
+
+interface GetUserResponse {
+  message: string
+  data: Partial<IUser>
+}
+export type { IUser, UpdateUserRequest, UpdateUserResponse, GetUserResponse }
