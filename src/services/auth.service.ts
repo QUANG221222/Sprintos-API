@@ -131,6 +131,11 @@ const verifyEmail = async (req: any) => {
   }
 }
 
+/**
+ * User login
+ * @param req Express request object containing login details
+ * @returns User data along with access and refresh tokens
+ */
 const login = async (req: any) => {
   try {
     const { email, password } = req.body
@@ -224,9 +229,47 @@ const refreshToken = async (clientRefreshToken: string): Promise<any> => {
   }
 }
 
+/**
+ * Change user password
+ * @param req Express request object containing old and new passwords
+ * @returns Updated user data
+ */
+const changePassword = async (req: any) => {
+  try {
+    const { oldPassword, newPassword } = req.body
+    const userId = req.jwtDecoded.id
+
+    const existingUser: any | null = await userModel.findOneById(userId)
+    if (!existingUser) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    if (!bcrypt.compareSync(oldPassword, existingUser.password)) {
+      throw new ApiError(
+        StatusCodes.NOT_ACCEPTABLE,
+        'Your old password is incorrect!'
+      )
+    }
+    const hashedNewPassword = bcrypt.hashSync(newPassword, 10)
+    const updateUser = {
+      password: hashedNewPassword
+    }
+
+    const updatedUser = await userModel.update(
+      existingUser._id.toString(),
+      updateUser
+    )
+
+    return pickUser(updatedUser)
+  } catch (error) {
+    throw error
+  }
+}
+
 export const authService = {
   register,
   verifyEmail,
   login,
-  refreshToken
+  refreshToken,
+  changePassword
 }

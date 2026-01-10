@@ -86,8 +86,38 @@ const login = async (req: Request, _res: Response, next: NextFunction) => {
   }
 }
 
+/**
+ * Validate change password request
+ * @param req Request object containing old and new passwords
+ * @param _res Response object
+ * @param next NextFunction for error handling
+ */
+const changePassword = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  const correctCondition = Joi.object({
+    oldPassword: Joi.string()
+      .pattern(PASSWORD_RULE)
+      .message(PASSWORD_RULE_MESSAGE)
+      .required(),
+    newPassword: Joi.string()
+      .pattern(PASSWORD_RULE)
+      .message(PASSWORD_RULE_MESSAGE)
+      .required()
+  })
+  try {
+    await correctCondition.validateAsync(req.body, { abortEarly: false })
+    next()
+  } catch (error: any) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, error.message))
+  }
+}
+
 export const authValidation = {
   register,
   verifyEmail,
-  login
+  login,
+  changePassword
 }
