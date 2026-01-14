@@ -76,8 +76,6 @@ const login = async (
   try {
     const result = await authService.login(req)
 
-    res.cookie('userRole', result.role, cookieOptions)
-
     res.cookie('accessToken', result.accessToken, cookieOptions)
 
     res.cookie('refreshToken', result.refreshToken, cookieOptions)
@@ -127,7 +125,6 @@ const logout = async (_req: Request, res: Response, next: NextFunction) => {
     // Clear cookies - accessToken & refreshToken
     res.clearCookie('accessToken', cookieOptions)
     res.clearCookie('refreshToken', cookieOptions)
-    res.clearCookie('userRole', cookieOptions)
 
     res.status(StatusCodes.OK).json({ message: 'Logout successful' })
   } catch (error: any) {

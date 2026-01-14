@@ -21,3 +21,17 @@ export const pickUser = (user: any): any => {
     'updatedAt'
   ])
 }
+
+export const pickProject = (project: any): any => {
+  return pick(project, [
+    '_id',
+    'ownerId',
+    'name',
+    'description',
+    'imageUrl',
+    'imagePublicId',
+    'members',
+    'createdAt',
+    'updatedAt'
+  ])
+}
