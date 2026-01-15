@@ -13,6 +13,18 @@ Router.route('/').post(
   projectController.createProject
 )
 
+Router.route('/:id')
+  .put(
+    authHandlingMiddleware.isAuthorized,
+    CloudinaryProvider.uploadProjectMemory.single('image'),
+    projectValidation.updateProject,
+    projectController.updateProject
+  )
+  .delete(
+    authHandlingMiddleware.isAuthorized,
+    projectController.deleteProjectById
+  )
+
 Router.get(
   '/owned',
   authHandlingMiddleware.isAuthorized,
@@ -25,10 +37,30 @@ Router.get(
   projectController.getAllUserParticipatedProjects
 )
 
-Router.route('/invite').put(
+Router.put(
+  '/verify/invite',
   authHandlingMiddleware.isAuthorized,
   projectValidation.acceptProjectInvitation,
   projectController.acceptProjectInvitation
 )
+
+Router.post(
+  '/invite',
+  authHandlingMiddleware.isAuthorized,
+  projectValidation.inviteMemberToProject,
+  projectController.inviteMemberToProject
+)
+
+Router.route('/:projectId/:memberId')
+  .put(
+    authHandlingMiddleware.isAuthorized,
+    projectValidation.updateMemberInProject,
+    projectController.updateMemberInProject
+  )
+  .delete(
+    authHandlingMiddleware.isAuthorized,
+    projectValidation.removeMemberFromProject,
+    projectController.removeMemberFromProject
+  )
 
 export const projectRouter: express.Router = Router

@@ -18,9 +18,7 @@ const COLLECTION_SCHEMA: Joi.ObjectSchema<IProject> = Joi.object({
           .message(EMAIL_RULE_MESSAGE)
           .required(),
         role: Joi.string().valid('owner', 'member', 'viewer').required(),
-        status: Joi.string()
-          .valid('active', 'pending', 'removed')
-          .default('pending'),
+        status: Joi.string().valid('active', 'pending').default('pending'),
         inviteToken: Joi.string().optional().allow(''),
         joinAt: Joi.date().timestamp('javascript').default(null),
         invitedAt: Joi.date().timestamp('javascript').default(Date.now)
@@ -117,8 +115,7 @@ const findByUserId = async (userId: string) => {
     const results = await GET_DB()
       .collection(COLLECTION_NAME)
       .find({
-        ownerId: new ObjectId(userId),
-        _destroy: false
+        ownerId: new ObjectId(userId)
       })
       .toArray()
 
@@ -128,6 +125,11 @@ const findByUserId = async (userId: string) => {
   }
 }
 
+/**
+ * Find projects by member id
+ * @param memberId id of the member
+ * @returns array of projects the member is part of
+ */
 const findByMemberId = async (memberId: string) => {
   try {
     const results = await GET_DB()

@@ -53,6 +53,11 @@ interface GetAllProjectsResponse {
   data: Array<Partial<IProject>>
 }
 
+interface UpdateProjectResponse {
+  message: string
+  data: Partial<IProject>
+}
+
 export type {
   IProject,
   IMember,
@@ -60,5 +65,6 @@ export type {
   CreateProjectResponse,
   GetAllProjectsResponse,
   AcceptProjectInvitationRequest,
-  AcceptProjectInvitationResponse
+  AcceptProjectInvitationResponse,
+  UpdateProjectResponse
 }

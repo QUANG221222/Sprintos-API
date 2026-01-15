@@ -111,12 +111,7 @@ const createNew = async (req: Request): Promise<any> => {
     return pickProject(createdProject)
   } catch (error: any) {
     if (req.file) {
-      try {
-        await CloudinaryProvider.deleteImage((req.file as any).filename)
-      } catch (deleteError) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to cleanup uploaded image:', deleteError)
-      }
+      await CloudinaryProvider.deleteImage((req.file as any).filename)
     }
     throw error
   }
@@ -136,12 +131,105 @@ const getAllUserOwnedProjects = async (userId: string): Promise<any[]> => {
   }
 }
 
+/**
+ * Get all projects a user is participating in
+ * @param userId id of the user
+ * @returns Array of projects the user is a member of
+ */
 const getAllUserParticipatedProjects = async (
   userId: string
 ): Promise<any[]> => {
   try {
     const projects = await projectModel.findByMemberId(userId)
     return projects
+  } catch (error: any) {
+    throw error
+  }
+}
+
+/**
+ * Update project details
+ * @param req Request object containing project update data
+ * @returns The updated project document
+ */
+const updateProject = async (req: Request): Promise<any> => {
+  try {
+    // Project ID from params
+    const { id } = req.params
+
+    // UserId from JWT
+    const userId = req.jwtDecoded.id
+
+    const existingProject = await projectModel.findOneById(id)
+    if (!existingProject) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+    }
+    if (existingProject.ownerId.toString() !== userId) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'You are not authorized to update this project'
+      )
+    }
+    // Upload project image if provided
+    let uploadedImage = null
+    if (req.file && req.file.buffer) {
+      uploadedImage = await CloudinaryProvider.uploadFromBuffer(
+        req.file.buffer,
+        'project',
+        req.file.originalname,
+        false
+      )
+    }
+    // Prepare update data
+    if (uploadedImage) {
+      // Delete old image if exists
+      if (existingProject.imagePublicId) {
+        await CloudinaryProvider.deleteImage(existingProject.imagePublicId)
+      }
+      req.body.imageUrl = uploadedImage.secure_url
+      req.body.imagePublicId = uploadedImage.public_id
+    }
+
+    const updateData: any = {
+      ...req.body,
+      updatedAt: Date.now()
+    }
+    const updatedProject = await projectModel.update(id, updateData)
+
+    return pickProject(updatedProject)
+  } catch (error: any) {
+    if (req.file) {
+      await CloudinaryProvider.deleteImage((req.file as any).filename)
+    }
+    throw error
+  }
+}
+
+/**
+ * Delete project by id
+ * @param req Request object containing project id
+ */
+const deleteProjectById = async (req: Request): Promise<void> => {
+  try {
+    // Project ID from params
+    const { id } = req.params
+
+    // UserId from JWT
+    const userId = req.jwtDecoded.id
+
+    const existingProject = await projectModel.findOneById(id)
+    if (!existingProject) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+    }
+
+    if (existingProject.ownerId.toString() !== userId) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'You are not authorized to delete this project'
+      )
+    }
+
+    await projectModel.deleteById(id)
   } catch (error: any) {
     throw error
   }
@@ -235,10 +323,216 @@ const inviteMember = async (
   }
 }
 
+/**
+ * Invite a new member to project
+ * @param req Request object containing project id, email and role
+ * @returns Updated project data
+ */
+const inviteMemberToProject = async (req: Request): Promise<any> => {
+  try {
+    const { projectId, email, role } = req.body
+    const userId = req.jwtDecoded.id
+
+    // Check if project exists
+    const project = await projectModel.findOneById(projectId)
+    if (!project) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+    }
+
+    // Check if user is owner
+    if (
+      project.ownerId.toString() !== userId &&
+      project.members.find((m) => m.memberId.toString() === userId)?.role !==
+        'owner'
+    ) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Only project owner can invite members'
+      )
+    }
+
+    // Check if user exists
+    const existingUser = await userModel.findOneByEmail(email)
+    if (!existingUser) {
+      throw new ApiError(
+        StatusCodes.NOT_FOUND,
+        `User with email ${email} does not exist`
+      )
+    }
+
+    // Check if user is already a member
+    const isMember = project.members.some(
+      (m) => m.email === email && m.inviteToken === ''
+    )
+    if (isMember) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'User is already a member of this project'
+      )
+    }
+
+    // Check if user is pending invitation
+    const isPending = project.members.some(
+      (m) => m.email === email && m.inviteToken !== ''
+    )
+
+    // If pending, resend invitation
+    if (isPending) {
+      const member = project.members.find(
+        (m) => m.email === email && m.inviteToken !== ''
+      )
+      if (!member) {
+        throw new ApiError(StatusCodes.NOT_FOUND, 'Pending member not found')
+      }
+      // Update new token
+      member.inviteToken = uuidv7()
+      await projectModel.update(projectId, { members: project.members })
+
+      // Resend invitation email
+      await inviteMember(member, project.name, existingUser, projectId)
+      return pickProject(project)
+    }
+
+    // Create new member data
+    const newMember: any = {
+      memberId: existingUser._id?.toString(),
+      email: email,
+      role: role,
+      status: 'pending',
+      inviteToken: uuidv7(),
+      invitedAt: Date.now()
+    }
+
+    // Add member to project
+    const updatedProject = await projectModel.addMember(projectId, newMember)
+
+    // Send invitation email
+    await inviteMember(newMember, project.name, existingUser, projectId)
+
+    return pickProject(updatedProject)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Update member role in project
+ * @param req Request object containing project id, member id and new role
+ * @returns Updated project data
+ */
+const updateMemberInProject = async (req: Request): Promise<any> => {
+  try {
+    const { projectId, memberId } = req.params
+    const { role } = req.body
+    const userId = req.jwtDecoded.id
+
+    // Check if project exists
+    const project = await projectModel.findOneById(projectId)
+    if (!project) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+    }
+
+    // Check if user is owner
+    if (
+      project.ownerId.toString() !== userId &&
+      project.members.find((m) => m.memberId.toString() === userId)?.role !==
+        'owner'
+    ) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Only project primary owner can update member roles'
+      )
+    }
+
+    // Check if member exists in project
+    const member = project.members.find(
+      (m) => m.memberId.toString() === memberId
+    )
+    if (!member) {
+      throw new ApiError(
+        StatusCodes.NOT_FOUND,
+        'Member not found in this project'
+      )
+    }
+
+    // Prevent changing owner's role
+    if (member.role === 'owner' && project.ownerId.toString() !== userId) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Cannot change role of the project owner. Please contact the primary owner.'
+      )
+    }
+
+    // Update member role
+    const updatedProject = await projectModel.updateMember(
+      projectId,
+      memberId,
+      {
+        role
+      }
+    )
+
+    return pickProject(updatedProject)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Remove member from project
+ * @param req Request object containing project id and member id
+ * @returns Success message
+ */
+const removeMemberFromProject = async (req: Request): Promise<void> => {
+  try {
+    const { projectId, memberId } = req.params
+    const userId = req.jwtDecoded.id
+
+    // Check if project exists
+    const project = await projectModel.findOneById(projectId)
+    if (!project) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+    }
+
+    // Check if user is owner
+    if (
+      project.ownerId.toString() !== userId &&
+      project.members.find((m) => m.memberId.toString() === userId)?.role !==
+        'owner'
+    ) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Only project owner can remove members'
+      )
+    }
+
+    // Check if member exists in project
+    const member = project.members.find(
+      (m) => m.memberId.toString() === memberId
+    )
+    if (!member) {
+      throw new ApiError(
+        StatusCodes.NOT_FOUND,
+        'Member not found in this project'
+      )
+    }
+
+    // Remove member from project
+    await projectModel.removeMember(projectId, memberId)
+  } catch (error) {
+    throw error
+  }
+}
+
 export const projectService = {
   createNew,
   inviteMember,
   acceptInvitation,
   getAllUserOwnedProjects,
-  getAllUserParticipatedProjects
+  getAllUserParticipatedProjects,
+  updateProject,
+  deleteProjectById,
+  inviteMemberToProject,
+  updateMemberInProject,
+  removeMemberFromProject
 }
