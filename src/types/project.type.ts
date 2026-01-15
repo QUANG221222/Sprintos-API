@@ -20,7 +20,6 @@ interface IProject {
   members: Array<IMember>
   createdAt: Date | number
   updateAt: Date | number | null
-  _destroy: boolean
 }
 
 interface CreateProjectRequest {

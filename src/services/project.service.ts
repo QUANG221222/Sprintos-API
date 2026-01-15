@@ -8,6 +8,7 @@ import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { pickProject } from '~/utils/formatter'
 import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
+import { sprintModel } from '~/models/sprint.model'
 
 /**
  * Create a new project
@@ -228,8 +229,16 @@ const deleteProjectById = async (req: Request): Promise<void> => {
         'You are not authorized to delete this project'
       )
     }
+    // Delete project image if exists
+    if (existingProject.imagePublicId) {
+      await CloudinaryProvider.deleteImage(existingProject.imagePublicId)
+    }
 
+    // Delete the project
     await projectModel.deleteById(id)
+
+    // Delete all associated sprints could be handled here or in a DB trigger
+    await sprintModel.deleteSprintsByProjectId(id)
   } catch (error: any) {
     throw error
   }

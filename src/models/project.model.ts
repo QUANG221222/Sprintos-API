@@ -28,8 +28,7 @@ const COLLECTION_SCHEMA: Joi.ObjectSchema<IProject> = Joi.object({
   imageUrl: Joi.string().optional().allow(''),
   imagePublicId: Joi.string().optional().allow(''),
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
-  updatedAt: Joi.date().timestamp('javascript').default(null),
-  _destroy: Joi.boolean().default(false)
+  updatedAt: Joi.date().timestamp('javascript').default(null)
 })
 
 const INVALID_UPDATE_FIELDS = ['_id', 'ownerId', 'createdAt']
@@ -78,7 +77,7 @@ const findOneById = async (id: string): Promise<IProject | null> => {
   try {
     const result = await GET_DB()
       .collection(COLLECTION_NAME)
-      .findOne({ _id: new ObjectId(id), _destroy: false })
+      .findOne({ _id: new ObjectId(id) })
     return result as IProject | null
   } catch (error: any) {
     throw new Error(error)
@@ -98,7 +97,7 @@ const findOneByNameAndOwnerId = async (
   try {
     const result = await GET_DB()
       .collection(COLLECTION_NAME)
-      .findOne({ name, ownerId: new ObjectId(ownerId), _destroy: false })
+      .findOne({ name, ownerId: new ObjectId(ownerId) })
     return result as IProject | null
   } catch (error: any) {
     throw new Error(error)
@@ -136,8 +135,7 @@ const findByMemberId = async (memberId: string) => {
       .collection(COLLECTION_NAME)
       .find({
         'members.memberId': new ObjectId(memberId),
-        ownerId: { $ne: new ObjectId(memberId) },
-        _destroy: false
+        ownerId: { $ne: new ObjectId(memberId) }
       })
       .toArray()
     return results as IProject[]
@@ -184,13 +182,9 @@ const deleteById = async (id: string) => {
   try {
     const result = await GET_DB()
       .collection(COLLECTION_NAME)
-      .findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: { _destroy: true } },
-        { returnDocument: 'after' }
-      )
+      .deleteOne({ _id: new ObjectId(id) })
 
-    return result as IProject | null
+    return result
   } catch (error) {
     throw new Error(error as string)
   }
