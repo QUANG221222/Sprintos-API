@@ -35,3 +35,18 @@ export const pickProject = (project: any): any => {
     'updatedAt'
   ])
 }
+
+export const pickSprint = (sprint: any): any => {
+  return pick(sprint, [
+    '_id',
+    'projectId',
+    'name',
+    'goal',
+    'maxStoryPoint',
+    'startDate',
+    'endDate',
+    'status',
+    'createdAt',
+    'updatedAt'
+  ])
+}
