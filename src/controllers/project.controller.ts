@@ -6,7 +6,8 @@ import {
   CreateProjectRequest,
   GetAllProjectsResponse,
   AcceptProjectInvitationResponse,
-  AcceptProjectInvitationRequest
+  AcceptProjectInvitationRequest,
+  UpdateProjectResponse
 } from '~/types/project.type'
 
 /**
@@ -78,6 +79,12 @@ const getAllUserOwnedProjects = async (
   }
 }
 
+/**
+ * Get all participated projects controller
+ * @param req request object
+ * @param res response with all participated projects
+ * @param next handle next middleware
+ */
 const getAllUserParticipatedProjects = async (
   req: Request<{}, {}, {}, {}>,
   res: Response<GetAllProjectsResponse>,
@@ -95,9 +102,127 @@ const getAllUserParticipatedProjects = async (
   }
 }
 
+/**
+ * Update project controller
+ * @param req id of the project and update data
+ * @param res response with updated project data
+ * @param next handle next middleware
+ */
+const updateProject = async (
+  req: Request<{ id: string }, {}, {}, {}>,
+  res: Response<UpdateProjectResponse>,
+  next: NextFunction
+) => {
+  try {
+    const result = await projectService.updateProject(req)
+
+    res.status(StatusCodes.OK).json({
+      message: 'Project updated successfully',
+      data: result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Delete project controller
+ * @param req id of the project to be deleted
+ * @param res result of deletion
+ * @param next handle next middleware
+ */
+const deleteProjectById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await projectService.deleteProjectById(req)
+
+    res.status(StatusCodes.NOT_IMPLEMENTED).json({
+      message: 'Project deleted successfully'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Invite member to project controller
+ * @param req request with project id, email and role
+ * @param res response with updated project data
+ * @param next handle next middleware
+ */
+const inviteMemberToProject = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await projectService.inviteMemberToProject(req)
+
+    res.status(StatusCodes.OK).json({
+      message: 'Member invited successfully',
+      data: result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Update member in project controller
+ * @param req request with project id, member id and new role
+ * @param res response with updated project data
+ * @param next handle next middleware
+ */
+const updateMemberInProject = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await projectService.updateMemberInProject(req)
+
+    res.status(StatusCodes.OK).json({
+      message: 'Member role updated successfully',
+      data: result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Remove member from project controller
+ * @param req request with project id and member id
+ * @param res response with success message
+ * @param next handle next middleware
+ */
+const removeMemberFromProject = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await projectService.removeMemberFromProject(req)
+
+    res.status(StatusCodes.OK).json({
+      message: 'Member removed successfully'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const projectController = {
   createProject,
   acceptProjectInvitation,
   getAllUserOwnedProjects,
-  getAllUserParticipatedProjects
+  getAllUserParticipatedProjects,
+  updateProject,
+  deleteProjectById,
+  inviteMemberToProject,
+  updateMemberInProject,
+  removeMemberFromProject
 }
