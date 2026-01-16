@@ -3,12 +3,13 @@ import { projectModel } from '~/models/project.model'
 import { WEBSITE_DOMAIN } from '~/utils/constants'
 import { BrevoProvider } from '~/providers/BrevoProvider'
 import { userModel } from '~/models/user.model'
-import { v7 as uuidv7 } from 'uuid'
+import { v4 as uuidv4 } from 'uuid'
 import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { pickProject } from '~/utils/formatter'
 import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
 import { sprintModel } from '~/models/sprint.model'
+import { boardColumnModel } from '~/models/boardColumn.model'
 
 /**
  * Create a new project
@@ -65,7 +66,7 @@ const createNew = async (req: Request): Promise<any> => {
           memberId: existingUser._id?.toString(),
           email: member.email,
           role: member.role || 'member',
-          inviteToken: uuidv7(),
+          inviteToken: uuidv4(),
           status: 'pending'
         }
 
@@ -238,6 +239,17 @@ const deleteProjectById = async (req: Request): Promise<void> => {
     await projectModel.deleteById(id)
 
     // Delete all associated sprints could be handled here or in a DB trigger
+
+    // Delete associated sprints
+    const sprints = await sprintModel.findByProjectId(id)
+    for (const sprint of sprints) {
+      // Delete associated board columns
+      if (sprint._id) {
+        await boardColumnModel.deleteBySprintId(sprint._id.toString())
+      }
+    }
+
+    // Finally, delete the sprints
     await sprintModel.deleteSprintsByProjectId(id)
   } catch (error: any) {
     throw error
@@ -394,7 +406,7 @@ const inviteMemberToProject = async (req: Request): Promise<any> => {
         throw new ApiError(StatusCodes.NOT_FOUND, 'Pending member not found')
       }
       // Update new token
-      member.inviteToken = uuidv7()
+      member.inviteToken = uuidv4()
       await projectModel.update(projectId, { members: project.members })
 
       // Resend invitation email
@@ -408,7 +420,7 @@ const inviteMemberToProject = async (req: Request): Promise<any> => {
       email: email,
       role: role,
       status: 'pending',
-      inviteToken: uuidv7(),
+      inviteToken: uuidv4(),
       invitedAt: Date.now()
     }
 
