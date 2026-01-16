@@ -99,11 +99,22 @@ const update = async (id: string, updateData: Partial<IBoardColumn>) => {
       }
     })
 
+    if (updateData.taskOrderIds) {
+      updateData.taskOrderIds = updateData.taskOrderIds.map(
+        (id: any) => new ObjectId(id)
+      ) as any
+    }
+
     const result = await GET_DB()
       .collection(COLLECTION_NAME)
       .findOneAndUpdate(
         { _id: new ObjectId(id) },
-        { $set: updateData },
+        {
+          $set: {
+            ...updateData,
+            updatedAt: Date.now()
+          }
+        },
         { returnDocument: 'after' }
       )
 

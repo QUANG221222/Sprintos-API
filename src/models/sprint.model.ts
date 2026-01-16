@@ -136,6 +136,11 @@ const deleteById = async (id: string) => {
   }
 }
 
+/**
+ * Delete all sprints by project id
+ * @param projectId id of the project
+ * @returns The delete result
+ */
 const deleteSprintsByProjectId = async (projectId: string) => {
   try {
     const result = await GET_DB()
