@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { userModel } from '~/models/user.model'
 import ApiError from '~/utils/ApiError'
 import bcrypt from 'bcryptjs'
-import { v7 as uuidv7 } from 'uuid'
+import { v4 as uuidv4 } from 'uuid'
 import { pickUser } from '~/utils/formatter'
 import { BrevoProvider } from '~/providers/BrevoProvider'
 import { WEBSITE_DOMAIN } from '~/utils/constants'
@@ -35,7 +35,7 @@ const register = async (req: Request): Promise<any> => {
       password: await bcrypt.hash(password as string, 8),
       displayName: nameFromEmail,
       isActive: false,
-      verifyToken: uuidv7()
+      verifyToken: uuidv4()
     }
 
     // Create new user

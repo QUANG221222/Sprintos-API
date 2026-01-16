@@ -4,6 +4,7 @@ import { projectModel } from '~/models/project.model'
 import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { pickSprint } from '~/utils/formatter'
+import { boardColumnModel } from '~/models/boardColumn.model'
 
 /**
  * Create a new sprint
@@ -58,6 +59,29 @@ const createNew = async (req: Request): Promise<any> => {
     }
 
     const createdSprint = await sprintModel.createNew(newSprintData)
+
+    if (!createdSprint) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Sprint creation failed'
+      )
+    }
+    // Create template board columns for the new sprint
+    const boardColumnTitles = [
+      'backlog',
+      'todo',
+      'in_process',
+      'review',
+      'done'
+    ]
+    for (const title of boardColumnTitles) {
+      // Prepare new board column data
+      const createdColumn: any = {
+        sprintId: createdSprint._id.toString(),
+        title
+      }
+      await boardColumnModel.createNew(createdColumn)
+    }
 
     return pickSprint(createdSprint)
   } catch (error: any) {
@@ -218,7 +242,11 @@ const deleteSprintById = async (req: Request): Promise<void> => {
       )
     }
 
+    // Delete the sprint
     await sprintModel.deleteById(id)
+
+    // Optionally, delete associated board columns and tasks here
+    await boardColumnModel.deleteBySprintId(id)
   } catch (error: any) {
     throw error
   }

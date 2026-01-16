@@ -50,3 +50,14 @@ export const pickSprint = (sprint: any): any => {
     'updatedAt'
   ])
 }
+
+export const pickBoardColumn = (column: any): any => {
+  return pick(column, [
+    '_id',
+    'sprintId',
+    'title',
+    'taskOrderIds',
+    'createdAt',
+    'updatedAt'
+  ])
+}
