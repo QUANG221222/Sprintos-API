@@ -61,3 +61,22 @@ export const pickBoardColumn = (column: any): any => {
     'updatedAt'
   ])
 }
+
+export const pickTask = (task: any): any => {
+  return pick(task, [
+    '_id',
+    'sprintId',
+    'boardColumnId',
+    'title',
+    'description',
+    'labels',
+    'priority',
+    'storyPoint',
+    'dueDate',
+    'assigneeIds',
+    'comments',
+    'attachments',
+    'createdAt',
+    'updatedAt'
+  ])
+}
