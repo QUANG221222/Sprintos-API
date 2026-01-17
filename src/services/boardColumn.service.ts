@@ -5,6 +5,7 @@ import { projectModel } from '~/models/project.model'
 import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { pickBoardColumn } from '~/utils/formatter'
+import { taskModel } from '~/models/task.model'
 
 /**
  * Create a new board column
@@ -287,6 +288,9 @@ const deleteBoardColumnById = async (req: Request): Promise<void> => {
     }
 
     await boardColumnModel.deleteById(id)
+
+    // Optionally, handle tasks associated with this column here
+    await taskModel.deleteByBoardColumnId(id)
   } catch (error: any) {
     throw error
   }

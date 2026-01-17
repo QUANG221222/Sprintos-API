@@ -5,6 +5,7 @@ import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { pickSprint } from '~/utils/formatter'
 import { boardColumnModel } from '~/models/boardColumn.model'
+import { taskModel } from '~/models/task.model'
 
 /**
  * Create a new sprint
@@ -247,6 +248,9 @@ const deleteSprintById = async (req: Request): Promise<void> => {
 
     // Optionally, delete associated board columns and tasks here
     await boardColumnModel.deleteBySprintId(id)
+
+    // Delete tasks associated with the sprint
+    await taskModel.deleteBySprintId(id)
   } catch (error: any) {
     throw error
   }

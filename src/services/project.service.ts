@@ -10,6 +10,7 @@ import { pickProject } from '~/utils/formatter'
 import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
 import { sprintModel } from '~/models/sprint.model'
 import { boardColumnModel } from '~/models/boardColumn.model'
+import { taskModel } from '~/models/task.model'
 
 /**
  * Create a new project
@@ -247,6 +248,9 @@ const deleteProjectById = async (req: Request): Promise<void> => {
       if (sprint._id) {
         await boardColumnModel.deleteBySprintId(sprint._id.toString())
       }
+
+      // Delete tasks associated with the sprint
+      await taskModel.deleteBySprintId(sprint._id?.toString() || '')
     }
 
     // Finally, delete the sprints

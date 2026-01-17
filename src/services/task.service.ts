@@ -17,6 +17,7 @@ const createNew = async (req: Request): Promise<any> => {
   try {
     const {
       sprintId,
+      boardColumnId,
       title,
       description,
       labels,
@@ -145,10 +146,14 @@ const createNew = async (req: Request): Promise<any> => {
       )
     }
 
+    const boardColumnIdFinal = boardColumnId
+      ? boardColumnId
+      : backlogColumn._id?.toString()
+
     // Prepare new task data
     const newTaskData: any = {
       sprintId,
-      boardColumnId: backlogColumn._id?.toString(),
+      boardColumnId: boardColumnIdFinal,
       title,
       description: description || '',
       labels: labels,
@@ -169,17 +174,17 @@ const createNew = async (req: Request): Promise<any> => {
 
     // Update board column taskOrderIds
     const updatedTaskOrderIds = [
-      ...(backlogColumn.taskOrderIds || []),
+      ...(boardColumnIdFinal.taskOrderIds || []),
       createdTask._id.toString()
     ]
 
-    if (!backlogColumn._id) {
+    if (!boardColumnIdFinal) {
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
         'Backlog column ID is missing'
       )
     }
-    await boardColumnModel.update(backlogColumn._id.toString(), {
+    await boardColumnModel.update(boardColumnIdFinal.toString(), {
       taskOrderIds: updatedTaskOrderIds
     })
 

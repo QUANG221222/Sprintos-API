@@ -145,7 +145,7 @@ const login = async (req: any) => {
     if (!existingUser) {
       throw new ApiError(
         StatusCodes.NOT_ACCEPTABLE,
-        'Your Email of Password is incorrect!'
+        'Your Email or Password is incorrect!'
       )
     }
 
