@@ -35,7 +35,7 @@ const COLLECTION_SCHEMA: Joi.ObjectSchema<ITask> = Joi.object({
     .required(),
   title: Joi.string().min(1).max(200).required(),
   description: Joi.string().max(2000).optional().allow(''),
-  labels: Joi.string().min(1).max(50).default('task'),
+  labels: Joi.array().items(Joi.string().min(1).max(50).optional()).default([]),
   priority: Joi.string()
     .valid('low', 'medium', 'high', 'critical')
     .optional()

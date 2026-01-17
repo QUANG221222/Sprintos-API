@@ -15,6 +15,10 @@ const createTask = async (req: Request, _res: Response, next: NextFunction) => {
         .pattern(OBJECT_ID_RULE)
         .message(OBJECT_ID_RULE_MESSAGE)
         .required(),
+      boardColumnId: Joi.string()
+        .pattern(OBJECT_ID_RULE)
+        .message(OBJECT_ID_RULE_MESSAGE)
+        .optional(),
       title: Joi.string().min(1).max(200).required().messages({
         'string.empty': 'Task title is required',
         'string.min': 'Task title must be at least 1 character',
@@ -23,9 +27,12 @@ const createTask = async (req: Request, _res: Response, next: NextFunction) => {
       description: Joi.string().max(2000).optional().allow('').messages({
         'string.max': 'Description must be at most 2000 characters'
       }),
-      labels: Joi.string().min(1).max(50).optional().messages({
-        'any.only': 'Label must be task, bug, feature, or story'
-      }),
+      labels: Joi.array().items(
+        Joi.string().min(1).max(50).optional().messages({
+          'string.min': 'Each label must be at least 1 character',
+          'string.max': 'Each label must be at most 50 characters'
+        })
+      ),
       priority: Joi.string()
         .valid('low', 'medium', 'high', 'critical')
         .optional()
@@ -65,12 +72,12 @@ const updateTask = async (req: Request, _res: Response, next: NextFunction) => {
       description: Joi.string().max(2000).optional().allow('').messages({
         'string.max': 'Description must be at most 2000 characters'
       }),
-      labels: Joi.string()
-        .valid('task', 'bug', 'feature', 'story')
-        .optional()
-        .messages({
-          'any.only': 'Label must be task, bug, feature, or story'
-        }),
+      labels: Joi.array().items(
+        Joi.string().min(1).max(50).optional().messages({
+          'string.min': 'Each label must be at least 1 character',
+          'string.max': 'Each label must be at most 50 characters'
+        })
+      ),
       priority: Joi.string()
         .valid('low', 'medium', 'high', 'critical')
         .optional()
