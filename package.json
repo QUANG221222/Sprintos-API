@@ -12,7 +12,8 @@
     "build-babel": "babel ./src -d ./dist --extensions \".ts\"",
     "build": "npm run clean-dist && npm run build-babel",
     "production": "npm run build && cross-env BUILD_MODE=production node ./dist/server.js",
-    "dev": "cross-env BUILD_MODE=dev nodemon --exec babel-node --extensions \".ts\" ./src/server.ts"
+    "dev": "cross-env BUILD_MODE=dev nodemon --exec babel-node --extensions \".ts\" ./src/server.ts",
+    "seed": "ts-node -r tsconfig-paths/register src/scripts/seedData.ts"
   },
   "keywords": [
     "sprintos",
@@ -49,6 +50,7 @@
     "eslint": "^9.36.0",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.2"
   },
   "dependencies": {

@@ -215,6 +215,28 @@ const removeMemberFromProject = async (
   }
 }
 
+/**
+ * Get project by id controller
+ * @param req request with project id
+ * @param res response with project data
+ * @param next handle next middleware
+ */
+const getProjectById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await projectService.getProjectById(req)
+    res.status(StatusCodes.OK).json({
+      message: 'Project retrieved successfully',
+      data: result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const projectController = {
   createProject,
   acceptProjectInvitation,
@@ -224,5 +246,6 @@ export const projectController = {
   deleteProjectById,
   inviteMemberToProject,
   updateMemberInProject,
-  removeMemberFromProject
+  removeMemberFromProject,
+  getProjectById
 }

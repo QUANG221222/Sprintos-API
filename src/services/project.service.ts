@@ -702,6 +702,35 @@ const removeMemberFromProject = async (req: Request): Promise<void> => {
   }
 }
 
+/**
+ * Get project by id
+ * @param req Request object containing project id
+ * @returns Project data
+ */
+const getProjectById = async (req: Request): Promise<any> => {
+  try {
+    const { id } = req.params
+    const userId = req.jwtDecoded.id
+
+    const project = await projectModel.findOneById(id)
+    if (!project) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+    }
+
+    // Kiểm tra quyền truy cập: owner hoặc là member active
+    const isMember = project.members.some(
+      (m) => m.memberId.toString() === userId && m.status === 'active'
+    )
+    if (!isMember && project.ownerId.toString() !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You do not have access to this project')
+    }
+
+    return pickProject(project)
+  } catch (error) {
+    throw error
+  }
+}
+
 export const projectService = {
   createNew,
   inviteMember,
@@ -712,5 +741,6 @@ export const projectService = {
   deleteProjectById,
   inviteMemberToProject,
   updateMemberInProject,
-  removeMemberFromProject
+  removeMemberFromProject,
+  getProjectById
 }
