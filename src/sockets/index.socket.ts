@@ -10,8 +10,18 @@ let io: SocketIOServer
 
 const setupSocketEvents = (socket: any) => {
   // Handle user joining their notification room
-  socket.on('join_notifications', (userId: string) =>
-    notificationSocket.handleJoinNotifications(socket, userId)
+  socket.on('join_notifications_for_user', (userId: string) =>
+    notificationSocket.handleJoinNotificationsForUser(socket, userId)
+  )
+
+  // Handle user joining their project notification room
+  socket.on('join_notifications_for_project', (projectId: string) =>
+    notificationSocket.handleJoinNotificationsForProject(socket, projectId)
+  )
+
+  // Handle user joining their task notification room
+  socket.on('join_notifications_for_task', (taskId: string) =>
+    notificationSocket.handleJoinNotificationsForTask(socket, taskId)
   )
 
   // Handle mark notification as read
