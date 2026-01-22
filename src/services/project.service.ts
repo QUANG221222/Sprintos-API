@@ -11,6 +11,7 @@ import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
 import { sprintModel } from '~/models/sprint.model'
 import { boardColumnModel } from '~/models/boardColumn.model'
 import { taskModel } from '~/models/task.model'
+import { notificationService } from '~/services/notification.service'
 
 /**
  * Create a new project
@@ -100,6 +101,22 @@ const createNew = async (req: Request): Promise<any> => {
     }
 
     const createdProject = await projectModel.createNew(newProjectData)
+
+    if (!createdProject) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Failed to create project'
+      )
+    }
+
+    // Send Notification for owner
+    await notificationService.createNotification(
+      'project_created',
+      'Project Created',
+      `You have successfully created the project "${name}".`,
+      ownerId,
+      ''
+    )
 
     if (preparedMembers.length > 1) {
       const createdProjectId = createdProject._id.toString()
@@ -199,6 +216,30 @@ const updateProject = async (req: Request): Promise<any> => {
     }
     const updatedProject = await projectModel.update(id, updateData)
 
+    if (!updatedProject) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Failed to update project'
+      )
+    }
+
+    // Get Creator Name
+    const creator = await userModel.findOneById(
+      updatedProject.ownerId.toString()
+    )
+    const creatorName = creator
+      ? creator.displayName || creator.email
+      : 'Someone'
+
+    // Noftification for project update
+    await notificationService.createNotification(
+      'project_updated',
+      'Project Updated',
+      `${creatorName} updated project "${updatedProject.name}".`,
+      '',
+      updatedProject._id.toString()
+    )
+
     return pickProject(updatedProject)
   } catch (error: any) {
     if (req.file) {
@@ -236,11 +277,7 @@ const deleteProjectById = async (req: Request): Promise<void> => {
       await CloudinaryProvider.deleteImage(existingProject.imagePublicId)
     }
 
-    // Delete the project
-    await projectModel.deleteById(id)
-
     // Delete all associated sprints could be handled here or in a DB trigger
-
     // Delete associated sprints
     const sprints = await sprintModel.findByProjectId(id)
     for (const sprint of sprints) {
@@ -253,8 +290,30 @@ const deleteProjectById = async (req: Request): Promise<void> => {
       await taskModel.deleteBySprintId(sprint._id?.toString() || '')
     }
 
-    // Finally, delete the sprints
+    // delete the sprints
     await sprintModel.deleteSprintsByProjectId(id)
+
+    // Finally, delete the project
+    const result = await projectModel.deleteById(id)
+
+    const owner = await userModel.findOneById(
+      existingProject.ownerId.toString()
+    )
+    const ownerName = owner ? owner.displayName || owner.email : 'Someone'
+
+    if (result) {
+      for (const member of existingProject.members) {
+        if (member.memberId.toString() === userId) continue
+        if (member.status !== 'active') continue
+        // Notification for all member in project deletion
+        await notificationService.createNotification(
+          'project_deleted',
+          'Project Deleted',
+          `A project named "${existingProject.name}" has been deleted by ${ownerName}.`,
+          member.memberId.toString()
+        )
+      }
+    }
   } catch (error: any) {
     throw error
   }
@@ -292,6 +351,37 @@ const acceptInvitation = async (req: Request): Promise<any> => {
     const result = await projectModel.update(projectId, {
       members: project.members
     })
+
+    if (!result) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Failed to accept invitation'
+      )
+    }
+
+    // Fetch joining user details
+    const joiningUser = await userModel.findOneByEmail(email)
+
+    if (!joiningUser) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+    // Notify joining user
+    await notificationService.createNotification(
+      'invitation_accepted',
+      'Invitation Accepted',
+      `You have successfully joined the project "${project.name}".`,
+      joiningUser._id?.toString(),
+      ''
+    )
+
+    // Notify for project
+    await notificationService.createNotification(
+      'project_member_joined',
+      'New Member Joined',
+      `${joiningUser.displayName} has joined the project "${project.name}".`,
+      joiningUser._id?.toString(),
+      projectId
+    )
 
     return pickProject(result)
   } catch (error: any) {
@@ -343,6 +433,17 @@ const inviteMember = async (
     `
 
     await BrevoProvider.sendEmail(member.email, customSubject, htmlContent)
+
+    // Send in-app notification
+    if (existingUser && existingUser._id) {
+      await notificationService.createNotification(
+        'project_invitation',
+        'Project Invitation',
+        `You have been invited to join project "${projectName}"`,
+        existingUser._id.toString(),
+        ''
+      )
+    }
   } catch (error: any) {
     throw error
   }
@@ -431,6 +532,22 @@ const inviteMemberToProject = async (req: Request): Promise<any> => {
     // Add member to project
     const updatedProject = await projectModel.addMember(projectId, newMember)
 
+    if (!updatedProject) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Failed to invite member'
+      )
+    }
+
+    // Notify project about new member invitation
+    await notificationService.createNotification(
+      'project_member_invited',
+      'Member Invited',
+      `Member with email "${email}" has been invited to the project.`,
+      '',
+      projectId
+    )
+
     // Send invitation email
     await inviteMember(newMember, project.name, existingUser, projectId)
 
@@ -497,6 +614,23 @@ const updateMemberInProject = async (req: Request): Promise<any> => {
       }
     )
 
+    // Notify member about role change
+    await notificationService.createNotification(
+      'member_role_changed',
+      'Member Role Changed',
+      `Your role in project "${project.name}" has been changed to "${role}".`,
+      memberId
+    )
+
+    // Notify project about member role change
+    await notificationService.createNotification(
+      'project_role_changed',
+      'Project Role Changed',
+      `Member with email "${member.email}" role has been changed to "${role}".`,
+      '',
+      projectId
+    )
+
     return pickProject(updatedProject)
   } catch (error) {
     throw error
@@ -543,7 +677,26 @@ const removeMemberFromProject = async (req: Request): Promise<void> => {
     }
 
     // Remove member from project
-    await projectModel.removeMember(projectId, memberId)
+    const result = await projectModel.removeMember(projectId, memberId)
+
+    if (result) {
+      // Notify member about removal
+      await notificationService.createNotification(
+        'member_removed',
+        'Removed from Project',
+        `You have been removed from project "${project.name}".`,
+        memberId
+      )
+
+      // Notify project about member removal
+      await notificationService.createNotification(
+        'project_member_removed',
+        'Member Removed',
+        `Member with email "${member.email}" has been removed from the project.`,
+        '',
+        projectId
+      )
+    }
   } catch (error) {
     throw error
   }

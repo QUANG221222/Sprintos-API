@@ -7,6 +7,7 @@ import { userModel } from '~/models/user.model'
 import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { pickTask } from '~/utils/formatter'
+import { notificationService } from '~/services/notification.service'
 
 /**
  * Create a new task
@@ -130,6 +131,14 @@ const createNew = async (req: Request): Promise<any> => {
             `User ${assignee.displayName} is not a member of this project`
           )
         }
+
+        // Notify assignee about new task
+        await notificationService.createNotification(
+          'task_assigned',
+          'New Task Assigned',
+          `You have been assigned to task: ${title}`,
+          assigneeId
+        )
       }
     }
 
@@ -172,6 +181,9 @@ const createNew = async (req: Request): Promise<any> => {
       )
     }
 
+    // Get creator info
+    const creator = await userModel.findOneById(userId)
+
     // Update board column taskOrderIds
     const updatedTaskOrderIds = [
       ...(boardColumnIdFinal.taskOrderIds || []),
@@ -187,6 +199,31 @@ const createNew = async (req: Request): Promise<any> => {
     await boardColumnModel.update(boardColumnIdFinal.toString(), {
       taskOrderIds: updatedTaskOrderIds
     })
+
+    // Notify project about new task
+    await notificationService.createNotification(
+      'task_created',
+      'New Task Created',
+      `${creator?.displayName} created task "${title}"`,
+      '',
+      project.ownerId.toString()
+    )
+
+    // Notify active members (except creator and assignees)
+    for (const member of project.members) {
+      if (
+        member.status === 'active' &&
+        member.memberId.toString() !== userId &&
+        !assigneeIds?.includes(member.memberId.toString())
+      ) {
+        await notificationService.createNotification(
+          'task_created',
+          'New Task Created',
+          `${creator?.displayName} created task "${title}" in project "${project.name}"`,
+          member.memberId.toString()
+        )
+      }
+    }
 
     return pickTask(createdTask)
   } catch (error: any) {
@@ -328,7 +365,10 @@ const getAllTasksByBoardColumnId = async (req: Request): Promise<any[]> => {
  */
 const updateTask = async (req: Request): Promise<any> => {
   try {
+    // Get task id from request params
     const { id } = req.params
+
+    // Get user id from JWT
     const userId = req.jwtDecoded.id
 
     const existingTask = await taskModel.findOneById(id)
@@ -436,6 +476,14 @@ const updateTask = async (req: Request): Promise<any> => {
             `User ${assignee.displayName} is not a member of this project`
           )
         }
+
+        // Notify assignee about new task
+        await notificationService.createNotification(
+          'task_assigned',
+          'New Task Assigned',
+          `You have been assigned to task: ${existingTask.title}`,
+          assigneeId
+        )
       }
     }
 
@@ -467,9 +515,35 @@ const updateTask = async (req: Request): Promise<any> => {
 
       // Add to new column
       const updatedNewTaskOrderIds = [...(newColumn.taskOrderIds || []), id]
-      await boardColumnModel.update(newColumn._id!.toString(), {
+      const result = await boardColumnModel.update(newColumn._id!.toString(), {
         taskOrderIds: updatedNewTaskOrderIds
       })
+
+      if (!result) {
+        throw new ApiError(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          'Failed to update board column task order'
+        )
+      }
+
+      // Notify project about task movement
+      await notificationService.createNotification(
+        'task_moved',
+        'Task Moved',
+        `Task "${existingTask.title}" has been moved to column "${newColumn.title}"`,
+        '',
+        project._id.toString()
+      )
+
+      // Notify to activity log
+      await notificationService.createNotification(
+        'task_moved',
+        'Task Moved',
+        `Task "${existingTask.title}" has been moved to column "${newColumn.title}"`,
+        '',
+        '',
+        id
+      )
     }
 
     // Prepare update data
@@ -479,6 +553,32 @@ const updateTask = async (req: Request): Promise<any> => {
     }
 
     const updatedTask = await taskModel.update(id, updateData)
+
+    if (!updatedTask) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Task update failed'
+      )
+    }
+
+    // Notify project to about task update
+    await notificationService.createNotification(
+      'task_updated',
+      'Task Updated',
+      `Task "${updatedTask.title}" has been updated`,
+      '',
+      project._id.toString()
+    )
+
+    // Notify to activity log
+    await notificationService.createNotification(
+      'task_updated',
+      'Task Updated',
+      `Task "${existingTask.title}" has been updated`,
+      '',
+      '',
+      id
+    )
 
     return pickTask(updatedTask)
   } catch (error) {
@@ -539,7 +639,23 @@ const deleteTaskById = async (req: Request): Promise<void> => {
       })
     }
 
-    await taskModel.deleteById(id)
+    const result = await taskModel.deleteById(id)
+
+    if (!result) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Task deletion failed'
+      )
+    }
+
+    // Notify project about task deletion
+    await notificationService.createNotification(
+      'task_deleted',
+      'Task Deleted',
+      `Task "${existingTask.title}" has been deleted`,
+      '',
+      project._id.toString()
+    )
   } catch (error: any) {
     throw error
   }

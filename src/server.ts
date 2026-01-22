@@ -7,6 +7,7 @@ import { corsOptions } from '~/configs/cors'
 import cookieParser from 'cookie-parser'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandling.middleware'
 import { APIs_V1 } from '~/routes/v1/index.route'
+import { initializeSocket } from '~/sockets/index.socket'
 
 const START_SERVER = () => {
   const app = express()
@@ -32,19 +33,29 @@ const START_SERVER = () => {
   // Error Handling Middleware (should be the last middleware)
   app.use(errorHandlingMiddleware)
 
+  let server
+
   if (env.BUILD_MODE === 'dev') {
-    app.listen(Number(env.LOCAL_APP_PORT), String(env.LOCAL_APP_HOST), () => {
-      console.log(
-        `LOCAL DEV: Hello ${env.AUTHOR_NAME}, Server is running at http://${env.LOCAL_APP_HOST}:${env.LOCAL_APP_PORT}`
-      )
-    })
+    server = app.listen(
+      Number(env.LOCAL_APP_PORT),
+      String(env.LOCAL_APP_HOST),
+      () => {
+        console.log(
+          `LOCAL DEV: Hello ${env.AUTHOR_NAME}, Server is running at http://${env.LOCAL_APP_HOST}:${env.LOCAL_APP_PORT}`
+        )
+      }
+    )
   } else {
-    app.listen(Number(process.env.PORT), () => {
+    server = app.listen(Number(process.env.PORT), () => {
       console.log(
         `PRODUCTION: Hello ${env.AUTHOR_NAME}, Backend Server is running successfully at Port: ${process.env.PORT}`
       )
     })
   }
+
+  // Initialize Socket.IO
+  const io = initializeSocket(server)
+  app.set('io', io)
 }
 
 // Immediately Invoked Function Expression (IIFE) to start the server
