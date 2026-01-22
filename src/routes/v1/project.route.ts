@@ -37,6 +37,12 @@ Router.get(
   projectController.getAllUserParticipatedProjects
 )
 
+Router.get(
+  '/:id',
+  authHandlingMiddleware.isAuthorized,
+  projectController.getProjectById
+)
+
 Router.put(
   '/verify/invite',
   authHandlingMiddleware.isAuthorized,
