@@ -6,6 +6,8 @@ import { StatusCodes } from 'http-status-codes'
 import { pickSprint } from '~/utils/formatter'
 import { boardColumnModel } from '~/models/boardColumn.model'
 import { taskModel } from '~/models/task.model'
+import { notificationService } from '~/services/notification.service'
+import { userModel } from '~/models/user.model'
 
 /**
  * Create a new sprint
@@ -67,6 +69,40 @@ const createNew = async (req: Request): Promise<any> => {
         'Sprint creation failed'
       )
     }
+
+    // Get creator info
+    const creator = await userModel.findOneById(userId)
+
+    // Notify project about new sprint
+    await notificationService.createNotification(
+      'sprint_created',
+      'New Sprint Created',
+      `${creator?.displayName} created sprint "${name}" in project "${existingProject.name}"`,
+      '',
+      projectId
+    )
+
+    // Notify to project owner
+    await notificationService.createNotification(
+      'sprint_created',
+      'New Sprint Created',
+      `You created a new sprint "${name}" in your project "${existingProject.name}"`,
+      existingProject.ownerId.toString()
+    )
+
+    // Notify all active members
+    for (const member of existingProject.members) {
+      if (member.status !== 'active') continue
+      if (member.memberId.toString() === existingProject.ownerId.toString())
+        continue
+      await notificationService.createNotification(
+        'sprint_created',
+        'New Sprint Created',
+        `A new sprint "${name}" has been created in project "${existingProject.name}"`,
+        member.memberId.toString()
+      )
+    }
+
     // Create template board columns for the new sprint
     const boardColumnTitles = [
       'backlog',
@@ -204,6 +240,72 @@ const updateSprint = async (req: Request): Promise<any> => {
 
     const updatedSprint = await sprintModel.update(id, updateData)
 
+    if (!updatedSprint) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Sprint update failed'
+      )
+    }
+
+    // Check if sprint status changed to 'active' (started)
+    if (req.body.status === 'active' && existingSprint.status !== 'active') {
+      // Notify project about sprint start
+      await notificationService.createNotification(
+        'sprint_started',
+        'Sprint Started',
+        `Sprint "${existingSprint.name}" has started`,
+        '',
+        project._id.toString()
+      )
+
+      // Notify all active members
+      for (const member of project.members) {
+        if (member.status !== 'active') continue
+        if (member.memberId.toString() === userId) continue
+
+        await notificationService.createNotification(
+          'sprint_started',
+          'Sprint Started',
+          `Sprint "${existingSprint.name}" has started in project "${project.name}"`,
+          member.memberId.toString()
+        )
+      }
+    }
+
+    // Check if sprint status changed to 'completed'
+    else if (
+      req.body.status === 'completed' &&
+      existingSprint.status !== 'completed'
+    ) {
+      // Notify project about sprint completion
+      await notificationService.createNotification(
+        'sprint_completed',
+        'Sprint Completed',
+        `Sprint "${existingSprint.name}" has been completed`,
+        '',
+        project._id.toString()
+      )
+
+      // Notify all active members
+      for (const member of project.members) {
+        if (member.status !== 'active') continue
+        if (member.memberId.toString() === userId) continue
+        await notificationService.createNotification(
+          'sprint_completed',
+          'Sprint Completed',
+          `Sprint "${existingSprint.name}" has been completed in project "${project.name}"`,
+          member.memberId.toString()
+        )
+      }
+    } else {
+      await notificationService.createNotification(
+        'sprint_updated',
+        'Sprint Updated',
+        `Sprint "${existingSprint.name}" has been updated`,
+        '',
+        project._id.toString()
+      )
+    }
     return pickSprint(updatedSprint)
   } catch (error) {
     throw error
@@ -243,14 +345,30 @@ const deleteSprintById = async (req: Request): Promise<void> => {
       )
     }
 
-    // Delete the sprint
-    await sprintModel.deleteById(id)
-
     // Optionally, delete associated board columns and tasks here
     await boardColumnModel.deleteBySprintId(id)
 
     // Delete tasks associated with the sprint
     await taskModel.deleteBySprintId(id)
+
+    // Finally, delete the sprint
+    const result = await sprintModel.deleteById(id)
+
+    if (!result) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Sprint deletion failed'
+      )
+    }
+
+    // Notify project about sprint deletion
+    await notificationService.createNotification(
+      'sprint_deleted',
+      'Sprint Deleted',
+      `Sprint "${existingSprint.name}" has been deleted`,
+      '',
+      project._id.toString()
+    )
   } catch (error: any) {
     throw error
   }

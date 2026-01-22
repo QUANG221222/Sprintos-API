@@ -139,7 +139,7 @@ const deleteProjectById = async (
   try {
     await projectService.deleteProjectById(req)
 
-    res.status(StatusCodes.NOT_IMPLEMENTED).json({
+    res.status(StatusCodes.OK).json({
       message: 'Project deleted successfully'
     })
   } catch (error) {
