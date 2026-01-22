@@ -4,14 +4,32 @@ import { notificationModel } from '~/models/notification.model'
 import { getIO } from '~/sockets/index.socket'
 
 // Handle user joining their notification room
-const handleJoinNotifications = (socket: any, userId: string) => {
+const handleJoinNotificationsForUser = (socket: any, userId: string) => {
   try {
     socket.join(`user_${userId}`)
-    socket.join(`project_${userId}`)
-    socket.join(`task_${userId}`)
     // console.log(`User ${userId} joined notifications room`)
   } catch (error) {
     console.error('Error joining notification room:', error)
+  }
+}
+
+// Handle user joining their project notification room
+const handleJoinNotificationsForProject = (socket: any, projectId: string) => {
+  try {
+    socket.join(`project_${projectId}`)
+    // console.log(`Project ${projectId} joined project notifications room`)
+  } catch (error) {
+    console.error('Error joining project notification room:', error)
+  }
+}
+
+// Handle user joining their task notification room
+const handleJoinNotificationsForTask = (socket: any, taskId: string) => {
+  try {
+    socket.join(`task_${taskId}`)
+    // console.log(`Task ${taskId} joined task notifications room`)
+  } catch (error) {
+    console.error('Error joining task notification room:', error)
   }
 }
 
@@ -108,7 +126,9 @@ const sendNotificationToTask = async (taskId: string, notification: any) => {
 }
 
 export const notificationSocket = {
-  handleJoinNotifications,
+  handleJoinNotificationsForUser,
+  handleJoinNotificationsForProject,
+  handleJoinNotificationsForTask,
   handleMarkNotificationAsRead,
   handleMarkAllNotificationsAsRead,
   sendNotificationToUser,

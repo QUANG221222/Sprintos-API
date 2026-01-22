@@ -1,3 +1,5 @@
+/* eslint-disable quotes */
+/* eslint-disable no-console */
 import { CONNECT_DB, GET_DB } from '~/configs/mongodb'
 import bcrypt from 'bcryptjs'
 import { ObjectId } from 'mongodb'
@@ -5,7 +7,7 @@ import { ObjectId } from 'mongodb'
 const seedData = async () => {
   try {
     console.log('🌱 Starting seed data...')
-    
+
     await CONNECT_DB()
     const db = GET_DB()
 
@@ -92,7 +94,8 @@ const seedData = async () => {
         _id: new ObjectId('507f1f77bcf86cd799439021'),
         ownerId: new ObjectId('507f1f77bcf86cd799439011'),
         name: 'E-Commerce Platform',
-        description: 'Building a modern e-commerce platform with React and Node.js',
+        description:
+          'Building a modern e-commerce platform with React and Node.js',
         imageUrl: 'https://picsum.photos/seed/project1/800/400',
         imagePublicId: '',
         members: [
@@ -176,7 +179,7 @@ const seedData = async () => {
     const now = Date.now()
     const oneWeek = 7 * 24 * 60 * 60 * 1000
     const twoWeeks = 14 * 24 * 60 * 60 * 1000
-    
+
     const sprints = [
       {
         _id: new ObjectId('507f1f77bcf86cd799439031'),
@@ -209,7 +212,7 @@ const seedData = async () => {
         goal: 'Integrate payment gateways and checkout process',
         maxStoryPoint: 55,
         startDate: now + twoWeeks,
-        endDate: now + (twoWeeks * 2),
+        endDate: now + twoWeeks * 2,
         status: 'planned',
         createdAt: now,
         updatedAt: null
@@ -256,17 +259,17 @@ const seedData = async () => {
 
     // 5. Create Tasks
     console.log('📝 Creating tasks...')
-    
+
     // Get board column IDs for Sprint 2 (active sprint)
     const sprint2Columns = boardColumns.filter(
-      col => col.sprintId.toString() === '507f1f77bcf86cd799439032'
+      (col) => col.sprintId.toString() === '507f1f77bcf86cd799439032'
     )
-    
-    const backlogCol = sprint2Columns.find(c => c.title === 'backlog')
-    const todoCol = sprint2Columns.find(c => c.title === 'todo')
-    const inProcessCol = sprint2Columns.find(c => c.title === 'in_process')
-    const reviewCol = sprint2Columns.find(c => c.title === 'review')
-    const doneCol = sprint2Columns.find(c => c.title === 'done')
+
+    const backlogCol = sprint2Columns.find((c) => c.title === 'backlog')
+    const todoCol = sprint2Columns.find((c) => c.title === 'todo')
+    const inProcessCol = sprint2Columns.find((c) => c.title === 'in_process')
+    const reviewCol = sprint2Columns.find((c) => c.title === 'review')
+    const doneCol = sprint2Columns.find((c) => c.title === 'done')
 
     const tasks = [
       // Backlog tasks
@@ -275,7 +278,8 @@ const seedData = async () => {
         sprintId: new ObjectId('507f1f77bcf86cd799439032'),
         boardColumnId: backlogCol!._id,
         title: 'Design product catalog UI',
-        description: 'Create wireframes and mockups for the product catalog page with filters and search functionality',
+        description:
+          'Create wireframes and mockups for the product catalog page with filters and search functionality',
         labels: 'feature',
         priority: 'medium',
         storyPoint: 8,
@@ -283,7 +287,7 @@ const seedData = async () => {
         assigneeIds: [new ObjectId('507f1f77bcf86cd799439012')],
         comments: [],
         attachments: [],
-        createdAt: now - (5 * 24 * 60 * 60 * 1000),
+        createdAt: now - 5 * 24 * 60 * 60 * 1000,
         updatedAt: null
       },
       {
@@ -291,15 +295,16 @@ const seedData = async () => {
         sprintId: new ObjectId('507f1f77bcf86cd799439032'),
         boardColumnId: backlogCol!._id,
         title: 'Implement product recommendations',
-        description: 'Add AI-powered product recommendation system based on user behavior',
+        description:
+          'Add AI-powered product recommendation system based on user behavior',
         labels: 'feature',
         priority: 'low',
         storyPoint: 13,
-        dueDate: now + (10 * 24 * 60 * 60 * 1000),
+        dueDate: now + 10 * 24 * 60 * 60 * 1000,
         assigneeIds: [],
         comments: [],
         attachments: [],
-        createdAt: now - (4 * 24 * 60 * 60 * 1000),
+        createdAt: now - 4 * 24 * 60 * 60 * 1000,
         updatedAt: null
       },
 
@@ -309,11 +314,12 @@ const seedData = async () => {
         sprintId: new ObjectId('507f1f77bcf86cd799439032'),
         boardColumnId: todoCol!._id,
         title: 'Set up product database schema',
-        description: 'Design and implement MongoDB schema for products, categories, and inventory',
+        description:
+          'Design and implement MongoDB schema for products, categories, and inventory',
         labels: 'task',
         priority: 'high',
         storyPoint: 5,
-        dueDate: now + (2 * 24 * 60 * 60 * 1000),
+        dueDate: now + 2 * 24 * 60 * 60 * 1000,
         assigneeIds: [new ObjectId('507f1f77bcf86cd799439011')],
         comments: [
           {
@@ -321,12 +327,12 @@ const seedData = async () => {
             memberDisplayName: 'Jane Smith',
             memberAvatar: 'https://i.pravatar.cc/150?img=5',
             content: 'Make sure to include indexes for search optimization',
-            createdAt: now - (2 * 60 * 60 * 1000)
+            createdAt: now - 2 * 60 * 60 * 1000
           }
         ],
         attachments: [],
-        createdAt: now - (3 * 24 * 60 * 60 * 1000),
-        updatedAt: now - (2 * 60 * 60 * 1000)
+        createdAt: now - 3 * 24 * 60 * 60 * 1000,
+        updatedAt: now - 2 * 60 * 60 * 1000
       },
       {
         _id: new ObjectId('507f1f77bcf86cd799439104'),
@@ -337,11 +343,11 @@ const seedData = async () => {
         labels: 'feature',
         priority: 'high',
         storyPoint: 8,
-        dueDate: now + (3 * 24 * 60 * 60 * 1000),
+        dueDate: now + 3 * 24 * 60 * 60 * 1000,
         assigneeIds: [new ObjectId('507f1f77bcf86cd799439013')],
         comments: [],
         attachments: [],
-        createdAt: now - (3 * 24 * 60 * 60 * 1000),
+        createdAt: now - 3 * 24 * 60 * 60 * 1000,
         updatedAt: null
       },
 
@@ -351,26 +357,29 @@ const seedData = async () => {
         sprintId: new ObjectId('507f1f77bcf86cd799439032'),
         boardColumnId: inProcessCol!._id,
         title: 'Implement user authentication system',
-        description: 'Set up JWT-based authentication with refresh tokens and secure password hashing',
+        description:
+          'Set up JWT-based authentication with refresh tokens and secure password hashing',
         labels: 'feature',
         priority: 'critical',
         storyPoint: 13,
-        dueDate: now + (1 * 24 * 60 * 60 * 1000),
+        dueDate: now + 1 * 24 * 60 * 60 * 1000,
         assigneeIds: [new ObjectId('507f1f77bcf86cd799439011')],
         comments: [
           {
             memberId: new ObjectId('507f1f77bcf86cd799439011'),
             memberDisplayName: 'John Doe',
             memberAvatar: 'https://i.pravatar.cc/150?img=12',
-            content: 'Working on the JWT implementation, almost done with access tokens',
-            createdAt: now - (4 * 60 * 60 * 1000)
+            content:
+              'Working on the JWT implementation, almost done with access tokens',
+            createdAt: now - 4 * 60 * 60 * 1000
           },
           {
             memberId: new ObjectId('507f1f77bcf86cd799439012'),
             memberDisplayName: 'Jane Smith',
             memberAvatar: 'https://i.pravatar.cc/150?img=5',
-            content: 'Great! Don\'t forget to implement rate limiting for login attempts',
-            createdAt: now - (3 * 60 * 60 * 1000)
+            content:
+              "Great! Don't forget to implement rate limiting for login attempts",
+            createdAt: now - 3 * 60 * 60 * 1000
           }
         ],
         attachments: [
@@ -378,22 +387,23 @@ const seedData = async () => {
             fileName: 'auth-flow-diagram.png',
             fileType: 'image/png',
             fileUrl: 'https://picsum.photos/seed/auth/600/400',
-            createdAt: now - (5 * 60 * 60 * 1000)
+            createdAt: now - 5 * 60 * 60 * 1000
           }
         ],
-        createdAt: now - (2 * 24 * 60 * 60 * 1000),
-        updatedAt: now - (3 * 60 * 60 * 1000)
+        createdAt: now - 2 * 24 * 60 * 60 * 1000,
+        updatedAt: now - 3 * 60 * 60 * 1000
       },
       {
         _id: new ObjectId('507f1f77bcf86cd799439106'),
         sprintId: new ObjectId('507f1f77bcf86cd799439032'),
         boardColumnId: inProcessCol!._id,
         title: 'Build product search functionality',
-        description: 'Implement full-text search with filters for price, category, and ratings',
+        description:
+          'Implement full-text search with filters for price, category, and ratings',
         labels: 'feature',
         priority: 'high',
         storyPoint: 8,
-        dueDate: now + (2 * 24 * 60 * 60 * 1000),
+        dueDate: now + 2 * 24 * 60 * 60 * 1000,
         assigneeIds: [new ObjectId('507f1f77bcf86cd799439013')],
         comments: [
           {
@@ -401,12 +411,12 @@ const seedData = async () => {
             memberDisplayName: 'Mike Wilson',
             memberAvatar: 'https://i.pravatar.cc/150?img=33',
             content: 'Implemented basic search, now working on filters',
-            createdAt: now - (6 * 60 * 60 * 1000)
+            createdAt: now - 6 * 60 * 60 * 1000
           }
         ],
         attachments: [],
-        createdAt: now - (2 * 24 * 60 * 60 * 1000),
-        updatedAt: now - (6 * 60 * 60 * 1000)
+        createdAt: now - 2 * 24 * 60 * 60 * 1000,
+        updatedAt: now - 6 * 60 * 60 * 1000
       },
 
       // Review tasks
@@ -415,26 +425,28 @@ const seedData = async () => {
         sprintId: new ObjectId('507f1f77bcf86cd799439032'),
         boardColumnId: reviewCol!._id,
         title: 'Fix product image upload bug',
-        description: 'Images larger than 5MB are not being uploaded correctly to Cloudinary',
+        description:
+          'Images larger than 5MB are not being uploaded correctly to Cloudinary',
         labels: 'bug',
         priority: 'high',
         storyPoint: 3,
-        dueDate: now + (1 * 24 * 60 * 60 * 1000),
+        dueDate: now + 1 * 24 * 60 * 60 * 1000,
         assigneeIds: [new ObjectId('507f1f77bcf86cd799439012')],
         comments: [
           {
             memberId: new ObjectId('507f1f77bcf86cd799439012'),
             memberDisplayName: 'Jane Smith',
             memberAvatar: 'https://i.pravatar.cc/150?img=5',
-            content: 'Fixed the issue, now compressing images before upload. Ready for review.',
-            createdAt: now - (2 * 60 * 60 * 1000)
+            content:
+              'Fixed the issue, now compressing images before upload. Ready for review.',
+            createdAt: now - 2 * 60 * 60 * 1000
           },
           {
             memberId: new ObjectId('507f1f77bcf86cd799439011'),
             memberDisplayName: 'John Doe',
             memberAvatar: 'https://i.pravatar.cc/150?img=12',
             content: 'Looks good! Testing it now.',
-            createdAt: now - (1 * 60 * 60 * 1000)
+            createdAt: now - 1 * 60 * 60 * 1000
           }
         ],
         attachments: [
@@ -442,11 +454,11 @@ const seedData = async () => {
             fileName: 'test-results.pdf',
             fileType: 'application/pdf',
             fileUrl: 'https://example.com/test-results.pdf',
-            createdAt: now - (2 * 60 * 60 * 1000)
+            createdAt: now - 2 * 60 * 60 * 1000
           }
         ],
-        createdAt: now - (1 * 24 * 60 * 60 * 1000),
-        updatedAt: now - (1 * 60 * 60 * 1000)
+        createdAt: now - 1 * 24 * 60 * 60 * 1000,
+        updatedAt: now - 1 * 60 * 60 * 1000
       },
 
       // Done tasks
@@ -455,11 +467,12 @@ const seedData = async () => {
         sprintId: new ObjectId('507f1f77bcf86cd799439032'),
         boardColumnId: doneCol!._id,
         title: 'Set up project repository and CI/CD',
-        description: 'Initialize Git repository, set up GitHub Actions for automated testing and deployment',
+        description:
+          'Initialize Git repository, set up GitHub Actions for automated testing and deployment',
         labels: 'task',
         priority: 'high',
         storyPoint: 5,
-        dueDate: now - (1 * 24 * 60 * 60 * 1000),
+        dueDate: now - 1 * 24 * 60 * 60 * 1000,
         assigneeIds: [new ObjectId('507f1f77bcf86cd799439011')],
         comments: [
           {
@@ -467,7 +480,7 @@ const seedData = async () => {
             memberDisplayName: 'John Doe',
             memberAvatar: 'https://i.pravatar.cc/150?img=12',
             content: 'CI/CD pipeline is up and running!',
-            createdAt: now - (12 * 60 * 60 * 1000)
+            createdAt: now - 12 * 60 * 60 * 1000
           }
         ],
         attachments: [
@@ -475,27 +488,28 @@ const seedData = async () => {
             fileName: 'ci-cd-config.yml',
             fileType: 'text/yaml',
             fileUrl: 'https://example.com/ci-cd-config.yml',
-            createdAt: now - (12 * 60 * 60 * 1000)
+            createdAt: now - 12 * 60 * 60 * 1000
           }
         ],
-        createdAt: now - (5 * 24 * 60 * 60 * 1000),
-        updatedAt: now - (12 * 60 * 60 * 1000)
+        createdAt: now - 5 * 24 * 60 * 60 * 1000,
+        updatedAt: now - 12 * 60 * 60 * 1000
       },
       {
         _id: new ObjectId('507f1f77bcf86cd799439109'),
         sprintId: new ObjectId('507f1f77bcf86cd799439032'),
         boardColumnId: doneCol!._id,
         title: 'Create database models and schemas',
-        description: 'Define Mongoose models for User, Product, Order, and other entities',
+        description:
+          'Define Mongoose models for User, Product, Order, and other entities',
         labels: 'task',
         priority: 'high',
         storyPoint: 8,
-        dueDate: now - (2 * 24 * 60 * 60 * 1000),
+        dueDate: now - 2 * 24 * 60 * 60 * 1000,
         assigneeIds: [new ObjectId('507f1f77bcf86cd799439013')],
         comments: [],
         attachments: [],
-        createdAt: now - (5 * 24 * 60 * 60 * 1000),
-        updatedAt: now - (2 * 24 * 60 * 60 * 1000)
+        createdAt: now - 5 * 24 * 60 * 60 * 1000,
+        updatedAt: now - 2 * 24 * 60 * 60 * 1000
       }
     ]
 
@@ -504,39 +518,69 @@ const seedData = async () => {
 
     // Update board columns with taskOrderIds
     console.log('🔄 Updating board columns with task orders...')
-    
+
     if (backlogCol) {
       await db.collection('boardColumns').updateOne(
         { _id: backlogCol._id },
-        { $set: { taskOrderIds: ['507f1f77bcf86cd799439101', '507f1f77bcf86cd799439102'] } }
+        {
+          $set: {
+            taskOrderIds: [
+              '507f1f77bcf86cd799439101',
+              '507f1f77bcf86cd799439102'
+            ]
+          }
+        }
       )
     }
-    
+
     if (todoCol) {
       await db.collection('boardColumns').updateOne(
         { _id: todoCol._id },
-        { $set: { taskOrderIds: ['507f1f77bcf86cd799439103', '507f1f77bcf86cd799439104'] } }
+        {
+          $set: {
+            taskOrderIds: [
+              '507f1f77bcf86cd799439103',
+              '507f1f77bcf86cd799439104'
+            ]
+          }
+        }
       )
     }
-    
+
     if (inProcessCol) {
       await db.collection('boardColumns').updateOne(
         { _id: inProcessCol._id },
-        { $set: { taskOrderIds: ['507f1f77bcf86cd799439105', '507f1f77bcf86cd799439106'] } }
+        {
+          $set: {
+            taskOrderIds: [
+              '507f1f77bcf86cd799439105',
+              '507f1f77bcf86cd799439106'
+            ]
+          }
+        }
       )
     }
-    
+
     if (reviewCol) {
-      await db.collection('boardColumns').updateOne(
-        { _id: reviewCol._id },
-        { $set: { taskOrderIds: ['507f1f77bcf86cd799439107'] } }
-      )
+      await db
+        .collection('boardColumns')
+        .updateOne(
+          { _id: reviewCol._id },
+          { $set: { taskOrderIds: ['507f1f77bcf86cd799439107'] } }
+        )
     }
-    
+
     if (doneCol) {
       await db.collection('boardColumns').updateOne(
         { _id: doneCol._id },
-        { $set: { taskOrderIds: ['507f1f77bcf86cd799439108', '507f1f77bcf86cd799439109'] } }
+        {
+          $set: {
+            taskOrderIds: [
+              '507f1f77bcf86cd799439108',
+              '507f1f77bcf86cd799439109'
+            ]
+          }
+        }
       )
     }
 
