@@ -3,12 +3,52 @@ import { env } from '~/configs/environment'
 import { Server as SocketIOServer } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import { cookieOptions } from '~/configs/cookieOption'
-// import { JwtProvider } from '~/providers/JwtProvider'
 import { notificationSocket } from '~/sockets/notification.socket'
+import { projectChatSocket } from '~/sockets/projectChat.socket'
 
 let io: SocketIOServer
 
 const setupSocketEvents = (socket: any) => {
+  /**
+   * Project Chat Socket Events
+   */
+  // Handle user joining project chat room
+  socket.on('join_project_chat', (roomId: string) =>
+    projectChatSocket.handleJoinProjectChat(socket, roomId)
+  )
+
+  // Handle sending message in project chat
+  socket.on('send_message', (messageData: any) =>
+    projectChatSocket.handleSendMessage(socket, messageData)
+  )
+
+  // Handle deleting message in project chat
+  socket.on('delete_message', (deleteData: any) =>
+    projectChatSocket.handleDeleteMessage(socket, deleteData)
+  )
+
+  // Handle user typing in project chat
+  socket.on('typing', (typingData: any) =>
+    projectChatSocket.handleTyping(socket, typingData)
+  )
+
+  // Handle user stopped typing in project chat
+  socket.on('stop_typing', (typingData: any) =>
+    projectChatSocket.handleStopTyping(socket, typingData)
+  )
+
+  // Handle user leaving project chat room
+  socket.on('leave_project_chat', (roomId: string) => {
+    try {
+      projectChatSocket.handleLeaveProjectChat(socket, roomId)
+    } catch (error) {
+      console.error('Error leaving project chat room:', error)
+    }
+  })
+
+  /**
+   * Notification Socket Events
+   */
   // Handle user joining their notification room
   socket.on('join_notifications_for_user', (userId: string) =>
     notificationSocket.handleJoinNotificationsForUser(socket, userId)
@@ -34,6 +74,7 @@ const setupSocketEvents = (socket: any) => {
     notificationSocket.handleMarkAllNotificationsAsRead(socket, userId)
   )
 
+  // Handle user disconnecting
   socket.on('disconnect', () => {
     console.log('❌ User disconnected:', socket.id)
   })

@@ -12,6 +12,7 @@ import { sprintModel } from '~/models/sprint.model'
 import { boardColumnModel } from '~/models/boardColumn.model'
 import { taskModel } from '~/models/task.model'
 import { notificationService } from '~/services/notification.service'
+import { projectChatService } from '~/services/projectChat.service'
 
 /**
  * Create a new project
@@ -117,6 +118,9 @@ const createNew = async (req: Request): Promise<any> => {
       ownerId,
       ''
     )
+
+    // Create chat room for the project
+    await projectChatService.createChatRoom(createdProject._id.toString())
 
     if (preparedMembers.length > 1) {
       const createdProjectId = createdProject._id.toString()
@@ -722,7 +726,10 @@ const getProjectById = async (req: Request): Promise<any> => {
       (m) => m.memberId.toString() === userId && m.status === 'active'
     )
     if (!isMember && project.ownerId.toString() !== userId) {
-      throw new ApiError(StatusCodes.FORBIDDEN, 'You do not have access to this project')
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'You do not have access to this project'
+      )
     }
 
     return pickProject(project)

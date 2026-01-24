@@ -6,6 +6,7 @@ import { sprintRoute } from './sprint.route'
 import { boardColumnRouter } from './boardColumn.route'
 import { taskRoute } from './task.route'
 import { notificationRoute } from './notification.route'
+import { projectChatRoute } from './projectChat.route'
 
 const Router = express.Router()
 
@@ -22,5 +23,7 @@ Router.use('/board-columns', boardColumnRouter)
 Router.use('/tasks', taskRoute)
 
 Router.use('/notifications', notificationRoute)
+
+Router.use('/project-chats', projectChatRoute)
 
 export const APIs_V1: express.Router = Router
