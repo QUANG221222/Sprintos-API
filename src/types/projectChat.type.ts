@@ -1,5 +1,13 @@
 import { ObjectId } from 'mongodb'
 
+interface IAttachment {
+  fileName: string
+  fileType: string
+  fileUrl: string
+  fileSize: number
+  publicId: string
+}
+
 interface IMessage {
   _id: ObjectId
   senderId: ObjectId
@@ -7,6 +15,7 @@ interface IMessage {
   senderRole: string
   senderAvatarUrl?: string
   message: string
+  attachment?: IAttachment
   timestamp: Date | number
   isDeleted: boolean
 }
