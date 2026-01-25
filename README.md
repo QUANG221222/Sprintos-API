@@ -54,17 +54,9 @@ A robust RESTful API backend for project management and team collaboration, buil
 
 ### System Architecture
 
-```
-[Add architecture diagram here showing:]
-- Client Layer (Web/Mobile Apps)
-- API Gateway
-- Application Layer (Controllers, Services, Middlewares)
-- Real-time Layer (Socket.IO)
-- Data Layer (MongoDB, Cloudinary)
-- External Services (Brevo Email)
-```
+![System Architecture](docs/images/system-architecture.png)
 
-**Recommended diagram location**: `docs/images/system-architecture.png`
+_Figure 1: Overall system architecture showing client-server interaction, Socket.IO real-time layer, and external services_
 
 ### Project Structure
 
@@ -100,15 +92,9 @@ sprintos-api/
 
 ### Data Flow Architecture
 
-```
-[Add data flow diagram here showing:]
-- HTTP Request Flow
-- WebSocket Connection Flow
-- Authentication Flow
-- File Upload Flow
-```
+![Data Flow](docs/images/data-flow.png)
 
-**Recommended diagram location**: `docs/images/data-flow.png`
+_Figure 2: Data flow diagram illustrating HTTP requests, WebSocket connections, and authentication process_
 
 ## 🚀 Getting Started
 
@@ -285,15 +271,15 @@ CLOUDINARY_API_SECRET=your_api_secret
 
 ### Socket.IO Architecture
 
-```
-[Add Socket.IO architecture diagram here showing:]
-- Client Connection Flow
-- Room-based Communication
-- Event Broadcasting
-- Namespace Organization
-```
+![Socket.IO Architecture](docs/images/socketio-architecture.png)
 
-**Recommended diagram location**: `docs/images/socketio-architecture.png`
+_Figure 3: Socket.IO event handling and room-based communication flow_
+
+### Socket.IO Room Structure
+
+![Socket Rooms Structure](docs/images/socket-rooms.png)
+
+_Figure 4: Room organization for users, projects, tasks, and chat rooms_
 
 ### Connection Setup
 
@@ -537,15 +523,9 @@ const NOTIFICATION_TYPES = {
 
 ### Socket.IO Room Structure
 
-```
-[Add room structure diagram here showing:]
-- User-specific rooms: user_{userId}
-- Project rooms: project_{projectId}
-- Task rooms: task_{taskId}
-- Chat rooms: chat_{roomId}
-```
+![Socket Rooms Structure](docs/images/socket-rooms.png)
 
-**Recommended diagram location**: `docs/images/socket-rooms.png`
+_Figure 4: Room organization for users, projects, tasks, and chat rooms_
 
 ### Error Handling
 
@@ -571,19 +551,9 @@ socket.on('disconnect', (reason) => {
 
 ## 💾 Database Schema
 
-```
-[Add database schema diagram here showing:]
-- Users collection
-- Projects collection
-- Sprints collection
-- Tasks collection
-- Board Columns collection
-- Notifications collection
-- Project Chats collection
-- Relationships between collections
-```
+![Database Schema](docs/images/database-schema.png)
 
-**Recommended diagram location**: `docs/images/database-schema.png`
+_Figure 5: Complete database schema with all collections and their relationships_
 
 ### Key Collections
 
