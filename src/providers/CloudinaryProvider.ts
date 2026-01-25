@@ -177,6 +177,54 @@ const uploadFromBuffer = (
 }
 
 /**
+ * Upload file từ base64 string
+ * @param base64String Base64 string của file
+ * @param folderName Folder name trong Cloudinary
+ * @param fileName Original file name (bao gồm extension)
+ * @returns Upload result
+ */
+const uploadFromBase64 = (
+  base64String: string,
+  folderName: string,
+  fileName: string
+): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const timestamp = Date.now()
+
+    // Split file name and extension
+    const lastDotIndex = fileName.lastIndexOf('.')
+    const ext = lastDotIndex > 0 ? fileName.substring(lastDotIndex + 1) : ''
+    const nameWithoutExt =
+      lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName
+
+    // Sanitize name
+    const sanitizedName = nameWithoutExt
+      .replace(/[^a-zA-Z0-9-_]/g, '_')
+      .substring(0, 50)
+
+    const publicId = `${folderName}_${sanitizedName}_${timestamp}`
+
+    cloudinary.uploader.upload(
+      base64String,
+      {
+        folder: `sprintos/${folderName}`,
+        public_id: publicId,
+        resource_type: 'auto',
+        // IMPORTANT: Specify format if there is an extension
+        ...(ext && { format: ext })
+      },
+      (error, result) => {
+        if (error) {
+          // console.error('Cloudinary upload error:', error)
+          return reject(error)
+        }
+        resolve(result)
+      }
+    )
+  })
+}
+
+/**
  * Conditional upload middleware
  * @param folderName The folder name in Cloudinary
  * @param shouldUpload Function to determine whether to upload
@@ -236,13 +284,31 @@ const uploadProjectMemory = createMemoryUpload(false)
  */
 const deleteMedia = async (
   publicId: string,
-  resourceType: 'image' | 'video' = 'image'
+  resourceType: 'image' | 'video' | 'auto' = 'image'
 ): Promise<void> => {
   try {
-    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType })
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    if (resourceType === 'auto') {
+      // Try deleting as image first
+      try {
+        await cloudinary.uploader.destroy(publicId, { resource_type: 'image' })
+      } catch {
+        // If not an image, try video
+        try {
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: 'video'
+          })
+        } catch {
+          // If not a video, try raw (for other file types)
+          await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' })
+        }
+      }
+    } else {
+      await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType
+      })
+    }
   } catch (error) {
-    throw new Error(`Failed to delete ${resourceType} from Cloudinary`)
+    throw new Error(`Failed to delete media from Cloudinary: ${error}`)
   }
 }
 
@@ -269,6 +335,7 @@ export const CloudinaryProvider = {
   uploadImgProject,
   uploadProjectMemory,
   uploadFromBuffer,
+  uploadFromBase64,
   createConditionalUpload,
   deleteImage,
   deleteVideo,

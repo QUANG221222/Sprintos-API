@@ -2,6 +2,12 @@
 import { projectChatModel } from '~/models/projectChat.model'
 import { getIO } from '~/sockets/index.socket'
 import { ObjectId } from 'mongodb'
+import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
+import {
+  normalizeBase64,
+  isValidBase64,
+  sanitizeFileName
+} from '~/utils/formatBase64File'
 
 /**
  * Handle user joining project chat room
@@ -44,13 +50,62 @@ const handleSendMessage = async (socket: any, messageData: any) => {
       senderName,
       senderRole,
       senderAvatarUrl,
-      message
+      message,
+      file
     } = messageData
 
     // Validate required fields
-    if (!roomId || !senderId || !senderName || !message) {
+    if (!roomId || !senderId || !senderName) {
       socket.emit('error', { message: 'Missing required message fields' })
       return
+    }
+    if (!message && !file) {
+      socket.emit('error', { message: 'Message content or file is required' })
+      return
+    }
+
+    let attachment = null
+
+    // Handle file upload if file is provided
+    if (file && file.base64 && file.fileName) {
+      try {
+        // Normalize base64 string
+        const normalizedBase64 = normalizeBase64(file.base64, file.fileType)
+
+        // Validate base64 string
+        if (!isValidBase64(normalizedBase64)) {
+          console.error('Invalid base64 format after normalization')
+          socket.emit('error', {
+            message:
+              'Invalid file format. Please ensure the file is properly encoded.'
+          })
+          return
+        }
+
+        // Sanitize filename
+        const sanitizedFileName = sanitizeFileName(file.fileName, 30)
+
+        // Upload file to Cloudinary
+        const uploadResult = await CloudinaryProvider.uploadFromBase64(
+          normalizedBase64,
+          'project-chats',
+          sanitizedFileName
+        )
+
+        attachment = {
+          fileName: file.fileName,
+          fileType: file.fileType || 'application/octet-stream',
+          fileUrl: uploadResult.secure_url,
+          fileSize: file.fileSize || 0,
+          publicId: uploadResult.public_id
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error)
+        socket.emit('error', {
+          message: 'Failed to upload file. Please try again.'
+        })
+        return
+      }
     }
 
     const newMessage = {
@@ -59,7 +114,8 @@ const handleSendMessage = async (socket: any, messageData: any) => {
       senderName,
       senderRole,
       senderAvatarUrl: senderAvatarUrl || '',
-      message,
+      message: message || '',
+      attachment,
       timestamp: Date.now(),
       isDeleted: false
     }
@@ -137,9 +193,34 @@ const handleDeleteMessage = async (socket: any, deleteData: any) => {
       socket.emit('error', { message: 'Missing required fields for deletion' })
       return
     }
+
+    // Fetch the message to check for attachment
+    const chatRoom = await projectChatModel.findOneById(roomId)
+    if (chatRoom) {
+      const message = chatRoom.messages.find(
+        (m: any) => m._id.toString() === messageId
+      )
+
+      // If message has attachment, delete file from Cloudinary
+      if (message && message.attachment && message.attachment.publicId) {
+        try {
+          await CloudinaryProvider.deleteMedia(
+            message.attachment.publicId,
+            'auto'
+          )
+          // console.log(
+          //   'Deleted file from Cloudinary:',
+          //   message.attachment.publicId
+          // )
+        } catch (error) {
+          console.error('Error deleting file from Cloudinary:', error)
+          // Continue with message deletion even if file deletion fails
+        }
+      }
+    }
+
     await projectChatModel.deleteMessage(roomId, messageId)
 
-    // Notify all users in the room about the deleted message
     if (getIO()) {
       getIO().to(`chat_${roomId}`).emit('message_deleted', {
         roomId,

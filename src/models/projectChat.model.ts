@@ -5,6 +5,7 @@ import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validator'
 import { ObjectId } from 'mongodb'
 
 const COLLECTION_NAME = 'project_chats'
+
 const PROJECT_CHATS_SCHEMA: Joi.Schema<IProjectChat> = Joi.object({
   projectId: Joi.string()
     .pattern(OBJECT_ID_RULE)
@@ -24,7 +25,14 @@ const PROJECT_CHATS_SCHEMA: Joi.Schema<IProjectChat> = Joi.object({
         senderName: Joi.string().required(),
         senderRole: Joi.string().required(),
         senderAvatarUrl: Joi.string().uri().optional().allow(''),
-        message: Joi.string().required(),
+        message: Joi.string().allow('').optional(),
+        attachment: Joi.object({
+          fileName: Joi.string().required(),
+          fileType: Joi.string().required(),
+          fileUrl: Joi.string().uri().required(),
+          fileSize: Joi.number().required(),
+          publicId: Joi.string().required()
+        }).optional(),
         timestamp: Joi.date().timestamp('javascript').default(Date.now),
         isDeleted: Joi.boolean().default(false)
       })
@@ -157,6 +165,7 @@ const deleteMessage = async (
           $set: {
             'messages.$.isDeleted': true,
             'messages.$.message': 'This message has been deleted',
+            'messages.$.attachment': null,
             updatedAt: Date.now()
           }
         }
