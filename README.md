@@ -4,16 +4,16 @@ A robust RESTful API backend for project management and team collaboration, buil
 
 ## 📋 Table of Contents
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [API Documentation](#api-documentation)
-- [Real-time Features (Socket.IO)](#real-time-features-socketio)
-- [Database Schema](#database-schema)
-- [Scripts](#scripts)
-- [License](#license)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Architecture](#-architecture)
+- [Getting Started](#-getting-started)
+- [Environment Variables](#-environment-variables)
+- [API Documentation](#-api-documentation)
+- [Real-time Features (Socket.IO)](#-real-time-features-socketio)
+- [Database Schema](#-database-schema)
+- [Scripts](#-scripts)
+- [License](#-license)
 
 ## ✨ Features
 
