@@ -134,7 +134,12 @@ const findByMemberId = async (memberId: string) => {
     const results = await GET_DB()
       .collection(COLLECTION_NAME)
       .find({
-        'members.memberId': new ObjectId(memberId),
+        members: {
+          $elemMatch: {
+            memberId: new ObjectId(memberId),
+            status: 'active'
+          }
+        },
         ownerId: { $ne: new ObjectId(memberId) }
       })
       .toArray()
