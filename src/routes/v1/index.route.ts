@@ -7,6 +7,7 @@ import { boardColumnRouter } from './boardColumn.route'
 import { taskRoute } from './task.route'
 import { notificationRoute } from './notification.route'
 import { projectChatRoute } from './projectChat.route'
+import { reportRoute } from './report.route'
 
 const Router = express.Router()
 
@@ -25,5 +26,7 @@ Router.use('/tasks', taskRoute)
 Router.use('/notifications', notificationRoute)
 
 Router.use('/project-chats', projectChatRoute)
+
+Router.use('/reports', reportRoute)
 
 export const APIs_V1: express.Router = Router
