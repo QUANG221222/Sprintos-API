@@ -13,7 +13,7 @@
     "build": "npm run clean-dist && npm run build-babel",
     "production": "npm run build && cross-env BUILD_MODE=production node ./dist/server.js",
     "dev": "cross-env BUILD_MODE=dev nodemon --exec babel-node --extensions \".ts\" ./src/server.ts",
-    "seed": "ts-node -r tsconfig-paths/register src/scripts/seedData.ts"
+    "seed": "cross-env BUILD_MODE=dev babel-node --extensions \".ts\" src/scripts/seedData.ts"
   },
   "keywords": [
     "sprintos",

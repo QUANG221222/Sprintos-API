@@ -57,15 +57,13 @@ const createNew = async (req: Request): Promise<any> => {
       )
     }
 
-    // Check if user has permission to create sprint
     if (
       project.members.find((m) => m.memberId.toString() === userId)?.role !==
-        'owner' &&
-      !isMember
+        'owner'
     ) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
-        'You do not have permission to create a sprint in this project'
+        'Only project owner can create tasks'
       )
     }
 
@@ -390,19 +388,18 @@ const updateTask = async (req: Request): Promise<any> => {
     }
 
     // Only project owner or member can update task
-    const isMember = project.members.some(
-      (m) => m.memberId.toString() === userId && m.status === 'active'
-    )
     const member = project.members.find((m) => m.memberId.toString() === userId)
+    const isAssignee = existingTask.assigneeIds.some(
+      (assigneeId) => assigneeId.toString() === userId
+    )
     // If member role is viewer, they can only update if they are an assignee
     if (
-      !isMember &&
-      member?.role === 'viewer' &&
-      existingTask.assigneeIds.indexOf(userId) === -1
+      member?.role !== 'owner' &&
+      !isAssignee
     ) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
-        'You are not authorized to update this task'
+        'Only project owner or assignee can update tasks'
       )
     }
 
@@ -445,12 +442,12 @@ const updateTask = async (req: Request): Promise<any> => {
     if (req.body.assigneeIds && req.body.assigneeIds.length > 0) {
       // Check if only project owner can assign tasks
       if (
-        project.members.find((m) => m.memberId.toString() === userId)?.role !==
-        'owner'
+        member?.role !== 'owner' &&
+        !isAssignee
       ) {
         throw new ApiError(
           StatusCodes.FORBIDDEN,
-          'Only project owner can assign tasks'
+          'Only project owner or assignee can assign tasks'
         )
       }
 
@@ -613,11 +610,11 @@ const deleteTaskById = async (req: Request): Promise<void> => {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
     }
 
-    // Only project owner or member with 'owner' role can delete task
+    /// Only project owner or member can update task
+    const member = project.members.find((m) => m.memberId.toString() === userId)
+    // If member role is viewer, they can only update if they are an assignee
     if (
-      project.ownerId.toString() !== userId &&
-      project.members.find((m) => m.memberId.toString() === userId)?.role !==
-        'owner'
+      member?.role !== 'owner'
     ) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
