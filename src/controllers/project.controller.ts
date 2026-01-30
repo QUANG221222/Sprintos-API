@@ -103,6 +103,26 @@ const getAllUserParticipatedProjects = async (
 }
 
 /**
+ * Get all projects (owned + participated) controller
+ */
+const getAllProjectsOfUser = async (
+  req: Request,
+  res: Response<GetAllProjectsResponse>,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.jwtDecoded.id
+    const projects = await projectService.getAllProjectsOfUser(userId)
+    res.status(StatusCodes.OK).json({
+      message: 'Projects retrieved successfully',
+      data: projects
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
  * Update project controller
  * @param req id of the project and update data
  * @param res response with updated project data
@@ -242,6 +262,7 @@ export const projectController = {
   acceptProjectInvitation,
   getAllUserOwnedProjects,
   getAllUserParticipatedProjects,
+  getAllProjectsOfUser,
   updateProject,
   deleteProjectById,
   inviteMemberToProject,
