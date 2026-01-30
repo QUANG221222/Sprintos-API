@@ -6,12 +6,17 @@ import { CloudinaryProvider } from '~/providers/CloudinaryProvider'
 
 const Router = express.Router()
 
-Router.route('/').post(
-  authHandlingMiddleware.isAuthorized,
-  CloudinaryProvider.uploadProjectMemory.single('image'),
-  projectValidation.createProject,
-  projectController.createProject
-)
+Router.route('/')
+  .post(
+    authHandlingMiddleware.isAuthorized,
+    CloudinaryProvider.uploadProjectMemory.single('image'),
+    projectValidation.createProject,
+    projectController.createProject
+  )
+  .get(
+    authHandlingMiddleware.isAuthorized,
+    projectController.getAllProjectsOfUser
+  )
 
 Router.route('/:id')
   .put(
@@ -35,6 +40,12 @@ Router.get(
   '/joined',
   authHandlingMiddleware.isAuthorized,
   projectController.getAllUserParticipatedProjects
+)
+
+Router.get(
+  '/all',
+  authHandlingMiddleware.isAuthorized,
+  projectController.getAllProjectsOfUser
 )
 
 Router.get(

@@ -172,6 +172,28 @@ const getAllUserParticipatedProjects = async (
 }
 
 /**
+ * Get all projects (owned + participated) of a user
+ * @param userId id of the user
+ * @returns Array of all projects
+ */
+const getAllProjectsOfUser = async (userId: string): Promise<any[]> => {
+  try {
+    const owned = await projectModel.findByUserId(userId)
+    const joined = await projectModel.findByMemberId(userId)
+    // Loại bỏ các project trùng lặp (nếu có)
+    const all = [
+      ...owned,
+      ...joined.filter(
+        (j) => !owned.some((o) => o._id.toString() === j._id.toString())
+      )
+    ]
+    return all
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
  * Update project details
  * @param req Request object containing project update data
  * @returns The updated project document
@@ -744,6 +766,7 @@ export const projectService = {
   acceptInvitation,
   getAllUserOwnedProjects,
   getAllUserParticipatedProjects,
+  getAllProjectsOfUser,
   updateProject,
   deleteProjectById,
   inviteMemberToProject,
