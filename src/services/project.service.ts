@@ -216,6 +216,17 @@ const updateProject = async (req: Request): Promise<any> => {
         'You are not authorized to update this project'
       )
     }
+
+    // Check if user has permission to update project
+    const member = existingProject.members.find((m) => m.memberId.toString() === userId)
+    if (
+      member?.role !== 'owner'
+    ) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Only project owner can update the project'
+      )
+    }
     // Upload project image if provided
     let uploadedImage = null
     if (req.file && req.file.buffer) {

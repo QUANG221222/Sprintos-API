@@ -40,14 +40,13 @@ const createNew = async (req: Request): Promise<any> => {
     }
 
     // Check if user has permission to create sprint
+    const member = existingProject.members.find((m) => m.memberId.toString() === userId)
     if (
-      existingProject.members.find((m) => m.memberId.toString() === userId)
-        ?.role !== 'owner' &&
-      !isMember
+      member?.role !== 'owner'
     ) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
-        'You do not have permission to create a sprint in this project'
+        'Only project owner can create sprints'
       )
     }
 
@@ -220,15 +219,14 @@ const updateSprint = async (req: Request): Promise<any> => {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
     }
 
-    // Only project owner or member with 'owner' role can update sprint
+    // Check if user has permission to update sprint
+    const member = project.members.find((m) => m.memberId.toString() === userId)
     if (
-      project.ownerId.toString() !== userId &&
-      project.members.find((m) => m.memberId.toString() === userId)?.role !==
-        'owner'
+      member?.role !== 'owner'
     ) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
-        'You are not authorized to update this sprint'
+        'Only project owner can update sprints'
       )
     }
 
@@ -335,7 +333,6 @@ const deleteSprintById = async (req: Request): Promise<void> => {
     }
 
     if (
-      project.ownerId.toString() !== userId &&
       project.members.find((m) => m.memberId.toString() === userId)?.role !==
         'owner'
     ) {
