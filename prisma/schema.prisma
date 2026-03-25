@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -12,8 +12,19 @@ datasource db {
 // ===================
 
 enum UserRole {
-  admin
-  user
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Gender{
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum VerificationCodeType {
@@ -24,40 +35,35 @@ enum VerificationCodeType {
 }
 
 enum ProjectMemberRole {
-  owner
-  member
-  viewer
+  OWNER
+  MEMBER
+  VIEWER
 }
 
 enum ProjectMemberStatus {
-  active
-  pending
+  ACTIVE
+  PENDING
 }
 
 enum SprintStatus {
-  planned
-  active
-  completed
+  PLANNED
+  ACTIVE
+  COMPLETED
 }
 
 enum BoardColumnTitle {
-  backlog
-  todo
-  in_process
-  review
-  done
+  BACKLOG
+  TODO
+  IN_PROCESS
+  REVIEW
+  DONE
 }
 
 enum TaskPriority {
-  low
-  medium
-  high
-  critical
-}
-
-enum UserStatus {
-  active
-  inactive
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 enum NotificationType {
@@ -93,15 +99,15 @@ model User {
   email          String           @unique 
   password       String           
   displayName    String           
-  role           UserRole         @default(user)
+  role           UserRole         @default(USER)
   totpSecret                  String?               @db.VarChar(1000)
-  status         UserStatus       @default(inactive)
+  status         UserStatus       @default(INACTIVE)
   verifyToken    String?
   phoneNumber    String?          
   address        String?          
   dob            DateTime?        @db.Date
   bio           String? 
-  gender         String?          
+  gender         Gender?          
   avatar         String?            
   avatarPublicId String?
   createdAt      DateTime         @default(now())
@@ -183,7 +189,7 @@ model ProjectMember {
   memberId    Int
   email       String
   role        ProjectMemberRole
-  status      ProjectMemberStatus @default(pending)
+  status      ProjectMemberStatus @default(PENDING)
   inviteToken String?
   joinAt      DateTime?
   invitedAt   DateTime           @default(now())
@@ -205,7 +211,7 @@ model Sprint {
   maxStoryPoint Int          @default(0)
   startDate     DateTime
   endDate       DateTime
-  status        SprintStatus @default(planned)
+  status        SprintStatus @default(PLANNED)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime?
   deletedAt     DateTime?
