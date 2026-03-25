@@ -1,0 +1,391 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ===================
+// Enums
+// ===================
+
+enum UserRole {
+  admin
+  user
+}
+
+enum VerificationCodeType {
+  REGISTER
+  FORGOT_PASSWORD
+  LOGIN
+  DISABLE_2FA
+}
+
+enum ProjectMemberRole {
+  owner
+  member
+  viewer
+}
+
+enum ProjectMemberStatus {
+  active
+  pending
+}
+
+enum SprintStatus {
+  planned
+  active
+  completed
+}
+
+enum BoardColumnTitle {
+  backlog
+  todo
+  in_process
+  review
+  done
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+enum NotificationType {
+  project_created
+  project_updated
+  project_deleted
+  project_invitation
+  project_role_changed
+  project_member_removed
+  project_member_joined
+  invitation_accepted
+  member_role_changed
+  member_removed
+  sprint_started
+  sprint_completed
+  sprint_created
+  sprint_deleted
+  sprint_updated
+  task_created
+  task_assigned
+  task_updated
+  task_deleted
+  task_moved
+  task_commented
+}
+
+// =================== 
+// Models
+// ===================
+
+model User {
+  id             Int              @id @default(autoincrement())
+  email          String           @unique 
+  password       String           
+  displayName    String           
+  role           UserRole         @default(user)
+  totpSecret                  String?               @db.VarChar(1000)
+  status         UserStatus       @default(inactive)
+  verifyToken    String?
+  phoneNumber    String?          
+  address        String?          
+  dob            DateTime?        @db.Date
+  bio           String? 
+  gender         String?          
+  avatar         String?            
+  avatarPublicId String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime?        @updatedAt
+  deletedAt      DateTime?        
+
+  ownedProjects  Project[]        @relation("ProjectOwner")
+  projectMembers ProjectMember[]  
+  taskAssignees  TaskAssignee[]
+  taskComments   TaskComment[]
+  chatMessages   ProjectChatMessage[]
+  notifications  Notification[]
+
+  @@index([deletedAt])
+  devices Device[]
+  refreshTokens RefreshToken[]
+}
+
+model VerificationCode {
+  id    Int                  @id @default(autoincrement())
+  email String               @db.VarChar(500)
+  code  String               @db.VarChar(50)
+  type  VerificationCodeType
+
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, code, type])
+  @@index([expiresAt])
+}
+
+model Device {
+  id            Int            @id @default(autoincrement())
+  userId        Int
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction) 
+  userAgent     String
+  ip            String
+  lastActive    DateTime       @updatedAt
+  createdAt     DateTime       @default(now())
+  isActive      Boolean        @default(true) 
+  refreshTokens RefreshToken[] 
+}
+
+model RefreshToken {
+  token     String   @unique @db.VarChar(1000)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  deviceId  Int 
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model Project {
+  id            Int              @id @default(autoincrement())
+  ownerId       Int
+  name          String
+  description   String?
+  imageUrl      String?
+  imagePublicId String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
+
+  owner         User             @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members       ProjectMember[]
+  sprints       Sprint[]
+  chat          ProjectChat?
+  notifications Notification[]
+
+  @@index([deletedAt])
+}
+
+model ProjectMember {
+  id          Int                @id @default(autoincrement())
+  projectId   Int
+  memberId    Int
+  email       String
+  role        ProjectMemberRole
+  status      ProjectMemberStatus @default(pending)
+  inviteToken String?
+  joinAt      DateTime?
+  invitedAt   DateTime           @default(now())
+  deletedAt   DateTime?
+
+  project     Project            @relation(fields: [projectId], references: [id])
+  member      User               @relation(fields: [memberId], references: [id])
+
+  @@index([projectId])
+  @@index([memberId])
+  @@index([deletedAt])
+}
+
+model Sprint {
+  id            Int          @id @default(autoincrement())
+  projectId     Int
+  name          String
+  goal          String?
+  maxStoryPoint Int          @default(0)
+  startDate     DateTime
+  endDate       DateTime
+  status        SprintStatus @default(planned)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
+
+  project       Project      @relation(fields: [projectId], references: [id])
+  boardColumns  BoardColumn[]
+  tasks         Task[]
+
+  @@index([projectId])
+  @@index([deletedAt])
+}
+
+model BoardColumn {
+  id        Int              @id @default(autoincrement())
+  sprintId  Int
+  title     BoardColumnTitle
+  createdAt DateTime         @default(now())
+  updatedAt DateTime?
+
+  sprint    Sprint           @relation(fields: [sprintId], references: [id])
+  tasks     Task[]
+  taskOrders BoardColumnTaskOrder[]
+
+  @@index([sprintId])
+}
+
+model BoardColumnTaskOrder {
+  id            Int         @id @default(autoincrement())
+  boardColumnId Int
+  taskId        Int
+  sortOrder     Int
+
+  boardColumn   BoardColumn @relation(fields: [boardColumnId], references: [id])
+  task          Task        @relation(fields: [taskId], references: [id])
+
+  @@index([boardColumnId, taskId])
+}
+
+model Task {
+  id            Int           @id @default(autoincrement())
+  sprintId      Int
+  boardColumnId Int
+  title         String
+  description   String?
+  priority      TaskPriority?
+  storyPoint    Int           @default(0)
+  dueDate       DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime?     @updatedAt
+  deletedAt     DateTime?
+
+  sprint        Sprint        @relation(fields: [sprintId], references: [id])
+  boardColumn   BoardColumn   @relation(fields: [boardColumnId], references: [id])
+  assignees     TaskAssignee[]
+  labels        TaskLabel[]
+  comments      TaskComment[]
+  attachments   TaskAttachment[]
+  notifications Notification[]
+  boardColumnTaskOrders BoardColumnTaskOrder[]
+
+  @@index([sprintId])
+  @@index([boardColumnId])
+  @@index([deletedAt])
+}
+
+model TaskAssignee {
+  id     Int  @id @default(autoincrement())
+  taskId Int
+  userId Int
+
+  task   Task @relation(fields: [taskId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+  @@index([userId])
+  @@unique([taskId, userId])
+}
+
+model TaskLabel {
+  id     Int    @id @default(autoincrement())
+  taskId Int
+  label  String
+
+  task   Task   @relation(fields: [taskId], references: [id])
+
+  @@index([taskId])
+}
+
+model TaskComment {
+  id                Int      @id @default(autoincrement())
+  taskId            Int
+  memberId          Int
+  memberDisplayName String
+  memberAvatar      String?
+  content           String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime? @updatedAt
+  deletedAt         DateTime?
+
+  task              Task     @relation(fields: [taskId], references: [id])
+  member            User     @relation(fields: [memberId], references: [id])
+
+  @@index([taskId])
+  @@index([memberId])
+  @@index([deletedAt])
+}
+
+model TaskAttachment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  fileName  String
+  fileType  String
+  fileUrl   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  task      Task     @relation(fields: [taskId], references: [id])
+
+  @@index([taskId])
+  @@index([deletedAt])
+}
+
+model ProjectChat {
+  id              Int      @id @default(autoincrement())
+  projectId       Int      @unique
+  lastMessage     String?
+  lastMessageTime DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime? @updatedAt
+  deletedAt       DateTime?
+
+  project         Project  @relation(fields: [projectId], references: [id])
+  messages        ProjectChatMessage[]
+  
+  @@index([deletedAt])
+}
+
+model ProjectChatMessage {
+  id              Int      @id @default(autoincrement())
+  projectChatId   Int
+  senderId        Int
+  senderName      String
+  senderRole      String
+  senderAvatarUrl String?
+  message         String?
+  attachmentFileName String?
+  attachmentFileType String?
+  attachmentFileUrl  String?
+  attachmentFileSize Int?
+  attachmentPublicId String?
+  timestamp       DateTime @default(now())
+  isDeleted       Boolean  @default(false)
+  updatedAt       DateTime? @updatedAt
+  deletedAt       DateTime?
+
+  chat            ProjectChat @relation(fields: [projectChatId], references: [id])
+  sender          User        @relation(fields: [senderId], references: [id])
+
+  @@index([projectChatId])
+  @@index([senderId])
+  @@index([deletedAt])
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int?
+  projectId Int?
+  taskId    Int?
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User?            @relation(fields: [userId], references: [id])
+  project   Project?         @relation(fields: [projectId], references: [id])
+  task      Task?            @relation(fields: [taskId], references: [id])
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([taskId])
+}
