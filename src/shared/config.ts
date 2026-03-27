@@ -10,6 +10,10 @@ if (!fs.existsSync(path.resolve('.env'))) {
 }
 
 const configSchema = z.object({
+  LOCAL_APP_PORT: z.string(),
+  LOCAL_APP_HOST: z.string().url(),
+  WEBSITE_DOMAIN_DEVELOPMENT: z.string().url(),
+  WEBSITE_DOMAIN_PRODUCTION: z.string().url(),
   DATABASE_URL: z.string(),
   APP_NAME: z.string(),
   SECRET_API_KEY: z.string(),
@@ -22,7 +26,8 @@ const configSchema = z.object({
   ADMIN_EMAIL: z.string().email(),
   ADMIN_NUMBERPHONE: z.string(),
   OTP_EXPIRES_IN: z.string(),
-  RESEND_API_KEY: z.string()
+  RESEND_API_KEY: z.string(),
+  BUILD_MODE: z.string()
   // GOOGLE_CLIENT_ID: z.string(),
   // GOOGLE_CLIENT_SECRET: z.string(),
   // GOOGLE_REDIRECT_URI: z.string(),

@@ -1,3 +1,5 @@
+import envConfig from '../config'
+
 export const REQUEST_USER_KEY = 'user'
 export const REQUEST_ROLE_PERMISSIONS = 'role_permissions'
 
@@ -29,3 +31,6 @@ export const TypeOfVerificationCode = {
 } as const
 
 export type TypeOfVerificationCodeType = (typeof TypeOfVerificationCode)[keyof typeof TypeOfVerificationCode]
+
+export const WebsiteDomain =
+  envConfig.BUILD_MODE === 'dev' ? envConfig.WEBSITE_DOMAIN_DEVELOPMENT : envConfig.WEBSITE_DOMAIN_PRODUCTION

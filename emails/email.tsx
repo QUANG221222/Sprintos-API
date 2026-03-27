@@ -1,11 +1,14 @@
 import { Body, Container, Head, Heading, Html, Img, Link, Section, Text } from '@react-email/components'
 
-interface OTPEmailProps {
+interface LinkVerificationEmailProps {
   code?: string
   title?: string
+  email?: string
+  type?: string
+  websiteDomain?: string
 }
 
-export const OTPEmail = ({ code, title }: OTPEmailProps) => (
+export const LinkVerificationEmail = ({ code, title, email, type, websiteDomain }: LinkVerificationEmailProps) => (
   <Html>
     <title>{title}</title>
     <Head />
@@ -18,31 +21,54 @@ export const OTPEmail = ({ code, title }: OTPEmailProps) => (
           alt='Plaid'
           style={logo}
         />
-        <Text style={tertiary}>OTP CODE</Text>
-        <Heading style={secondary}>Please enter the following code:</Heading>
+        <Text style={tertiary}>LINK TO {title}</Text>
+        <Heading style={secondary}>Please click the link below:</Heading>
         <Section style={codeContainer}>
-          <Text style={OTPCode}>{code}</Text>
+          <Link
+            href={`${websiteDomain}/verification?email=${email}&code=${code}&type=${type}`}
+            style={{
+              ...OTPCode
+            }}
+          >
+            Verify Email
+          </Link>
         </Section>
+        {/* User can copy the link to verify their email */}
+        <Text style={paragraph}>Or copy the link below to verify your email:</Text>
+        <Link
+          href={`${websiteDomain}/verification?email=${email}&code=${code}&type=${type}`}
+          style={{
+            ...paragraph,
+            textDecoration: 'underline',
+            wordBreak: 'break-all',
+            color: 'blue',
+            textAlign: 'center'
+          }}
+        >
+          {`${websiteDomain}/verification?email=${email}&code=${code}&type=${type}`}
+        </Link>
+        <Text style={paragraph}>This link will expire in 5 minutes.</Text>
         <Text style={paragraph}>Not expecting this email?</Text>
         <Text style={paragraph}>
           Contact{' '}
-          <Link href='mailto:login@plaid.com' style={link}>
-            login@plaid.com
+          <Link href='mailto:wangcode2k5@gmail.com' style={link}>
+            wangcode2k5@gmail.com
           </Link>{' '}
-          if you did not request this code.
+          if you did not request this link.
         </Text>
       </Container>
-      <Text style={footer}>Securely powered by Plaid.</Text>
     </Body>
   </Html>
 )
 
-OTPEmail.PreviewProps = {
+LinkVerificationEmail.PreviewProps = {
   code: '144833',
-  title: 'Verify Your Identity'
-} as OTPEmailProps
+  title: 'Verify Your Identity',
+  email: 'user@example.com',
+  websiteDomain: 'https://example.com'
+} as LinkVerificationEmailProps
 
-export default OTPEmail
+export default LinkVerificationEmail
 
 const main = {
   backgroundColor: '#ffffff',
@@ -55,7 +81,7 @@ const container = {
   borderRadius: '5px',
   boxShadow: '0 5px 10px rgba(20,50,70,.2)',
   marginTop: '20px',
-  maxWidth: '360px',
+  maxWidth: '700px',
   margin: '0 auto',
   padding: '68px 0 130px'
 }

@@ -10,7 +10,6 @@ export const UserSchema = z.object({
   role: z.nativeEnum(RoleName),
   totpSecret: z.string().nullable(),
   status: z.nativeEnum(UserStatus),
-  verifyToken: z.string().nullable(),
   phoneNumber: z.string().max(20).nullable(),
   address: z.string().max(255).nullable(),
   dob: z.date().nullable(),
