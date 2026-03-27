@@ -102,7 +102,6 @@ model User {
   role           UserRole         @default(USER)
   totpSecret                  String?               @db.VarChar(1000)
   status         UserStatus       @default(INACTIVE)
-  verifyToken    String?
   phoneNumber    String?          
   address        String?          
   dob            DateTime?        @db.Date
@@ -136,6 +135,7 @@ model VerificationCode {
   createdAt DateTime @default(now())
 
   @@unique([email, code, type])
+  @@unique([email, type])
   @@index([expiresAt])
 }
 
