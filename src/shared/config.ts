@@ -3,9 +3,11 @@ import fs from 'fs'
 import path from 'path'
 import 'dotenv/config'
 
+const envFile = process.env.BUILD_MODE === 'prod' ? '.env.production' : '.env'
+
 // Check if .env file exists
-if (!fs.existsSync(path.resolve('.env'))) {
-  console.log('Config file .env not found')
+if (!fs.existsSync(path.resolve(envFile))) {
+  console.log(`Config file ${envFile} not found`)
   process.exit(1)
 }
 
@@ -27,7 +29,7 @@ const configSchema = z.object({
   ADMIN_NUMBERPHONE: z.string(),
   OTP_EXPIRES_IN: z.string(),
   RESEND_API_KEY: z.string(),
-  BUILD_MODE: z.string()
+  BUILD_MODE: z.string().default(process.env.BUILD_MODE || 'dev')
   // GOOGLE_CLIENT_ID: z.string(),
   // GOOGLE_CLIENT_SECRET: z.string(),
   // GOOGLE_REDIRECT_URI: z.string(),
