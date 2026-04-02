@@ -17,7 +17,9 @@ COPY . .
 RUN npx prisma generate
 
 # Build NestJS
-RUN npm run start:prod
+RUN npm run build
+
+CMD [ "npm", "run", "start:dev" ]
 
 # ============ Stage 2: Production ============
 FROM node:20-alpine AS production
@@ -50,7 +52,7 @@ RUN chown -R nestjs:nodejs /app
 # Switch sang user non-root
 USER nestjs
 
-EXPOSE 3000
+EXPOSE 8080
 
 # Dùng dumb-init để handle SIGTERM đúng
 ENTRYPOINT ["dumb-init", "--"]
