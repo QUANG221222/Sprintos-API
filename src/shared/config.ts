@@ -1,15 +1,13 @@
 import z from 'zod'
-import fs from 'fs'
-import path from 'path'
 import 'dotenv/config'
 
-const envFile = process.env.BUILD_MODE === 'prod' ? '.env.production' : '.env'
+// const envFile = process.env.BUILD_MODE === 'prod' ? '.env.production' : '.env'
 
-// Check if .env file exists
-if (!fs.existsSync(path.resolve(envFile))) {
-  console.log(`Config file ${envFile} not found`)
-  process.exit(1)
-}
+// // Check if .env file exists
+// if (!fs.existsSync(path.resolve(envFile))) {
+//   console.log(`Config file ${envFile} not found`)
+//   process.exit(1)
+// }
 
 const configSchema = z.object({
   LOCAL_APP_PORT: z.string(),

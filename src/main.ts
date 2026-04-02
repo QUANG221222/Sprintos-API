@@ -4,6 +4,6 @@ import envConfig from './shared/config'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
-  await app.listen(envConfig.LOCAL_APP_PORT ?? 3000)
+  await app.listen(envConfig.LOCAL_APP_PORT ?? 8080)
 }
 bootstrap()
