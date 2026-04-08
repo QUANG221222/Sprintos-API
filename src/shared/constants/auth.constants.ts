@@ -1,7 +1,8 @@
+import ms from 'ms'
 import envConfig from '../config'
 
 export const REQUEST_USER_KEY = 'user'
-export const REQUEST_ROLE_PERMISSIONS = 'role_permissions'
+export const isProduction = envConfig.BUILD_MODE === 'production'
 
 export const AuthType = {
   Bearer: 'Bearer',
@@ -32,5 +33,13 @@ export const TypeOfVerificationCode = {
 
 export type TypeOfVerificationCodeType = (typeof TypeOfVerificationCode)[keyof typeof TypeOfVerificationCode]
 
-export const WebsiteDomain =
-  envConfig.BUILD_MODE === 'dev' ? envConfig.WEBSITE_DOMAIN_DEVELOPMENT : envConfig.WEBSITE_DOMAIN_PRODUCTION
+export const WebsiteDomain = isProduction ? envConfig.WEBSITE_DOMAIN_PRODUCTION : envConfig.WEBSITE_DOMAIN_DEVELOPMENT
+
+export const cookieOptions = {
+  httpOnly: true, // prevent client-side JS access
+  secure: isProduction, // prevent cookie access in non-HTTPS
+  sameSite: isProduction ? ('none' as const) : ('lax' as const), // CSRF protection
+  path: '/', // cookie available for entire site
+  domain: isProduction ? process.env.COOKIE_DOMAIN : undefined, // set domain in production
+  maxAge: ms('1 days') // cookie expiry time
+} as const
