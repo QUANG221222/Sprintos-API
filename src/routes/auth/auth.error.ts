@@ -12,6 +12,18 @@ export const EmailNotFoundException = new UnprocessableEntityException({
   statusCode: HttpStatus.UNPROCESSABLE_ENTITY
 })
 
+export const UserNotActiveException = new UnprocessableEntityException({
+  message: 'User is not active. Please verify your email.',
+  path: 'email',
+  statusCode: HttpStatus.UNPROCESSABLE_ENTITY
+})
+
+export const LoginFailedException = new UnprocessableEntityException({
+  message: 'Invalid email or password',
+  path: 'email',
+  statusCode: HttpStatus.UNPROCESSABLE_ENTITY
+})
+
 export const FailedToSendOTPException = new UnprocessableEntityException({
   message: 'Failed to send OTP',
   path: 'code',

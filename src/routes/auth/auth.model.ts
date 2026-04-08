@@ -31,8 +31,20 @@ export const VerifyEmailBodySchema = VerificationCodeSchema.pick({
   type: true
 })
 
+export const LoginBodySchema = RegisterBodySchema.extend({
+  totpCode: z.string().length(6).optional(), // 2FA code
+  code: z.string().length(6).optional() // Email OTP code
+}).strict()
+
+export const LoginResSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string()
+})
+
 export type RegisterBodyType = z.infer<typeof RegisterBodySchema>
 export type RegisterResType = z.infer<typeof RegisterResSchema>
 export type VerificationCodeType = z.infer<typeof VerificationCodeSchema>
 export type SendEmailVerificationBodyType = z.infer<typeof SendEmailVerificationBodySchema>
 export type VerifyEmailBodyType = z.infer<typeof VerifyEmailBodySchema>
+export type LoginBodyType = z.infer<typeof LoginBodySchema>
+export type LoginResType = z.infer<typeof LoginResSchema>
