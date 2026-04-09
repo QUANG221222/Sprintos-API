@@ -1,18 +1,21 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '~/shared/services/prisma.service'
-import { DeviceType, RefreshTokenType, RegisterResType, VerificationCodeType } from './auth.model'
+import { DeviceType, RefreshTokenType, VerificationCodeType } from './auth.model'
 import { UserType } from '~/shared/models/shared-user.model'
 import { TypeOfVerificationCodeType } from '~/shared/constants/auth.constants'
+import { RoleType } from '~/shared/models/shared-role.model'
 
 @Injectable()
 export class AuthRepo {
   constructor(private readonly prismaService: PrismaService) {}
-  register(data: Pick<UserType, 'email' | 'password' | 'displayName'>): Promise<RegisterResType> {
-    return this.prismaService.user.create({
-      data: {
-        email: data.email,
-        password: data.password,
-        displayName: data.displayName
+  async createUser(
+    user: Pick<UserType, 'email' | 'displayName' | 'password' | 'roleId'>
+  ): Promise<Omit<UserType, 'password' | 'totpSecret'>> {
+    return await this.prismaService.user.create({
+      data: user,
+      omit: {
+        password: true,
+        totpSecret: true
       }
     })
   }
@@ -68,13 +71,19 @@ export class AuthRepo {
     })
   }
 
-  findUniqueRefreshTokenIncludeUser(where: { token: string }): Promise<(RefreshTokenType & { user: UserType }) | null> {
+  findUniqueRefreshTokenIncludeUserRole(where: {
+    token: string
+  }): Promise<(RefreshTokenType & { user: UserType & { role: RoleType } }) | null> {
     return this.prismaService.refreshToken.findUnique({
       where,
       include: {
-        user: true
+        user: {
+          include: {
+            role: true
+          }
+        }
       }
-    }) as Promise<(RefreshTokenType & { user: UserType }) | null>
+    }) as Promise<(RefreshTokenType & { user: UserType & { role: RoleType } }) | null>
   }
 
   deleteRefreshToken(where: { token: string }): Promise<RefreshTokenType> {

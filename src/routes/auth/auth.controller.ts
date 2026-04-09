@@ -1,9 +1,7 @@
-import { Body, Controller, HttpCode, HttpStatus, Ip, Post, Res } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Ip, Post, Req, Res } from '@nestjs/common'
 import {
   LoginBodyDTO,
   LoginResDTO,
-  LogoutBodyDTO,
-  RefreshTokenBodyDTO,
   RefreshTokenResDTO,
   RegisterBodyDTO,
   RegisterResDTO,
@@ -14,11 +12,11 @@ import { ZodSerializerDto } from 'nestjs-zod'
 import { IsPublic } from '~/shared/decorators/auth.decorator'
 import { AuthService } from './auth.service'
 import { MessageResDTO } from '~/shared/dtos/response.dto'
-import { Response } from 'express'
+import { Request, Response } from 'express'
 import { cookieOptions } from '~/shared/constants/auth.constants'
 import { UserAgent } from '~/shared/decorators/user-agent.decorator'
 
-@Controller('v1/auth')
+@Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -68,13 +66,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @IsPublic()
   async refreshToken(
-    @Body() body: RefreshTokenBodyDTO,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @UserAgent() userAgent: string,
     @Ip() ip
   ) {
     const result = await this.authService.refreshToken({
-      ...body,
+      req,
       userAgent,
       ip
     })
@@ -85,10 +83,13 @@ export class AuthController {
 
   @Post('logout')
   @ZodSerializerDto(MessageResDTO)
-  async logout(@Res({ passthrough: true }) res: Response, @Body() body: LogoutBodyDTO) {
-    const result = await this.authService.logout(body)
+  async logout(@Res({ passthrough: true }) res: Response, @Req() req: Request) {
+    const result = await this.authService.logout(req)
+
     res.clearCookie('accessToken', cookieOptions)
+
     res.clearCookie('refreshToken', cookieOptions)
+
     return result
   }
 }

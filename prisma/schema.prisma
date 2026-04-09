@@ -11,11 +11,6 @@ datasource db {
 // Enums
 // ===================
 
-enum UserRole {
-  ADMIN
-  USER
-}
-
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -32,6 +27,16 @@ enum VerificationCodeType {
   FORGOT_PASSWORD
   LOGIN
   DISABLE_2FA
+}
+
+enum HTTPMethod {
+  GET
+  POST
+  PUT
+  DELETE
+  PATCH
+  OPTIONS
+  HEAD
 }
 
 enum ProjectMemberRole {
@@ -99,7 +104,8 @@ model User {
   email          String           @unique 
   password       String           
   displayName    String           
-  role           UserRole         @default(USER)
+  roleId         Int
+  role           Role               @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   totpSecret                  String?               @db.VarChar(1000)
   status         UserStatus       @default(INACTIVE)
   phoneNumber    String?          
@@ -161,6 +167,37 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+}
+
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @db.VarChar(500)
+  description String       @default("")
+  isActive    Boolean      @default(true)
+  permissions Permission[]
+  users       User[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([deletedAt])
+}
+
+model Permission {
+  id          Int        @id @default(autoincrement())
+  name        String     @db.VarChar(500)
+  description String     @default("")
+  path        String     @db.VarChar(1000)
+  method      HTTPMethod
+  module      String     @default("") @db.VarChar(500)
+  roles       Role[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([deletedAt])
 }
 
 model Project {

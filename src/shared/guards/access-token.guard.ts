@@ -4,12 +4,15 @@ import {
   ExecutionContext,
   UnauthorizedException,
   GoneException,
-  HttpStatus
+  HttpStatus,
+  ForbiddenException
 } from '@nestjs/common'
 import { TokenService } from '../services/token.service'
-import { REQUEST_USER_KEY } from '../constants/auth.constants'
+import { REQUEST_ROLE_PERMISSIONS, REQUEST_USER_KEY } from '../constants/auth.constants'
 import { AccessTokenPayLoad } from '../types/jwt.type'
 import { PrismaService } from '../services/prisma.service'
+import { extractTokenFromCookie } from '../helpers'
+import { HTTPMethod } from '../constants/role.constants'
 
 @Injectable()
 export class AccessTokenGuard implements CanActivate {
@@ -21,17 +24,17 @@ export class AccessTokenGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest()
     // Extract and validate token
-    await this.extractAndValidateToken(request)
+    const decodedAccessToken = await this.extractAndValidateToken(request)
 
     // Check user permission
-    // await this.validateUserPermission(decodedAccessToken, request)
+    await this.validateUserPermission(decodedAccessToken, request)
 
     return true
   }
 
   private async extractAndValidateToken(request: any): Promise<AccessTokenPayLoad> {
-    const accessToken = this.extractTokenFromCookie(request, 'accessToken')
-    const refreshToken = this.extractTokenFromCookie(request, 'refreshToken')
+    const accessToken = extractTokenFromCookie(request, 'accessToken')
+    const refreshToken = extractTokenFromCookie(request, 'refreshToken')
 
     const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
 
@@ -52,43 +55,26 @@ export class AccessTokenGuard implements CanActivate {
     return decodedAccessToken
   }
 
-  private extractTokenFromCookie(request: any, tokenName: string = 'accessToken'): string {
-    const cookieHeader = request.headers.cookie
-    if (!cookieHeader) {
-      throw new UnauthorizedException(`${tokenName} not found`)
+  private async validateUserPermission(decodedAccessToken: AccessTokenPayLoad, request: any): Promise<void> {
+    const roleId = decodedAccessToken.roleId
+    const path = request.route.path
+    const method = request.method as keyof typeof HTTPMethod
+    const role = await this.prismaService.role
+      .findUniqueOrThrow({
+        where: { id: roleId, deletedAt: null, isActive: true },
+        include: {
+          permissions: {
+            where: { deletedAt: null, method, path }
+          }
+        }
+      })
+      .catch(() => {
+        throw new ForbiddenException('You do not have permission to access this resource')
+      })
+    const canAccess = role.permissions.some((permission) => permission.method === method && permission.path === path)
+    if (!canAccess) {
+      throw new ForbiddenException('You do not have permission to access this resource')
     }
-
-    const token = cookieHeader
-      .split(';')
-      .find((cookie: string) => cookie.trim().startsWith(`${tokenName}=`))
-      ?.split('=')[1]
-
-    if (!token) {
-      throw new UnauthorizedException(`${tokenName} not found`)
-    }
-    return token
+    request[REQUEST_ROLE_PERMISSIONS] = role
   }
-
-  // private async validateUserPermission(decodedAccessToken: AccessTokenPayLoad, request: any): Promise<void> {
-  //   const roleId = decodedAccessToken.roleId
-  //   const path = request.route.path
-  //   const method = request.method as keyof typeof HTTPMethod
-  //   const role = await this.prismaService.role
-  //     .findUniqueOrThrow({
-  //       where: { id: roleId, deletedAt: null, isActive: true },
-  //       include: {
-  //         permissions: {
-  //           where: { deletedAt: null, method, path }
-  //         }
-  //       }
-  //     })
-  //     .catch(() => {
-  //       throw new ForbiddenException('Error.Forbidden')
-  //     })
-  //   const canAccess = role.permissions.some((permission) => permission.method === method && permission.path === path)
-  //   if (!canAccess) {
-  //     throw new ForbiddenException('Error.Forbidden')
-  //   }
-  //   request[REQUEST_ROLE_PERMISSIONS] = role
-  // }
 }

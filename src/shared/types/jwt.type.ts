@@ -2,7 +2,8 @@ export interface AccessTokenPayloadCreate {
   userId: number
   email: string
   deviceId: number
-  role: string
+  roleId: number
+  roleName: string
 }
 
 export interface AccessTokenPayLoad extends AccessTokenPayloadCreate {
