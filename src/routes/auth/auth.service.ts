@@ -5,13 +5,16 @@ import { AuthRepo } from './auth.repo'
 import { HttpException, Injectable, UnauthorizedException } from '@nestjs/common'
 import {
   LoginBodyType,
-  LogoutBodyType,
-  RefreshTokenBodyType,
   RegisterBodyType,
   SendEmailVerificationBodyType,
   VerifyEmailBodyType
 } from './auth.model'
-import { generateOTP, isNotFoundPrismaError, isUniqueConstraintPrismaError } from '~/shared/helpers'
+import {
+  extractTokenFromCookie,
+  generateOTP,
+  isNotFoundPrismaError,
+  isUniqueConstraintPrismaError
+} from '~/shared/helpers'
 import {
   EmailAldreadyExistsException,
   EmailNotFoundException,
@@ -27,11 +30,14 @@ import ms, { StringValue } from 'ms'
 import envConfig from '~/shared/config'
 import { EmailService } from '~/shared/services/email.service'
 import { TypeOfVerificationCode, TypeOfVerificationCodeType, UserStatus } from '~/shared/constants/auth.constants'
+import { SharedRoleRepository } from '~/shared/repositories/shared-role.repo'
+import { Request } from 'express'
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly sharedUserRepository: SharedUserRepository,
+    private readonly sharedRoleRepository: SharedRoleRepository,
     private readonly authRepo: AuthRepo,
     private readonly emailService: EmailService,
     private readonly hashingService: HashingService,
@@ -54,10 +60,14 @@ export class AuthService {
         type: TypeOfVerificationCode.REGISTER
       })
 
-      const createUser = await this.authRepo.register({
+      // Get client role id
+      const clientRoleId = await this.sharedRoleRepository.getClientRoleId()
+
+      const createUser = await this.authRepo.createUser({
         email,
         password: hashedPassword,
-        displayName: nameFromEmail
+        displayName: nameFromEmail,
+        roleId: clientRoleId
       })
 
       return createUser
@@ -70,7 +80,7 @@ export class AuthService {
   }
 
   async sendEmail({ email, websiteDomain, type }: SendEmailVerificationBodyType) {
-    const user = await this.sharedUserRepository.findUnique({ email: email, deletedAt: null })
+    const user = await this.sharedUserRepository.findUnique({ email: email })
 
     if (type === TypeOfVerificationCode.REGISTER && user && user.status !== UserStatus.INACTIVE) {
       throw EmailAldreadyExistsException
@@ -144,7 +154,7 @@ export class AuthService {
 
   async login(body: LoginBodyType & { userAgent: string; ip: string }) {
     // Find user by email
-    const exitingUser = await this.sharedUserRepository.findUnique({ email: body.email, deletedAt: null })
+    const exitingUser = await this.sharedUserRepository.findUniqueUserIncludeRole({ email: body.email })
 
     if (!exitingUser) {
       throw EmailNotFoundException
@@ -173,7 +183,8 @@ export class AuthService {
       userId: exitingUser.id,
       email: exitingUser.email,
       deviceId: device.id,
-      role: exitingUser.role
+      roleId: exitingUser.roleId,
+      roleName: exitingUser.role.name
     })
 
     return tokens
@@ -183,12 +194,14 @@ export class AuthService {
     userId,
     email,
     deviceId,
-    role
+    roleId,
+    roleName
   }: {
     userId: number
     email: string
     deviceId: number
-    role: string
+    roleId: number
+    roleName: string
   }) {
     // Generate access token and refresh token
     const [accessToken, refreshToken] = await Promise.all([
@@ -196,7 +209,8 @@ export class AuthService {
         userId,
         email,
         deviceId,
-        role
+        roleId,
+        roleName
       }),
       this.tokenService.signRefreshToken({
         userId
@@ -218,37 +232,45 @@ export class AuthService {
     }
   }
 
-  async refreshToken({ refreshToken, userAgent, ip }: RefreshTokenBodyType & { userAgent: string; ip: string }) {
+  async refreshToken({ req, userAgent, ip }: { req: Request; userAgent: string; ip: string }) {
     try {
+      // Extract refresh token from cookie
+      const refreshToken = extractTokenFromCookie(req, 'refreshToken')
+
       // 1. Verify refresh token and get payload
       const { userId } = await this.tokenService.verifyRefreshToken(refreshToken)
 
       // 2. Check refreshToken is exist in database
-      const refreshTokenData = await this.authRepo.findUniqueRefreshTokenIncludeUser({ token: refreshToken })
+      const refreshTokenData = await this.authRepo.findUniqueRefreshTokenIncludeUserRole({ token: refreshToken })
       if (!refreshTokenData) {
         throw RefreshTokenNotFoundException
       }
 
       const {
         deviceId,
-        user: { email, role }
+        user: {
+          email,
+          roleId,
+          role: { name: roleName }
+        }
       } = refreshTokenData
 
-      // 3. Cập nhật device
+      // 3. Update device with new ip and user agent
       const $updateDevice = this.authRepo.updateDevice(deviceId, {
         ip,
         userAgent
       })
 
-      // 4. Xóa refresh token cũ
+      // 4. Delete old refresh token
       const $deleteRefreshToken = this.authRepo.deleteRefreshToken({ token: refreshToken })
 
-      // 5. Tạo mới access token và refresh token
+      // 5. Generate new access token and refresh token
       const $tokens = this.generateTokens({
         userId,
         deviceId,
         email,
-        role
+        roleId,
+        roleName
       })
 
       const [, , tokens] = await Promise.all([$updateDevice, $deleteRefreshToken, $tokens])
@@ -262,8 +284,11 @@ export class AuthService {
     }
   }
 
-  async logout({ refreshToken }: LogoutBodyType) {
+  async logout(req: Request) {
     try {
+      // Extract refresh token from cookie
+      const refreshToken = extractTokenFromCookie(req, 'refreshToken')
+
       // 1. Check refreshToken is exist and valid
       await this.tokenService.verifyRefreshToken(refreshToken)
 

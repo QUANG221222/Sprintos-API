@@ -2,6 +2,7 @@ import ms from 'ms'
 import envConfig from '../config'
 
 export const REQUEST_USER_KEY = 'user'
+export const REQUEST_ROLE_PERMISSIONS = 'role_permissions'
 export const isProduction = envConfig.BUILD_MODE === 'production'
 
 export const AuthType = {

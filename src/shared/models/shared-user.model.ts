@@ -1,13 +1,12 @@
 import { z } from 'zod'
 import { UserStatus } from '../constants/auth.constants'
-import { RoleName } from '../constants/role.constants'
 
 export const UserSchema = z.object({
   id: z.number(),
   email: z.string().email(),
   password: z.string().min(6).max(100),
   displayName: z.string().min(2).max(100),
-  role: z.nativeEnum(RoleName),
+  roleId: z.number().positive(),
   totpSecret: z.string().nullable(),
   status: z.nativeEnum(UserStatus),
   phoneNumber: z.string().max(20).nullable(),
