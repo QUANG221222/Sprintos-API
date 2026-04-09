@@ -1,4 +1,4 @@
-import { ConflictException, HttpStatus, UnprocessableEntityException } from '@nestjs/common'
+import { ConflictException, HttpStatus, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common'
 
 export const EmailAldreadyExistsException = new ConflictException({
   message: 'Email already exists',
@@ -40,4 +40,10 @@ export const OTPExpiredException = new UnprocessableEntityException({
   message: 'OTP has expired',
   path: 'code',
   statusCode: HttpStatus.UNPROCESSABLE_ENTITY
+})
+
+export const RefreshTokenNotFoundException = new UnauthorizedException({
+  message: 'Refresh token not found',
+  path: 'refreshToken',
+  statusCode: HttpStatus.UNAUTHORIZED
 })

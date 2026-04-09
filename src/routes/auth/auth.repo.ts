@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '~/shared/services/prisma.service'
-import { RegisterResType, VerificationCodeType } from './auth.model'
+import { DeviceType, RefreshTokenType, RegisterResType, VerificationCodeType } from './auth.model'
 import { UserType } from '~/shared/models/shared-user.model'
 import { TypeOfVerificationCodeType } from '~/shared/constants/auth.constants'
 
@@ -48,6 +48,53 @@ export class AuthRepo {
   ): Promise<VerificationCodeType> {
     return this.prismaService.verificationCode.delete({
       where: uniqueValue
+    })
+  }
+
+  createRefreshToken(data: {
+    userId: number
+    token: string
+    deviceId: number
+    expiresAt: Date
+  }): Promise<RefreshTokenType> {
+    return this.prismaService.refreshToken.create({
+      data
+    })
+  }
+
+  findUniqueRefreshToken(token: string): Promise<RefreshTokenType | null> {
+    return this.prismaService.refreshToken.findUnique({
+      where: { token }
+    })
+  }
+
+  findUniqueRefreshTokenIncludeUser(where: { token: string }): Promise<(RefreshTokenType & { user: UserType }) | null> {
+    return this.prismaService.refreshToken.findUnique({
+      where,
+      include: {
+        user: true
+      }
+    }) as Promise<(RefreshTokenType & { user: UserType }) | null>
+  }
+
+  deleteRefreshToken(where: { token: string }): Promise<RefreshTokenType> {
+    return this.prismaService.refreshToken.delete({
+      where
+    })
+  }
+
+  createDevice(
+    data: Pick<DeviceType, 'userId' | 'userAgent' | 'ip'> & Partial<Pick<DeviceType, 'lastActive' | 'isActive'>>
+  ) {
+    return this.prismaService.device.create({
+      data
+    })
+  }
+
+  updateDevice(deviceId: number, data: Partial<DeviceType>): Promise<DeviceType> {
+    return this.prismaService.device.update({
+      where: { id: deviceId },
+      data
     })
   }
 }
