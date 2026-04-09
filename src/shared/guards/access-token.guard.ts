@@ -1,4 +1,11 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common'
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  GoneException,
+  HttpStatus
+} from '@nestjs/common'
 import { TokenService } from '../services/token.service'
 import { REQUEST_USER_KEY } from '../constants/auth.constants'
 import { AccessTokenPayLoad } from '../types/jwt.type'
@@ -23,23 +30,43 @@ export class AccessTokenGuard implements CanActivate {
   }
 
   private async extractAndValidateToken(request: any): Promise<AccessTokenPayLoad> {
-    const accessToken = this.extractAccessTokenFromHeader(request)
-    try {
-      const decodedAccessToken = await this.tokenService.verifyAccessToken(accessToken)
+    const accessToken = this.extractTokenFromCookie(request, 'accessToken')
+    const refreshToken = this.extractTokenFromCookie(request, 'refreshToken')
 
-      request[REQUEST_USER_KEY] = decodedAccessToken
-      return decodedAccessToken
-    } catch {
-      throw new UnauthorizedException('Error.InvalidAccessToken')
-    }
+    const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
+
+    const decodedAccessToken = await this.tokenService
+      .verifyAccessToken(accessToken)
+      .then((payload) => payload)
+      .catch((error) => {
+        if (error.name === 'TokenExpiredError' && decodedRefreshToken.exp > Math.floor(Date.now() / 1000)) {
+          throw new GoneException({
+            message: 'Access token expired',
+            path: 'accessToken',
+            statusCode: HttpStatus.GONE
+          })
+        }
+        throw new UnauthorizedException('Invalid access token')
+      })
+    request[REQUEST_USER_KEY] = decodedAccessToken
+    return decodedAccessToken
   }
 
-  private extractAccessTokenFromHeader(request: any): string {
-    const accessToken = request.headers.authorization?.split(' ')[1]
-    if (!accessToken) {
-      throw new UnauthorizedException('Error.MissingAccessToken')
+  private extractTokenFromCookie(request: any, tokenName: string = 'accessToken'): string {
+    const cookieHeader = request.headers.cookie
+    if (!cookieHeader) {
+      throw new UnauthorizedException(`${tokenName} not found`)
     }
-    return accessToken
+
+    const token = cookieHeader
+      .split(';')
+      .find((cookie: string) => cookie.trim().startsWith(`${tokenName}=`))
+      ?.split('=')[1]
+
+    if (!token) {
+      throw new UnauthorizedException(`${tokenName} not found`)
+    }
+    return token
   }
 
   // private async validateUserPermission(decodedAccessToken: AccessTokenPayLoad, request: any): Promise<void> {

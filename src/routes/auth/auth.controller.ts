@@ -1,7 +1,10 @@
-import { Body, Controller, Post, Res } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Ip, Post, Res } from '@nestjs/common'
 import {
   LoginBodyDTO,
   LoginResDTO,
+  LogoutBodyDTO,
+  RefreshTokenBodyDTO,
+  RefreshTokenResDTO,
   RegisterBodyDTO,
   RegisterResDTO,
   SendEmailVerificationBodyDTO,
@@ -13,6 +16,7 @@ import { AuthService } from './auth.service'
 import { MessageResDTO } from '~/shared/dtos/response.dto'
 import { Response } from 'express'
 import { cookieOptions } from '~/shared/constants/auth.constants'
+import { UserAgent } from '~/shared/decorators/user-agent.decorator'
 
 @Controller('v1/auth')
 export class AuthController {
@@ -42,11 +46,49 @@ export class AuthController {
   @Post('login')
   @IsPublic()
   @ZodSerializerDto(LoginResDTO)
-  async login(@Body() body: LoginBodyDTO, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.login(body)
+  async login(
+    @Body() body: LoginBodyDTO,
+    @Res({ passthrough: true }) res: Response,
+    @UserAgent() userAgent: string,
+    @Ip() ip
+  ) {
+    const result = await this.authService.login({
+      ...body,
+      userAgent,
+      ip
+    })
 
     res.cookie('accessToken', result.accessToken, cookieOptions)
     res.cookie('refreshToken', result.refreshToken, cookieOptions)
+    return result
+  }
+
+  @Post('refresh-token')
+  @ZodSerializerDto(RefreshTokenResDTO)
+  @HttpCode(HttpStatus.OK)
+  @IsPublic()
+  async refreshToken(
+    @Body() body: RefreshTokenBodyDTO,
+    @Res({ passthrough: true }) res: Response,
+    @UserAgent() userAgent: string,
+    @Ip() ip
+  ) {
+    const result = await this.authService.refreshToken({
+      ...body,
+      userAgent,
+      ip
+    })
+    res.cookie('accessToken', result.accessToken, cookieOptions)
+    res.cookie('refreshToken', result.refreshToken, cookieOptions)
+    return result
+  }
+
+  @Post('logout')
+  @ZodSerializerDto(MessageResDTO)
+  async logout(@Res({ passthrough: true }) res: Response, @Body() body: LogoutBodyDTO) {
+    const result = await this.authService.logout(body)
+    res.clearCookie('accessToken', cookieOptions)
+    res.clearCookie('refreshToken', cookieOptions)
     return result
   }
 }

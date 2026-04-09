@@ -1,6 +1,7 @@
 export interface AccessTokenPayloadCreate {
   userId: number
   email: string
+  deviceId: number
   role: string
 }
 

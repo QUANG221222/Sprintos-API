@@ -2,9 +2,16 @@ import { TokenService } from './../../shared/services/token.service'
 import { SharedUserRepository } from './../../shared/repositories/shared-user.repo'
 import { HashingService } from './../../shared/services/hashing.service'
 import { AuthRepo } from './auth.repo'
-import { Injectable } from '@nestjs/common'
-import { LoginBodyType, RegisterBodyType, SendEmailVerificationBodyType, VerifyEmailBodyType } from './auth.model'
-import { generateOTP, isUniqueConstraintPrismaError } from '~/shared/helpers'
+import { HttpException, Injectable, UnauthorizedException } from '@nestjs/common'
+import {
+  LoginBodyType,
+  LogoutBodyType,
+  RefreshTokenBodyType,
+  RegisterBodyType,
+  SendEmailVerificationBodyType,
+  VerifyEmailBodyType
+} from './auth.model'
+import { generateOTP, isNotFoundPrismaError, isUniqueConstraintPrismaError } from '~/shared/helpers'
 import {
   EmailAldreadyExistsException,
   EmailNotFoundException,
@@ -12,6 +19,7 @@ import {
   InvalidOTPException,
   LoginFailedException,
   OTPExpiredException,
+  RefreshTokenNotFoundException,
   UserNotActiveException
 } from './auth.error'
 import { addMilliseconds } from 'date-fns'
@@ -134,7 +142,7 @@ export class AuthService {
     return verificationCode
   }
 
-  async login(body: LoginBodyType) {
+  async login(body: LoginBodyType & { userAgent: string; ip: string }) {
     // Find user by email
     const exitingUser = await this.sharedUserRepository.findUnique({ email: body.email, deletedAt: null })
 
@@ -154,20 +162,125 @@ export class AuthService {
       throw LoginFailedException
     }
 
-    // Generate access token and refresh token
-    const accessToken = await this.tokenService.signAccessToken({
+    // Create Device
+    const device = await this.authRepo.createDevice({
+      userId: exitingUser.id,
+      userAgent: body.userAgent,
+      ip: body.ip
+    })
+
+    const tokens = await this.generateTokens({
       userId: exitingUser.id,
       email: exitingUser.email,
+      deviceId: device.id,
       role: exitingUser.role
     })
 
-    const refreshToken = await this.tokenService.signRefreshToken({
-      userId: exitingUser.id
+    return tokens
+  }
+
+  async generateTokens({
+    userId,
+    email,
+    deviceId,
+    role
+  }: {
+    userId: number
+    email: string
+    deviceId: number
+    role: string
+  }) {
+    // Generate access token and refresh token
+    const [accessToken, refreshToken] = await Promise.all([
+      this.tokenService.signAccessToken({
+        userId,
+        email,
+        deviceId,
+        role
+      }),
+      this.tokenService.signRefreshToken({
+        userId
+      })
+    ])
+
+    const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
+
+    await this.authRepo.createRefreshToken({
+      token: refreshToken,
+      userId,
+      deviceId,
+      expiresAt: new Date(decodedRefreshToken.exp * 1000) // Convert exp to milliseconds
     })
 
     return {
       accessToken,
       refreshToken
+    }
+  }
+
+  async refreshToken({ refreshToken, userAgent, ip }: RefreshTokenBodyType & { userAgent: string; ip: string }) {
+    try {
+      // 1. Verify refresh token and get payload
+      const { userId } = await this.tokenService.verifyRefreshToken(refreshToken)
+
+      // 2. Check refreshToken is exist in database
+      const refreshTokenData = await this.authRepo.findUniqueRefreshTokenIncludeUser({ token: refreshToken })
+      if (!refreshTokenData) {
+        throw RefreshTokenNotFoundException
+      }
+
+      const {
+        deviceId,
+        user: { email, role }
+      } = refreshTokenData
+
+      // 3. Cập nhật device
+      const $updateDevice = this.authRepo.updateDevice(deviceId, {
+        ip,
+        userAgent
+      })
+
+      // 4. Xóa refresh token cũ
+      const $deleteRefreshToken = this.authRepo.deleteRefreshToken({ token: refreshToken })
+
+      // 5. Tạo mới access token và refresh token
+      const $tokens = this.generateTokens({
+        userId,
+        deviceId,
+        email,
+        role
+      })
+
+      const [, , tokens] = await Promise.all([$updateDevice, $deleteRefreshToken, $tokens])
+
+      return tokens
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error
+      }
+      throw new UnauthorizedException()
+    }
+  }
+
+  async logout({ refreshToken }: LogoutBodyType) {
+    try {
+      // 1. Check refreshToken is exist and valid
+      await this.tokenService.verifyRefreshToken(refreshToken)
+
+      // 2. Delete refresh token in database
+      const deletedRefreshToken = await this.authRepo.deleteRefreshToken({ token: refreshToken })
+
+      // 3. Update device in database, set isActive to false
+      await this.authRepo.updateDevice(deletedRefreshToken.deviceId, {
+        isActive: false
+      })
+
+      return { message: 'Logout successfully' }
+    } catch (error) {
+      if (isNotFoundPrismaError(error)) {
+        throw RefreshTokenNotFoundException
+      }
+      throw new UnauthorizedException()
     }
   }
 }
