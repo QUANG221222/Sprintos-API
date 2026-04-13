@@ -4,6 +4,7 @@ import { HashingService } from './../../shared/services/hashing.service'
 import { AuthRepo } from './auth.repo'
 import { HttpException, Injectable, UnauthorizedException } from '@nestjs/common'
 import {
+  ForgotPasswordBodyType,
   LoginBodyType,
   RegisterBodyType,
   SendEmailVerificationBodyType,
@@ -307,5 +308,49 @@ export class AuthService {
       }
       throw new UnauthorizedException()
     }
+  }
+
+  async forgotPassword(body: ForgotPasswordBodyType) {
+    const { email, code, newPassword } = body
+
+    // Check if user exist
+    const user = await this.sharedUserRepository.findUnique({ email })
+
+    if (!user) {
+      throw EmailNotFoundException
+    }
+
+    // Check if user is active
+    if (user.status !== UserStatus.ACTIVE) {
+      throw UserNotActiveException
+    }
+
+    // Validate verification code
+    const verificationCode = await this.validateVerificationCode({
+      email,
+      code,
+      type: TypeOfVerificationCode.FORGOT_PASSWORD
+    })
+
+    if (!verificationCode) {
+      throw InvalidOTPException
+    }
+
+    // Hash new password
+    const hashedPassword = await this.hashingService.hash(newPassword)
+
+    // Update user password and delete verification code
+    await Promise.all([
+      this.sharedUserRepository.update({ id: user.id }, { password: hashedPassword }),
+      this.authRepo.deleteVerificationCode({
+        email_code_type: {
+          email,
+          code,
+          type: TypeOfVerificationCode.FORGOT_PASSWORD
+        }
+      })
+    ])
+
+    return { message: 'Password has been reset successfully' }
   }
 }

@@ -63,6 +63,12 @@ export const DeviceSchema = z.object({
   isActive: z.boolean()
 })
 
+export const ForgotPasswordBodySchema = UserSchema.pick({ email: true }).extend({
+  code: z.string().length(6),
+  email: z.string().email(),
+  newPassword: z.string().min(8)
+})
+
 export type RegisterBodyType = z.infer<typeof RegisterBodySchema>
 export type RegisterResType = z.infer<typeof RegisterResSchema>
 export type VerificationCodeType = z.infer<typeof VerificationCodeSchema>
@@ -73,3 +79,4 @@ export type LoginResType = z.infer<typeof LoginResSchema>
 export type RefreshTokenResType = z.infer<typeof RefreshTokenResSchema>
 export type RefreshTokenType = z.infer<typeof RefreshTokenSchema>
 export type DeviceType = z.infer<typeof DeviceSchema>
+export type ForgotPasswordBodyType = z.infer<typeof ForgotPasswordBodySchema>
