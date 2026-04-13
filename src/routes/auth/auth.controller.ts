@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Ip, Post, Req, Res } from '@nestjs/common'
 import {
+  ForgotPasswordBodyDTO,
   LoginBodyDTO,
   LoginResDTO,
   RefreshTokenResDTO,
@@ -91,5 +92,10 @@ export class AuthController {
     res.clearCookie('refreshToken', cookieOptions)
 
     return result
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() body: ForgotPasswordBodyDTO) {
+    return this.authService.forgotPassword(body)
   }
 }
