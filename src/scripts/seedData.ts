@@ -57,7 +57,7 @@ const BOARD_COLUMN_TITLES = [
 const generateUsers = () => [
   {
     _id: USER_IDS.JOHN,
-    email: 'john.doe@example.com',
+    email: 'sprintos.01062026@gmail.com',
     password: bcrypt.hashSync('Password@123', 8),
     displayName: 'John Doe',
     role: 'user',
@@ -72,7 +72,7 @@ const generateUsers = () => [
   },
   {
     _id: USER_IDS.JANE,
-    email: 'jane.smith@example.com',
+    email: 'witty960@virgilian.com',
     password: bcrypt.hashSync('Password@123', 8),
     displayName: 'Jane Smith',
     role: 'user',
@@ -87,7 +87,7 @@ const generateUsers = () => [
   },
   {
     _id: USER_IDS.MIKE,
-    email: 'mike.wilson@example.com',
+    email: 'coralgray@virgilian.com',
     password: bcrypt.hashSync('Password@123', 8),
     displayName: 'Mike Wilson',
     role: 'user',
@@ -132,7 +132,7 @@ const generateProjects = () => [
     members: [
       {
         memberId: USER_IDS.JOHN,
-        email: 'john.doe@example.com',
+        email: 'sprintos.01062026@gmail.com',
         role: 'owner',
         status: 'active',
         inviteToken: '',
@@ -141,7 +141,7 @@ const generateProjects = () => [
       },
       {
         memberId: USER_IDS.JANE,
-        email: 'jane.smith@example.com',
+        email: 'witty960@virgilian.com',
         role: 'member',
         status: 'active',
         inviteToken: '',
@@ -150,7 +150,7 @@ const generateProjects = () => [
       },
       {
         memberId: USER_IDS.MIKE,
-        email: 'mike.wilson@example.com',
+        email: 'coralgray@virgilian.com',
         role: 'member',
         status: 'active',
         inviteToken: '',
@@ -171,7 +171,7 @@ const generateProjects = () => [
     members: [
       {
         memberId: USER_IDS.JANE,
-        email: 'jane.smith@example.com',
+        email: 'witty960@virgilian.com',
         role: 'owner',
         status: 'active',
         inviteToken: '',
@@ -180,7 +180,7 @@ const generateProjects = () => [
       },
       {
         memberId: USER_IDS.JOHN,
-        email: 'john.doe@example.com',
+        email: 'sprintos.01062026@gmail.com',
         role: 'member',
         status: 'active',
         inviteToken: '',
@@ -622,11 +622,11 @@ const printSummary = (
   console.log(`   - Board Columns: ${boardColumns.length}`)
   console.log(`   - Tasks: ${tasks.length}`)
   console.log('\n🔑 Test Credentials:')
-  console.log('   Email: john.doe@example.com')
+  console.log('   Email: sprintos.01062026@gmail.com')
   console.log('   Password: Password@123')
-  console.log('\n   Email: jane.smith@example.com')
+  console.log('\n   Email: witty960@virgilian.com')
   console.log('   Password: Password@123')
-  console.log('\n   Email: mike.wilson@example.com')
+  console.log('\n   Email: coralgray@virgilian.com')
   console.log('   Password: Password@123')
   console.log('\n   Email: sarah.jones@example.com')
   console.log('   Password: Password@123')
