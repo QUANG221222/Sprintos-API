@@ -1,8 +1,8 @@
-# Deploy Sprintos API to EC2 (Ubuntu + Nginx + PM2)
+# Deploy Sprintos API to EC2 (Amazon Linux 2023 + Nginx + PM2)
 
 ## 1. Provision EC2
 
-- Use Ubuntu 22.04 LTS.
+- Use Amazon Linux 2023.
 - Attach an Elastic IP.
 - Open Security Group inbound:
   - `22` (SSH) from your IP
@@ -12,15 +12,15 @@
 ## 2. SSH to server
 
 ```bash
-ssh -i <your-key>.pem ubuntu@<ec2-public-ip>
+ssh -i <your-key>.pem ec2-user@<ec2-public-ip>
 ```
 
 ## 3. Install Node.js, pnpm, PM2, Nginx
 
 ```bash
-sudo apt update && sudo apt upgrade -y
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs nginx git
+sudo dnf update -y
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo dnf install -y nodejs nginx git
 sudo corepack enable
 sudo corepack prepare pnpm@10.17.0 --activate
 sudo npm i -g pm2
@@ -39,7 +39,7 @@ nginx -v
 
 ```bash
 sudo mkdir -p /var/www/sprintos-api
-sudo chown -R ubuntu:ubuntu /var/www/sprintos-api
+sudo chown -R ec2-user:ec2-user /var/www/sprintos-api
 cd /var/www/sprintos-api
 git clone https://github.com/QUANG221222/Sprintos-API.git current
 cd current
@@ -97,9 +97,9 @@ pm2 restart sprintos-api
 Copy config:
 
 ```bash
-sudo cp deploy/nginx/sprintos-api.conf /etc/nginx/sites-available/sprintos-api
-sudo ln -s /etc/nginx/sites-available/sprintos-api /etc/nginx/sites-enabled/sprintos-api
+sudo cp deploy/nginx/sprintos-api.conf /etc/nginx/conf.d/sprintos-api.conf
 sudo nginx -t
+sudo systemctl enable nginx
 sudo systemctl restart nginx
 ```
 
@@ -113,18 +113,35 @@ curl http://<ec2-public-ip>/v1
 ## 9. Add HTTPS with Certbot (recommended)
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d api.your-domain.com
+ls /etc/nginx/
+sudo dnf install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d sprintos-apis.fittrackwk.online
 ```
 
 ## 10. Update app later
 
 ```bash
 cd /var/www/sprintos-api/current
-git pull origin main
+git pull origin master
 pnpm install --frozen-lockfile
 pnpm build
 pm2 restart sprintos-api
+pm2 save
+```
+
+## Config User Data In Launch Template
+
+```
+#!/bin/bash
+set -euxo pipefail
+
+# Chạy dưới user ec2-user để dùng đúng PM2 home
+
+su - ec2-user -c '
+cd /var/www/sprintos-api/current
+pm2 resurrect
+pm2 save
+'
 ```
 
 ## Troubleshooting
