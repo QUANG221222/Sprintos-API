@@ -205,13 +205,13 @@ model Project {
   ownerId       Int
   name          String
   description   String?
-  imageUrl      String?
-  imagePublicId String?
+  image      String?
+
   createdAt     DateTime         @default(now())
-  updatedAt     DateTime?
+  updatedAt     DateTime?        @updatedAt
   deletedAt     DateTime?
 
-  owner         User             @relation("ProjectOwner", fields: [ownerId], references: [id])
+  owner         User             @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   members       ProjectMember[]
   sprints       Sprint[]
   chat          ProjectChat?
@@ -230,13 +230,12 @@ model ProjectMember {
   inviteToken String?
   joinAt      DateTime?
   invitedAt   DateTime           @default(now())
+  updatedAt   DateTime?          @updatedAt
   deletedAt   DateTime?
 
-  project     Project            @relation(fields: [projectId], references: [id])
-  member      User               @relation(fields: [memberId], references: [id])
+  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  member      User               @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([projectId])
-  @@index([memberId])
   @@index([deletedAt])
 }
 
@@ -253,7 +252,7 @@ model Sprint {
   updatedAt     DateTime?
   deletedAt     DateTime?
 
-  project       Project      @relation(fields: [projectId], references: [id])
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   boardColumns  BoardColumn[]
   tasks         Task[]
 
@@ -268,7 +267,7 @@ model BoardColumn {
   createdAt DateTime         @default(now())
   updatedAt DateTime?
 
-  sprint    Sprint           @relation(fields: [sprintId], references: [id])
+  sprint    Sprint           @relation(fields: [sprintId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   tasks     Task[]
   taskOrders BoardColumnTaskOrder[]
 
@@ -281,7 +280,7 @@ model BoardColumnTaskOrder {
   taskId        Int
   sortOrder     Int
 
-  boardColumn   BoardColumn @relation(fields: [boardColumnId], references: [id])
+  boardColumn   BoardColumn @relation(fields: [boardColumnId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   task          Task        @relation(fields: [taskId], references: [id])
 
   @@index([boardColumnId, taskId])
@@ -300,8 +299,8 @@ model Task {
   updatedAt     DateTime?     @updatedAt
   deletedAt     DateTime?
 
-  sprint        Sprint        @relation(fields: [sprintId], references: [id])
-  boardColumn   BoardColumn   @relation(fields: [boardColumnId], references: [id])
+  sprint        Sprint        @relation(fields: [sprintId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  boardColumn   BoardColumn   @relation(fields: [boardColumnId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   assignees     TaskAssignee[]
   labels        TaskLabel[]
   comments      TaskComment[]
@@ -319,8 +318,8 @@ model TaskAssignee {
   taskId Int
   userId Int
 
-  task   Task @relation(fields: [taskId], references: [id])
-  user   User @relation(fields: [userId], references: [id])
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user   User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([taskId])
   @@index([userId])
@@ -348,8 +347,8 @@ model TaskComment {
   updatedAt         DateTime? @updatedAt
   deletedAt         DateTime?
 
-  task              Task     @relation(fields: [taskId], references: [id])
-  member            User     @relation(fields: [memberId], references: [id])
+  task              Task     @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  member            User     @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([taskId])
   @@index([memberId])
@@ -366,7 +365,7 @@ model TaskAttachment {
   updatedAt DateTime? @updatedAt
   deletedAt DateTime?
 
-  task      Task     @relation(fields: [taskId], references: [id])
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([taskId])
   @@index([deletedAt])
@@ -405,8 +404,8 @@ model ProjectChatMessage {
   updatedAt       DateTime? @updatedAt
   deletedAt       DateTime?
 
-  chat            ProjectChat @relation(fields: [projectChatId], references: [id])
-  sender          User        @relation(fields: [senderId], references: [id])
+  chat            ProjectChat @relation(fields: [projectChatId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sender          User        @relation(fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([projectChatId])
   @@index([senderId])
@@ -424,9 +423,9 @@ model Notification {
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
 
-  user      User?            @relation(fields: [userId], references: [id])
-  project   Project?         @relation(fields: [projectId], references: [id])
-  task      Task?            @relation(fields: [taskId], references: [id])
+  user      User?            @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project   Project?         @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  task      Task?            @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([userId])
   @@index([projectId])
