@@ -2,6 +2,7 @@ export const RoleName = {
   Admin: 'ADMIN',
   User: 'USER',
   Owner: 'OWNER',
+  CoOwner: 'CO-OWNER',
   Member: 'MEMBER',
   Viewer: 'VIEWER'
 } as const

@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Param, Post, Body, Put, Delete } from '@nestjs/common'
+import { Controller, Get, Query, Param, Post, Body, Put, Delete, ParseBoolPipe } from '@nestjs/common'
 import { PermissionService } from './permission.service'
 import { ZodSerializerDto } from 'nestjs-zod'
 import {
@@ -50,7 +50,11 @@ export class PermissionController {
   }
 
   @Delete(':permissionId')
-  delete(@Param() params: GetPermissionParamsDTO, @ActiveUser('userId') deletedById: number) {
-    return this.permissionService.delete({ permissionId: params.permissionId, deletedById })
+  delete(
+    @Param() params: GetPermissionParamsDTO,
+    @ActiveUser('userId') deletedById: number,
+    @Query('isHard', new ParseBoolPipe({ optional: true })) isHard?: boolean
+  ) {
+    return this.permissionService.delete({ permissionId: params.permissionId, deletedById }, isHard)
   }
 }

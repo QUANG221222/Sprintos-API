@@ -1,20 +1,15 @@
 import { PrismaService } from '~/shared/services/prisma.service'
 import { Injectable } from '@nestjs/common'
 import { GetListQueryType } from '~/shared/models/request.model'
-import {
-  CreateProjectBodyType,
-  GetListProjectResType,
-  GetProjectDetailResType,
-  UpdateProjectBodyType,
-} from './project.model'
-import { Prisma, ProjectMemberRole, ProjectMemberStatus } from '~/generated/prisma/client'
-import { missingEmailsError } from './project.error'
-import { v4 as uuidv4 } from 'uuid'
+import { CreateProjectBodyType, GetListProjectResType, UpdateProjectBodyType } from './project.model'
+import { ProjectMemberStatus, ProjectMemberRole } from '~/shared/constants/project.constants'
+import { GetProjectDetailResType } from '~/shared/models/shared-project.model'
+import { Prisma } from '~/generated/prisma/client'
 
 @Injectable()
 export class ProjectRepo {
   constructor(private readonly prismaService: PrismaService) {}
-    
+
   async findAll(pagination: GetListQueryType, userId: number): Promise<GetListProjectResType> {
     const { page, limit } = pagination
     const skip = (page - 1) * limit
@@ -54,14 +49,27 @@ export class ProjectRepo {
           ]
         },
         include: {
-          members: true
+          members: {
+            include: {
+              role: true
+            }
+          }
         },
         skip,
         take
       })
     ])
+
+    const mappedData = data.map((project) => ({
+      ...project,
+      members: project.members.map((member) => ({
+        ...member,
+        role: member.role.name as (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole]
+      }))
+    }))
+
     return {
-      data,
+      data: mappedData,
       page,
       limit,
       totalItems,
@@ -86,14 +94,27 @@ export class ProjectRepo {
           deletedAt: null
         },
         include: {
-          members: true
+          members: {
+            include: {
+              role: true
+            }
+          }
         },
         skip,
         take
       })
     ])
+
+    const mappedData = data.map((project) => ({
+      ...project,
+      members: project.members.map((member) => ({
+        ...member,
+        role: member.role.name as (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole]
+      }))
+    }))
+
     return {
-      data,
+      data: mappedData,
       page,
       limit,
       totalItems,
@@ -101,7 +122,7 @@ export class ProjectRepo {
     }
   }
 
-  async findAllJoinedByUser(userId: number, pagination: GetListQueryType): Promise<GetListProjectResType> {
+  async findAllJoinedByUser(userId: number, pagination: GetListQueryType): Promise<GetListProjectResType | null> {
     const { page, limit } = pagination
     const skip = (page - 1) * limit
     const take = limit
@@ -109,35 +130,58 @@ export class ProjectRepo {
       this.prismaService.project.count({
         where: {
           deletedAt: null,
-          members: {
-            some: {
-              memberId: userId,
-              deletedAt: null,
-              status: ProjectMemberStatus.ACTIVE
+          AND: [
+            { ownerId: { not: userId } },
+            {
+              members: {
+                some: {
+                  memberId: userId,
+                  deletedAt: null,
+                  status: ProjectMemberStatus.ACTIVE
+                }
+              }
             }
-          }
+          ]
         }
       }),
       this.prismaService.project.findMany({
         where: {
           deletedAt: null,
-          members: {
-            some: {
-              memberId: userId,
-              deletedAt: null,
-              status: ProjectMemberStatus.ACTIVE
+          AND: [
+            { ownerId: { not: userId } },
+            {
+              members: {
+                some: {
+                  memberId: userId,
+                  deletedAt: null,
+                  status: ProjectMemberStatus.ACTIVE
+                }
+              }
             }
-          }
+          ]
         },
         include: {
-          members: true
+          members: {
+            include: {
+              role: true
+            }
+          }
         },
         skip,
         take
       })
     ])
+
+    const mappedData = data.map((project) => ({
+      ...project,
+      members: project.members.map((member) => ({
+        ...member,
+        role: member.role.name as (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole]
+      }))
+    }))
+
     return {
-      data,
+      data: mappedData,
       page,
       limit,
       totalItems,
@@ -145,153 +189,193 @@ export class ProjectRepo {
     }
   }
 
-  async findAllOfUser(userId: number, pagination: GetListQueryType): Promise<GetListProjectResType> {
-    const { page, limit } = pagination
-    const skip = (page - 1) * limit
-    const take = limit
-    const where: Prisma.ProjectWhereInput = {
-      deletedAt: null,
-      OR: [
-        { ownerId: userId },
-        {
-          members: {
-            some: {
-              memberId: userId,
-              deletedAt: null,
-              status: ProjectMemberStatus.ACTIVE
-            }
-          }
-        }
-      ]
-    }
-    const [totalItems, data] = await Promise.all([
-      this.prismaService.project.count({ where }),
-      this.prismaService.project.findMany({
-        where,
-        include: { members: true },
-        skip,
-        take
-      })
-    ])
-    return {
-      data,
-      page,
-      limit,
-      totalItems,
-      totalPages: Math.ceil(totalItems / limit)
-    }
-  }
-
-  async findById(id: number): Promise<GetProjectDetailResType | null> {
-    return await this.prismaService.project.findFirst({
-      where: {
-        id,
-        deletedAt: null
-      },
-      include: {
-        members: true
-      }
-    })
-  }
-
-  async create({ body, ownerId }: { body: CreateProjectBodyType; ownerId: number }): Promise<GetProjectDetailResType> {
-    const { members, ...projectData } = body
-    if (members && members.length > 0) {
-      const emails = members.map((member) => member.email)
-      const existingUsers = await this.prismaService.user.findMany({
-        where: {
-          email: { in: emails },
-          deletedAt: null
-        },
-        select: {
-          id: true,
-          email: true
-        }
-      })
-
-      if (existingUsers.length !== emails.length) {
-        throw missingEmailsError(emails, existingUsers.map((user) => user.email))
-      }
-
-      const userByEmail = new Map(existingUsers.map((user) => [user.email, user]))
-      const memberData = members.map((member) => {
-        const user = userByEmail.get(member.email)
-        return {
-          member: {
-            connect: {
-              id: user!.id
-            }
-          },
-          email: user!.email,
-          role: member.role as ProjectMemberRole,
-          status: ProjectMemberStatus.PENDING,
-          inviteToken: uuidv4()
-        }
-      })
-
-      return await this.prismaService.project.create({
-        data: {
-          ...projectData,
-          ownerId,
-          members: {
-            create: memberData
-          }
-        },
-        include: {
-          members: true
-        }
-      })
-    }
-    
-    return await this.prismaService.project.create({
+  async create({
+    projectData,
+    ownerId,
+    membersToCreate
+  }: {
+    projectData: Omit<CreateProjectBodyType, 'members'>
+    ownerId: number
+    membersToCreate: Prisma.ProjectMemberUncheckedCreateWithoutProjectInput[]
+  }): Promise<GetProjectDetailResType> {
+    const project = await this.prismaService.project.create({
       data: {
         ...projectData,
-        ownerId
+        createdById: ownerId,
+        ownerId,
+        members: {
+          create: membersToCreate
+        }
       },
       include: {
-        members: true
+        members: {
+          include: {
+            role: true
+          }
+        }
       }
     })
+
+    return {
+      ...project,
+      members: project.members.map((member) => ({
+        ...member,
+        role: member.role.name as (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole]
+      }))
+    }
   }
 
-  async update({ id, body }: { id: number; body: UpdateProjectBodyType }): Promise<GetProjectDetailResType> {
-    return await this.prismaService.project.update({
+  async update({
+    id,
+    body,
+    updatedById
+  }: {
+    id: number
+    body: UpdateProjectBodyType
+    updatedById: number
+  }): Promise<GetProjectDetailResType> {
+    const project = await this.prismaService.project.update({
       where: {
         id,
         deletedAt: null
       },
       data: {
         ...body,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedById
       },
       include: {
-        members: true
+        members: {
+          include: {
+            role: true
+          }
+        }
       }
     })
+
+    return {
+      ...project,
+      members: project.members.map((member) => ({
+        ...member,
+        role: member.role.name as (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole]
+      }))
+    }
   }
 
-  async delete(id: number, isHard?: boolean): Promise<GetProjectDetailResType> {
-    return isHard
-      ? await this.prismaService.project.update({
+  async delete(
+    { id, deletedById }: { id: number; deletedById: number },
+    isHard?: boolean
+  ): Promise<GetProjectDetailResType> {
+    const project = isHard
+      ? await this.prismaService.project.delete({
+          where: {
+            id
+          },
+          include: {
+            members: {
+              include: {
+                role: true
+              }
+            }
+          }
+        })
+      : await this.prismaService.project.update({
           where: {
             id,
             deletedAt: null
           },
           data: {
-            deletedAt: new Date()
+            deletedAt: new Date(),
+            deletedById
           },
           include: {
-            members: true
+            members: {
+              include: {
+                role: true
+              }
+            }
           }
         })
-      : await this.prismaService.project.delete({
-          where: {
-            id,
-            deletedAt: null
-          },
-          include: {
-            members: true
+
+    return {
+      ...project,
+      members: project.members.map((member) => ({
+        ...member,
+        role: member.role.name as (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole]
+      }))
+    }
+  }
+
+  async transfer({
+    projectId,
+    newOwnerId,
+    requesterId,
+    requesterMemberId,
+    targetMemberId,
+    ownerRoleId,
+    coOwnerRoleId
+  }: {
+    projectId: number
+    newOwnerId: number
+    requesterId: number
+    requesterMemberId?: number
+    targetMemberId: number
+    ownerRoleId: number
+    coOwnerRoleId: number
+  }): Promise<GetProjectDetailResType> {
+    return await this.prismaService.$transaction(async (tx) => {
+      // 1. Update Project Owner
+      await tx.project.update({
+        where: { id: projectId },
+        data: {
+          ownerId: newOwnerId,
+          updatedById: requesterId,
+          updatedAt: new Date()
+        }
+      })
+
+      // 2. Update new owner's project member role to OWNER
+      await tx.projectMember.update({
+        where: { id: targetMemberId },
+        data: {
+          roleId: ownerRoleId,
+          updatedById: requesterId,
+          updatedAt: new Date()
+        }
+      })
+
+      // 3. Update old owner's project member role to CO-OWNER
+      if (requesterMemberId) {
+        await tx.projectMember.update({
+          where: { id: requesterMemberId },
+          data: {
+            roleId: coOwnerRoleId,
+            updatedById: requesterId,
+            updatedAt: new Date()
           }
         })
+      }
+
+      // Fetch and return the updated project details
+      const project = await tx.project.findFirstOrThrow({
+        where: { id: projectId },
+        include: {
+          members: {
+            include: {
+              role: true
+            }
+          }
+        }
+      })
+
+      return {
+        ...project,
+        members: project.members.map((member) => ({
+          ...member,
+          role: member.role.name as (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole]
+        }))
+      }
+    })
   }
 }
+
