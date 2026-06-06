@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from '~/app.module'
 import { HTTPMethod, RoleName } from '~/shared/constants/role.constants'
+import { ProjectMemberRole } from '~/shared/constants/project.constants'
 import { PrismaService } from '~/shared/services/prisma.service'
 
 const prisma = new PrismaService()
@@ -94,50 +95,70 @@ async function bootstrap() {
   const rolePermissionFilter = {
     [RoleName.Admin]: (permissions: typeof updatedPermissionsInDb) => permissions,
     [RoleName.User]: (permissions: typeof updatedPermissionsInDb) =>
-      permissions.filter((p) => p.method === 'GET' || p.path.startsWith('/auth') || p.path.startsWith('/profile')),
-    [RoleName.Owner]: (permissions: typeof updatedPermissionsInDb) =>
-      permissions.filter((p) => p.path.startsWith('/project'))
+      permissions.filter(
+        (p) =>
+          p.path.startsWith('/auth') ||
+          p.path.startsWith('/profile') ||
+          (p.path === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
+          p.path === '/projects/owned' ||
+          p.path === '/projects/joined'
+      ),
+    [ProjectMemberRole.OWNER]: (permissions: typeof updatedPermissionsInDb) =>
+      permissions.filter(
+        (p) =>
+          p.path.startsWith('/projects') ||
+          p.path.startsWith('/project-members') ||
+          p.path.startsWith('/sprints') ||
+          p.path.startsWith('/tasks') ||
+          p.path.startsWith('/board-columns')
+      ),
+    [ProjectMemberRole.MEMBER]: (permissions: typeof updatedPermissionsInDb) =>
+      permissions.filter(
+        (p) =>
+          ((p.path.startsWith('/projects') || p.path.startsWith('/project-members')) && p.method === 'GET') ||
+          p.path.startsWith('/sprints') ||
+          p.path.startsWith('/tasks') ||
+          p.path.startsWith('/board-columns')
+      ),
+    [ProjectMemberRole.VIEWER]: (permissions: typeof updatedPermissionsInDb) =>
+      permissions.filter(
+        (p) =>
+          p.method === 'GET' &&
+          (p.path.startsWith('/projects') ||
+            p.path.startsWith('/project-members') ||
+            p.path.startsWith('/sprints') ||
+            p.path.startsWith('/tasks') ||
+            p.path.startsWith('/board-columns'))
+      )
   }
 
-  // Sau đó apply cho từng role
-  const adminPermissions = rolePermissionFilter[RoleName.Admin](updatedPermissionsInDb)
-  const userPermissions = rolePermissionFilter[RoleName.User](updatedPermissionsInDb)
+  // Sau đó apply và cập nhật cho từng role trong database
+  for (const roleKey of Object.values(RoleName)) {
+    const filterFn = rolePermissionFilter[roleKey]
+    if (!filterFn) continue
 
-  // Cập nhật lại các permission trong admin role
-  const adminRole = await prisma.role.findFirstOrThrow({
-    where: {
-      name: RoleName.Admin,
-      deletedAt: null
-    }
-  })
-  await prisma.role.update({
-    where: {
-      id: adminRole.id
-    },
-    data: {
-      permissions: {
-        set: adminPermissions.map((permission) => ({ id: permission.id }))
+    const rolePermissions = filterFn(updatedPermissionsInDb)
+    const roleRecord = await prisma.role.findFirst({
+      where: {
+        name: roleKey,
+        deletedAt: null
       }
-    }
-  })
+    })
 
-  // Cập nhật lại các permission trong user role
-  const userRole = await prisma.role.findFirstOrThrow({
-    where: {
-      name: RoleName.User,
-      deletedAt: null
+    if (roleRecord) {
+      await prisma.role.update({
+        where: { id: roleRecord.id },
+        data: {
+          permissions: {
+            set: rolePermissions.map((permission) => ({ id: permission.id }))
+          }
+        }
+      })
+      console.log(`Updated permissions for role: ${roleKey} (${rolePermissions.length} permissions)`)
+    } else {
+      console.warn(`Role ${roleKey} not found in database.`)
     }
-  })
-  await prisma.role.update({
-    where: {
-      id: userRole.id
-    },
-    data: {
-      permissions: {
-        set: userPermissions.map((permission) => ({ id: permission.id }))
-      }
-    }
-  })
+  }
 
   console.log('Permission update completed.')
 
