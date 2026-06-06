@@ -39,12 +39,6 @@ enum HTTPMethod {
   HEAD
 }
 
-enum ProjectMemberRole {
-  OWNER
-  MEMBER
-  VIEWER
-}
-
 enum ProjectMemberStatus {
   ACTIVE
   PENDING
@@ -54,14 +48,6 @@ enum SprintStatus {
   PLANNED
   ACTIVE
   COMPLETED
-}
-
-enum BoardColumnTitle {
-  BACKLOG
-  TODO
-  IN_PROCESS
-  REVIEW
-  DONE
 }
 
 enum TaskPriority {
@@ -117,18 +103,59 @@ model User {
   avatarPublicId String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime?        @updatedAt
-  deletedAt      DateTime?        
+  deletedAt      DateTime?      
 
-  ownedProjects  Project[]        @relation("ProjectOwner")
-  projectMembers ProjectMember[]  
-  taskAssignees  TaskAssignee[]
-  taskComments   TaskComment[]
-  chatMessages   ProjectChatMessage[]
-  notifications  Notification[]
+  createdPermissions          Permission[]          @relation("PermissionCreatedBy")
+  updatedPermissions          Permission[]          @relation("PermissionUpdatedBy")
+  deletedPermissions          Permission[]          @relation("PermissionDeletedBy")  
+  createdRoles                Role[]                @relation("RoleCreatedBy")
+  updatedRoles                Role[]                @relation("RoleUpdatedBy")
+  deletedRoles                Role[]                @relation("RoleDeletedBy")
+  createdProjects             Project[]             @relation("ProjectCreatedBy")
+  updatedProjects             Project[]             @relation("ProjectUpdatedBy")
+  deletedProjects             Project[]             @relation("ProjectDeletedBy")
+  updatedProjectMembers       ProjectMember[]       @relation("ProjectMemberUpdatedBy")
+  deletedProjectMembers       ProjectMember[]       @relation("ProjectMemberDeletedBy")
+  invitedProjectMembers       ProjectMember[]       @relation("ProjectMemberInvitedBy")
+  createdSprints              Sprint[]              @relation("SprintCreatedBy")
+  updatedSprints              Sprint[]              @relation("SprintUpdatedBy")
+  deletedSprints              Sprint[]              @relation("SprintDeletedBy")
+  createdBoardColumns         BoardColumn[]           @relation("BoardColumnCreatedBy")
+  updatedBoardColumns         BoardColumn[]           @relation("BoardColumnUpdatedBy")
+  deletedBoardColumns         BoardColumn[]           @relation("BoardColumnDeletedBy")
+  createdTasks                Task[]                @relation("TaskCreatedBy")
+  updatedTasks                Task[]                @relation("TaskUpdatedBy")
+  deletedTasks                Task[]                @relation("TaskDeletedBy")
+  taskAssignees             TaskAssignee[]        @relation("TaskAssigneeCreatedBy")
+  taskLabels                TaskLabel[]           @relation("TaskLabelCreatedBy")
+  taskComments                TaskComment[]         @relation("TaskCommentCreatedBy")
+  taskAttachments             TaskAttachment[]      @relation("TaskAttachmentCreatedBy")
+  projectChats                ProjectChat[]           @relation("ProjectChatCreatedBy")
+  projectChatMessages         ProjectChatMessage[]    @relation("ProjectChatMessageCreatedBy")
+  updatedTaskAssignees        TaskAssignee[]        @relation("TaskAssigneeUpdatedBy")
+  updatedTaskLabels           TaskLabel[]           @relation("TaskLabelUpdatedBy")
+  updatedTaskComments         TaskComment[]         @relation("TaskCommentUpdatedBy")
+  updatedTaskAttachments      TaskAttachment[]      @relation("TaskAttachmentUpdatedBy")
+  updatedProjectChats         ProjectChat[]           @relation("ProjectChatUpdatedBy")
+  updatedProjectChatMessages    ProjectChatMessage[]    @relation("ProjectChatMessageUpdatedBy")
+  deletedTaskAssignees        TaskAssignee[]        @relation("TaskAssigneeDeletedBy")
+  deletedTaskLabels           TaskLabel[]           @relation("TaskLabelDeletedBy")
+  deletedTaskComments         TaskComment[]         @relation("TaskCommentDeletedBy")
+  deletedTaskAttachments      TaskAttachment[]      @relation("TaskAttachmentDeletedBy")
+  deletedProjectChats         ProjectChat[]           @relation("ProjectChatDeletedBy")
+  deletedProjectChatMessages    ProjectChatMessage[]    @relation("ProjectChatMessageDeletedBy")
+  
 
-  @@index([deletedAt])
+  notifications               Notification[] 
   devices Device[]
   refreshTokens RefreshToken[]
+  ownedProjects  Project[]        @relation("ProjectOwnedBy")
+  projectMembers ProjectMember[]  @relation("ProjectMembers")
+  taskAssignments TaskAssignee[]  @relation("TaskAssignments")
+  memberComments  TaskComment[]   @relation("TaskCommentMember")
+  chatMessages   ProjectChatMessage[]
+
+  @@index([deletedAt])
 }
 
 model VerificationCode {
@@ -176,6 +203,14 @@ model Role {
   isActive    Boolean      @default(true)
   permissions Permission[]
   users       User[]
+  roles       ProjectMember[]
+
+  createdById Int?
+  createdBy   User? @relation("RoleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("RoleUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("RoleDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -193,6 +228,13 @@ model Permission {
   module      String     @default("") @db.VarChar(500)
   roles       Role[]
 
+  createdById Int?
+  createdBy   User? @relation("PermissionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("PermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("PermissionDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -207,12 +249,19 @@ model Project {
   description   String?
   image      String?
 
+  createdById Int?
+  createdBy   User? @relation("ProjectCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("ProjectUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("ProjectDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
   createdAt     DateTime         @default(now())
   updatedAt     DateTime?        @updatedAt
   deletedAt     DateTime?
 
-  owner         User             @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  members       ProjectMember[]
+  owner         User             @relation("ProjectOwnedBy", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  members       ProjectMember[] @relation("ProjectMembers")
   sprints       Sprint[]
   chat          ProjectChat?
   notifications Notification[]
@@ -225,16 +274,26 @@ model ProjectMember {
   projectId   Int
   memberId    Int
   email       String
-  role        ProjectMemberRole
+  roleId      Int
+  role        Role                 @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   status      ProjectMemberStatus @default(PENDING)
   inviteToken String?
   joinAt      DateTime?
+
+  invitedById Int?
+  invitedBy   User? @relation("ProjectMemberInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("ProjectMemberUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("ProjectMemberDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+
   invitedAt   DateTime           @default(now())
   updatedAt   DateTime?          @updatedAt
   deletedAt   DateTime?
 
-  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  member      User               @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project     Project            @relation("ProjectMembers", fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  member      User               @relation("ProjectMembers", fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([deletedAt])
 }
@@ -248,6 +307,15 @@ model Sprint {
   startDate     DateTime
   endDate       DateTime
   status        SprintStatus @default(PLANNED)
+
+  createdById Int?
+  createdBy   User? @relation("SprintCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("SprintUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("SprintDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+
   createdAt     DateTime     @default(now())
   updatedAt     DateTime?
   deletedAt     DateTime?
@@ -263,22 +331,32 @@ model Sprint {
 model BoardColumn {
   id        Int              @id @default(autoincrement())
   sprintId  Int
-  title     BoardColumnTitle
-  createdAt DateTime         @default(now())
-  updatedAt DateTime?
+  title     String
+  
+  createdById Int?
+  createdBy   User? @relation("BoardColumnCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("BoardColumnUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("BoardColumnDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
 
   sprint    Sprint           @relation(fields: [sprintId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   tasks     Task[]
   taskOrders BoardColumnTaskOrder[]
 
-  @@index([sprintId])
+  @@index([deletedAt, sprintId])
 }
 
 model BoardColumnTaskOrder {
   id            Int         @id @default(autoincrement())
   boardColumnId Int
   taskId        Int
-  sortOrder     Int
+  sortOrder     Int 
 
   boardColumn   BoardColumn @relation(fields: [boardColumnId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   task          Task        @relation(fields: [taskId], references: [id])
@@ -295,6 +373,14 @@ model Task {
   priority      TaskPriority?
   storyPoint    Int           @default(0)
   dueDate       DateTime?
+
+  createdById Int?
+  createdBy   User? @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("TaskUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("TaskDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime?     @updatedAt
   deletedAt     DateTime?
@@ -318,8 +404,19 @@ model TaskAssignee {
   taskId Int
   userId Int
 
+  createdById Int?
+  createdBy   User? @relation("TaskAssigneeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("TaskAssigneeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("TaskAssigneeDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime? @updatedAt
+  deletedAt     DateTime?
+
   task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user   User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user   User @relation("TaskAssignments", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([taskId])
   @@index([userId])
@@ -330,6 +427,17 @@ model TaskLabel {
   id     Int    @id @default(autoincrement())
   taskId Int
   label  String
+
+  createdById Int?
+  createdBy   User? @relation("TaskLabelCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("TaskLabelUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("TaskLabelDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime? @updatedAt
+  deletedAt     DateTime?
 
   task   Task   @relation(fields: [taskId], references: [id])
 
@@ -343,12 +451,20 @@ model TaskComment {
   memberDisplayName String
   memberAvatar      String?
   content           String
+
+  createdById Int?
+  createdBy   User? @relation("TaskCommentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("TaskCommentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("TaskCommentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime? @updatedAt
   deletedAt         DateTime?
 
   task              Task     @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  member            User     @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  member            User     @relation("TaskCommentMember", fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([taskId])
   @@index([memberId])
@@ -361,6 +477,14 @@ model TaskAttachment {
   fileName  String
   fileType  String
   fileUrl   String
+
+  createdById Int?
+  createdBy   User? @relation("TaskAttachmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("TaskAttachmentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("TaskAttachmentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
   createdAt DateTime @default(now())
   updatedAt DateTime? @updatedAt
   deletedAt DateTime?
@@ -376,6 +500,14 @@ model ProjectChat {
   projectId       Int      @unique
   lastMessage     String?
   lastMessageTime DateTime?
+
+  createdById Int?
+  createdBy   User? @relation("ProjectChatCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("ProjectChatUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("ProjectChatDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime? @updatedAt
   deletedAt       DateTime?
@@ -401,6 +533,15 @@ model ProjectChatMessage {
   attachmentPublicId String?
   timestamp       DateTime @default(now())
   isDeleted       Boolean  @default(false)
+
+  createdById Int?
+  createdBy   User? @relation("ProjectChatMessageCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedById Int?
+  updatedBy   User? @relation("ProjectChatMessageUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedById Int?
+  deletedBy   User? @relation("ProjectChatMessageDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  createdAt       DateTime @default(now())
   updatedAt       DateTime? @updatedAt
   deletedAt       DateTime?
 

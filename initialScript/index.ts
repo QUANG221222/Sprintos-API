@@ -23,11 +23,15 @@ const main = async () => {
       },
       {
         name: RoleName.Owner,
-        description: 'Owner role'
+        description: 'Project member owner role'
+      },
+      {
+        name: RoleName.CoOwner,
+        description: 'Project co-owner role'
       },
       {
         name: RoleName.Member,
-        description: 'Member role'
+        description: 'Project member role'
       },
       {
         name: RoleName.Viewer,
