@@ -1,4 +1,4 @@
-import { Body, Container, Head, Heading, Html, Img, Link, Section, Text } from '@react-email/components'
+import { Body, Container, Head, Heading, Html, Link, Section, Text } from '@react-email/components'
 
 interface LinkVerificationEmailProps {
   code?: string
@@ -14,15 +14,11 @@ export const LinkVerificationEmail = ({ code, title, email, type, websiteDomain 
     <Head />
     <Body style={main}>
       <Container style={container}>
-        <Img
-          src={`https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdDlpa21sc2NhNDdtZ2NoNXFmc2J4ODhkMWdocXB6b2YyMnBoaGw3YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OuQmhmAAdJFLi/giphy.gif`}
-          width='212'
-          height='88'
-          alt='Plaid'
-          style={logo}
-        />
-        <Text style={tertiary}>LINK TO {title}</Text>
-        <Heading style={secondary}>Please click the link below:</Heading>
+        {/* <Text style={tertiary}>EMAIL VERIFICATION</Text> */}
+        <Heading style={secondary}>Verify your email address</Heading>
+        <Text style={paragraph}>
+          Thanks for signing up. Please confirm this email address to complete your registration.
+        </Text>
         <Section style={codeContainer}>
           <Link
             href={`${websiteDomain}/verification?email=${email}&code=${code}&type=${type}`}
@@ -30,31 +26,34 @@ export const LinkVerificationEmail = ({ code, title, email, type, websiteDomain 
               ...OTPCode
             }}
           >
-            Verify Email
+            Verify email
           </Link>
         </Section>
-        {/* User can copy the link to verify their email */}
-        <Text style={paragraph}>Or copy the link below to verify your email:</Text>
+        <Text style={paragraph}>
+          If the button does not work, copy and paste this link into your browser:
+        </Text>
         <Link
-          href={`${websiteDomain}/verification?email=${email}&code=${code}&type=${type}`}
+          href={`${websiteDomain}/verify?email=${email}&code=${code}&type=${type}`}
           style={{
             ...paragraph,
             textDecoration: 'underline',
             wordBreak: 'break-all',
             color: 'blue',
-            textAlign: 'center'
+            textAlign: 'center',
+            fontSize: '12px',
+            margin: '0 auto 16px'
           }}
         >
-          {`${websiteDomain}/verification?email=${email}&code=${code}&type=${type}`}
+          {`${websiteDomain}/verify?email=${email}&code=${code}&type=${type}`}
         </Link>
         <Text style={paragraph}>This link will expire in 5 minutes.</Text>
-        <Text style={paragraph}>Not expecting this email?</Text>
+        <Text style={paragraph}>If you did not request this email, you can ignore it.</Text>
         <Text style={paragraph}>
-          Contact{' '}
+          Need help? Contact{' '}
           <Link href='mailto:wangcode2k5@gmail.com' style={link}>
             wangcode2k5@gmail.com
           </Link>{' '}
-          if you did not request this link.
+          if you have questions.
         </Text>
       </Container>
     </Body>
@@ -63,7 +62,7 @@ export const LinkVerificationEmail = ({ code, title, email, type, websiteDomain 
 
 LinkVerificationEmail.PreviewProps = {
   code: '144833',
-  title: 'Verify Your Identity',
+  title: 'Verify your email',
   email: 'user@example.com',
   websiteDomain: 'https://example.com'
 } as LinkVerificationEmailProps
@@ -86,10 +85,6 @@ const container = {
   padding: '68px 0 130px'
 }
 
-const logo = {
-  margin: '0 auto'
-}
-
 const tertiary = {
   color: '#0a85ea',
   fontSize: '11px',
@@ -110,31 +105,28 @@ const secondary = {
   fontSize: '20px',
   fontWeight: 500,
   lineHeight: '24px',
-  marginBottom: '0',
-  marginTop: '0',
-  marginLeft: '40px',
-  textAlign: 'center' as const
+  margin: '0 8px 16px 8px',
+  textAlign: 'center' as const,
 }
 
 const codeContainer = {
-  background: 'rgba(0,0,0,.05)',
-  borderRadius: '4px',
-  margin: '16px auto 14px',
+  margin: '20px auto 16px',
   verticalAlign: 'middle',
   width: '280px'
 }
 
 const OTPCode = {
-  color: '#000',
+  backgroundColor: '#0a85ea',
+  borderRadius: '6px',
+  color: '#ffffff',
   display: 'inline-block',
   fontFamily: 'HelveticaNeue-Bold',
-  fontSize: '32px',
+  fontSize: '16px',
   fontWeight: 700,
-  letterSpacing: '6px',
-  lineHeight: '40px',
-  paddingBottom: '8px',
-  paddingTop: '8px',
+  letterSpacing: '0',
+  lineHeight: '44px',
   margin: '0 auto',
+  textDecoration: 'none',
   width: '100%',
   textAlign: 'center' as const
 }

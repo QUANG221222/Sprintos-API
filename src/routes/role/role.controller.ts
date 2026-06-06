@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Param, Post, Body, Put, Delete } from '@nestjs/common'
+import { Controller, Get, Query, Param, Post, Body, Put, Delete, ParseBoolPipe } from '@nestjs/common'
 import { ZodSerializerDto } from 'nestjs-zod'
 import {
   CreateRoleBodyDTO,
@@ -50,10 +50,17 @@ export class RoleController {
   }
 
   @Delete(':id')
-  delete(@ActiveUser('userId') userId: number, @Param() params: GetRoleParamsDTO) {
-    return this.roleService.delete({
-      id: params.id,
-      deletedById: userId
-    })
+  delete(
+    @ActiveUser('userId') userId: number,
+    @Param() params: GetRoleParamsDTO,
+    @Query('isHard', new ParseBoolPipe({ optional: true })) isHard?: boolean
+  ) {
+    return this.roleService.delete(
+      {
+        id: params.id,
+        deletedById: userId
+      },
+      isHard
+    )
   }
 }

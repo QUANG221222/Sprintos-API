@@ -1,0 +1,27 @@
+import { z } from 'zod'
+import { ProjectMemberSchema } from './shared-project-member.model'
+
+export const ProjectSchema = z
+  .object({
+    id: z.number(),
+    ownerId: z.number(),
+    name: z.string(),
+    description: z.string().nullable(),
+    image: z.string().nullable(),
+    members: z.array(ProjectMemberSchema),
+    // sprints: z.array(SprintSchema)
+    // notifications: z.array(NotificationSchema)
+    createdById: z.number().nullable(),
+    updatedById: z.number().nullable(),
+    deletedById: z.number().nullable(),
+
+    createdAt: z.date(),
+    updatedAt: z.date().nullable(),
+    deletedAt: z.date().nullable()
+  })
+  .strict()
+
+export const GetProjectDetailResSchema = ProjectSchema
+
+export type ProjectType = z.infer<typeof ProjectSchema>
+export type GetProjectDetailResType = z.infer<typeof GetProjectDetailResSchema>

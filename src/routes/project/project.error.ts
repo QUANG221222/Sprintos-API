@@ -15,16 +15,18 @@ export const ProjectForbiddenError = new UnprocessableEntityException({
 export const ProjectIdRequiredError = new UnprocessableEntityException({
   message: 'projectId is required',
   path: 'projectId',
+  statusCode: HttpStatus.UNPROCESSABLE_ENTITY
+})
+
+export const CannotTransferToSelfError = new UnprocessableEntityException({
+  message: 'Cannot transfer the project to yourself',
+  path: 'newOwnerId',
   statusCode: HttpStatus.BAD_REQUEST
 })
 
-export const missingEmailsError = (emails: string[], existingEmails: string[]) => {
-  const missingEmails = emails.filter((email) => !existingEmails.includes(email))
-  return new UnprocessableEntityException({
-    message: `The following member emails do not exist: ${missingEmails.join(', ')}`,
-    path: 'member.email',
-    statusCode: HttpStatus.BAD_REQUEST
-  })
-}
-
+export const TargetUserNotMemberError = new UnprocessableEntityException({
+  message: 'Target user is not an active member of this project',
+  path: 'newOwnerId',
+  statusCode: HttpStatus.BAD_REQUEST
+})
 

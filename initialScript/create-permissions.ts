@@ -103,6 +103,16 @@ async function bootstrap() {
           p.path === '/projects/owned' ||
           p.path === '/projects/joined'
       ),
+    [ProjectMemberRole.CO_OWNER]: (permissions: typeof updatedPermissionsInDb) =>
+      permissions.filter(
+        (p) =>
+          (p.path === '/projects' && p.method === 'GET') ||
+          (p.path.startsWith('/project-members') &&
+            (p.method === 'GET' || p.method === 'POST' || p.method === 'PATCH')) ||
+          p.path.startsWith('/sprints') ||
+          p.path.startsWith('/tasks') ||
+          p.path.startsWith('/board-columns')
+      ),
     [ProjectMemberRole.OWNER]: (permissions: typeof updatedPermissionsInDb) =>
       permissions.filter(
         (p) =>

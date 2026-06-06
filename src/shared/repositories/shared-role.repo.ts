@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { RoleName } from '~/shared/constants/role.constants'
+import { ProjectMemberRole } from '~/shared/constants/project.constants'
 import { PrismaService } from '~/shared/services/prisma.service'
 import { RoleType } from '../models/shared-role.model'
 
@@ -8,6 +9,7 @@ export class SharedRoleRepository {
   private clientRoleId: number | null = null
   private adminRoleId: number | null = null
   private ownerRoleId: number | null = null
+  private coOwnerRoleId: number | null = null
   private memberRoleId: number | null = null
   private viewerRoleId: number | null = null
 
@@ -45,8 +47,17 @@ export class SharedRoleRepository {
     if (this.ownerRoleId) {
       return this.ownerRoleId
     }
-    const role = await this.getRole(RoleName.Owner)
+    const role = await this.getRole(ProjectMemberRole.OWNER)
     this.ownerRoleId = role.id
+    return role.id
+  }
+
+  async getCoOwnerRoleId() {
+    if (this.coOwnerRoleId) {
+      return this.coOwnerRoleId
+    }
+    const role = await this.getRole(ProjectMemberRole.CO_OWNER)
+    this.coOwnerRoleId = role.id
     return role.id
   }
 
@@ -54,7 +65,7 @@ export class SharedRoleRepository {
     if (this.memberRoleId) {
       return this.memberRoleId
     }
-    const role = await this.getRole(RoleName.Member)
+    const role = await this.getRole(ProjectMemberRole.MEMBER)
     this.memberRoleId = role.id
     return role.id
   }
@@ -63,8 +74,27 @@ export class SharedRoleRepository {
     if (this.viewerRoleId) {
       return this.viewerRoleId
     }
-    const role = await this.getRole(RoleName.Viewer)
+    const role = await this.getRole(ProjectMemberRole.VIEWER)
     this.viewerRoleId = role.id
     return role.id
+  }
+
+  async getRoleIdByName(roleName: string) {
+    switch (roleName) {
+      case RoleName.User:
+        return this.getClientRoleId()
+      case RoleName.Admin:
+        return this.getAdminRoleId()
+      case ProjectMemberRole.OWNER:
+        return this.getOwnerRoleId()
+      case ProjectMemberRole.CO_OWNER:
+        return this.getCoOwnerRoleId()
+      case ProjectMemberRole.MEMBER:
+        return this.getMemberRoleId()
+      case ProjectMemberRole.VIEWER:
+        return this.getViewerRoleId()
+      default:
+        throw new Error(`Role with name ${roleName} not found`)
+    }
   }
 }

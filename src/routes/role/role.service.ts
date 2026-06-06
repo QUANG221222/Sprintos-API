@@ -69,10 +69,10 @@ export class RoleService {
     }
   }
 
-  async delete({ id, deletedById }: { id: number; deletedById: number | null }) {
+  async delete({ id, deletedById }: { id: number; deletedById: number | null }, isHard?: boolean) {
     try {
       await this.verifyRole(id)
-      await this.roleRepository.delete({ id, deletedById })
+      await this.roleRepository.delete({ id, deletedById }, isHard)
       return { message: 'Role deleted successfully' }
     } catch (error) {
       if (isNotFoundPrismaError(error)) {

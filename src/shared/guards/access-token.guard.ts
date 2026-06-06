@@ -55,26 +55,104 @@ export class AccessTokenGuard implements CanActivate {
     return decodedAccessToken
   }
 
+  private async extractProjectId(request: any): Promise<number | null> {
+    // 1. Direct projectId in params, body, or query
+    const projectIdRaw = request.params?.projectId ?? request.body?.projectId ?? request.query?.projectId
+    if (projectIdRaw && !isNaN(Number(projectIdRaw))) {
+      return Number(projectIdRaw)
+    }
+
+    // 2. SprintId in params, body, or query
+    const sprintIdRaw = request.params?.sprintId ?? request.body?.sprintId ?? request.query?.sprintId
+    if (sprintIdRaw && !isNaN(Number(sprintIdRaw))) {
+      const sprint = await this.prismaService.sprint.findUnique({
+        where: { id: Number(sprintIdRaw) },
+        select: { projectId: true }
+      })
+      if (sprint) return sprint.projectId
+    }
+
+    // 3. TaskId in params, body, or query
+    const taskIdRaw = request.params?.taskId ?? request.body?.taskId ?? request.query?.taskId
+    if (taskIdRaw && !isNaN(Number(taskIdRaw))) {
+      const task = await this.prismaService.task.findUnique({
+        where: { id: Number(taskIdRaw) },
+        select: { sprint: { select: { projectId: true } } }
+      })
+      if (task?.sprint) return task.sprint.projectId
+    }
+
+    // 4. BoardColumnId in params, body, or query
+    const boardColumnIdRaw =
+      request.params?.boardColumnId ?? request.body?.boardColumnId ?? request.query?.boardColumnId
+    if (boardColumnIdRaw && !isNaN(Number(boardColumnIdRaw))) {
+      const column = await this.prismaService.boardColumn.findUnique({
+        where: { id: Number(boardColumnIdRaw) },
+        select: { sprint: { select: { projectId: true } } }
+      })
+      if (column?.sprint) return column.sprint.projectId
+    }
+
+    return null
+  }
+
   private async validateUserPermission(decodedAccessToken: AccessTokenPayLoad, request: any): Promise<void> {
-    const roleId = decodedAccessToken.roleId
+    const globalRoleId = decodedAccessToken.roleId
     const path = request.route.path
     const method = request.method as keyof typeof HTTPMethod
-    const role = await this.prismaService.role
-      .findUniqueOrThrow({
-        where: { id: roleId, deletedAt: null, isActive: true },
-        include: {
-          permissions: {
-            where: { deletedAt: null, method, path }
-          }
+
+    const roleIdsToCheck: number[] = [globalRoleId]
+
+    // Try to extract projectId from request context
+    const projectId = await this.extractProjectId(request)
+
+    if (projectId) {
+      const projectMember = await this.prismaService.projectMember.findFirst({
+        where: {
+          projectId,
+          memberId: decodedAccessToken.userId,
+          status: 'ACTIVE',
+          deletedAt: null
+        },
+        select: {
+          role: true
         }
       })
-      .catch(() => {
-        throw new ForbiddenException('You do not have permission to access this resource')
-      })
-    const canAccess = role.permissions.some((permission) => permission.method === method && permission.path === path)
-    if (!canAccess) {
+
+      if (projectMember && projectMember.role && projectMember.role.isActive) {
+        roleIdsToCheck.push(projectMember.role.id)
+      }
+    }
+
+    // Find if any of the active roles has the permission for current route
+    const matchingRoles = await this.prismaService.role.findMany({
+      where: {
+        id: { in: roleIdsToCheck },
+        deletedAt: null,
+        isActive: true,
+        permissions: {
+          some: {
+            method,
+            path,
+            deletedAt: null
+          }
+        }
+      },
+      include: {
+        permissions: {
+          where: {
+            method,
+            path,
+            deletedAt: null
+          }
+        }
+      }
+    })
+
+    if (matchingRoles.length === 0) {
       throw new ForbiddenException('You do not have permission to access this resource')
     }
-    request[REQUEST_ROLE_PERMISSIONS] = role
+
+    request[REQUEST_ROLE_PERMISSIONS] = matchingRoles[0]
   }
 }

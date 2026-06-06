@@ -55,9 +55,12 @@ export class PermissionService {
     }
   }
 
-  async delete({ permissionId, deletedById }: { permissionId: number; deletedById: number | null; isHard?: boolean }) {
+  async delete(
+    { permissionId, deletedById }: { permissionId: number; deletedById: number | null; isHard?: boolean },
+    isHard?: boolean
+  ) {
     try {
-      await this.permissionRepository.delete({ permissionId, deletedById })
+      await this.permissionRepository.delete({ permissionId, deletedById }, isHard)
       return {
         message: 'Delete permission successfully'
       }
