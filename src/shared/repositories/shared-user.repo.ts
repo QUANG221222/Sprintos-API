@@ -17,6 +17,24 @@ export class SharedUserRepository {
     })
   }
 
+  findByEmail(email: string): Promise<UserType | null> {
+    return this.prismaService.user.findFirst({
+      where: {
+        email,
+        deletedAt: null
+      }
+    })
+  }
+
+  findManyByEmails(emails: string[]): Promise<UserType[]> {
+    return this.prismaService.user.findMany({
+      where: {
+        email: { in: emails },
+        deletedAt: null
+      }
+    })
+  }
+
   findUniqueUserIncludeRole(where: WhereUniqueUserType): Promise<(UserType & { role: RoleType }) | null> {
     return this.prismaService.user.findFirst({
       where: {

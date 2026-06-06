@@ -101,6 +101,21 @@ model User {
   gender         Gender?          
   avatar         String?            
   avatarPublicId String?
+
+  // 1 user có thể tạo ra nhiều user khác
+  // 1 user chỉ có thể được tạo ra bởi 1 user khác
+  // Tự quan hệ 1-n
+  createdById  Int?
+  createdBy    User?  @relation("CreatorUsers", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  createdUsers User[] @relation("CreatorUsers")
+
+  updatedById  Int?
+  updatedBy    User?  @relation("UpdatorUsers", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedUsers User[] @relation("UpdatorUsers")
+  deletedById  Int?
+  deletedBy    User?  @relation("DeletorUsers", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deletedUsers User[] @relation("DeletorUsers")
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime?        @updatedAt
   deletedAt      DateTime?      
