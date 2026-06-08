@@ -47,3 +47,9 @@ export const RefreshTokenNotFoundException = new UnauthorizedException({
   path: 'refreshToken',
   statusCode: HttpStatus.UNAUTHORIZED
 })
+
+export const GoogleUserInfoError = new UnprocessableEntityException({
+  message: 'Failed to get Google user information',
+  path: 'email',
+  statusCode: HttpStatus.UNPROCESSABLE_ENTITY
+})
