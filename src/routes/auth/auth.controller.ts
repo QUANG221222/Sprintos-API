@@ -1,6 +1,7 @@
-import { Body, Controller, HttpCode, HttpStatus, Ip, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Req, Res } from '@nestjs/common'
 import {
   ForgotPasswordBodyDTO,
+  GetAuthorizationUrlResDTO,
   LoginBodyDTO,
   LoginResDTO,
   RefreshTokenResDTO,
@@ -16,10 +17,17 @@ import { MessageResDTO } from '~/shared/dtos/response.dto'
 import { Request, Response } from 'express'
 import { cookieOptions } from '~/shared/constants/auth.constants'
 import { UserAgent } from '~/shared/decorators/user-agent.decorator'
+import { GoogleService } from './google.service'
+import envConfig from '~/shared/config'
+import { MicrosoftService } from './microsoft.service'
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly googleService: GoogleService,
+    private readonly microsoftService: MicrosoftService
+  ) {}
 
   @Post('register')
   @IsPublic()
@@ -95,7 +103,59 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @IsPublic()
+  @ZodSerializerDto(MessageResDTO)
   forgotPassword(@Body() body: ForgotPasswordBodyDTO) {
     return this.authService.forgotPassword(body)
+  }
+
+  @Get('google-link')
+  @IsPublic()
+  @ZodSerializerDto(GetAuthorizationUrlResDTO)
+  getAuthorizationUrl(@UserAgent() userAgent: string, @Ip() ip: string) {
+    return this.googleService.getAuthorizationUrl({ userAgent, ip })
+  }
+
+  @Get('google/callback')
+  @IsPublic()
+  async googleCallback(@Query('code') code: string, @Query('state') state: string, @Res() res: Response) {
+    try {
+      const data = await this.googleService.googleCallback({ code, state })
+
+      res.cookie('accessToken', data.accessToken, cookieOptions)
+      res.cookie('refreshToken', data.refreshToken, cookieOptions)
+
+      return res.redirect(
+        `${envConfig.CLIENT_REDIRECT_URI}?accessToken=${data.accessToken}&refreshToken=${data.refreshToken}`
+      )
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Google authentication failed, Please try again anther way'
+      return res.redirect(`${envConfig.CLIENT_REDIRECT_URI}?errorMessage=${message}`)
+    }
+  }
+
+  @Get('microsoft-link')
+  @IsPublic()
+  @ZodSerializerDto(GetAuthorizationUrlResDTO)
+  getMicrosoftAuthorizationUrl(@UserAgent() userAgent: string, @Ip() ip: string) {
+    return this.microsoftService.getAuthorizationUrl({ userAgent, ip })
+  }
+  @Get('microsoft/callback')
+  @IsPublic()
+  async microsoftCallback(@Query('code') code: string, @Query('state') state: string, @Res() res: Response) {
+    try {
+      const data = await this.microsoftService.microsoftCallback({ code, state })
+
+      res.cookie('accessToken', data.accessToken, cookieOptions)
+      res.cookie('refreshToken', data.refreshToken, cookieOptions)
+
+      return res.redirect(
+        `${envConfig.CLIENT_REDIRECT_URI}?accessToken=${data.accessToken}&refreshToken=${data.refreshToken}`
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Microsoft authentication failed, please try again'
+      return res.redirect(`${envConfig.CLIENT_REDIRECT_URI}?errorMessage=${message}`)
+    }
   }
 }

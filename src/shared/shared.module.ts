@@ -14,6 +14,7 @@ import { SharedRoleRepository } from './repositories/shared-role.repo'
 import { SharedProjectRepository } from './repositories/shared-project.repo'
 import { SharedProjectMemberService } from './services/shared-project-member.service'
 import { SharedProjectMemberRepo } from './repositories/shared-project-member.repo'
+import { S3Service } from './services/S3.service'
 
 const sharedServices = [
   PrismaService,
@@ -25,7 +26,8 @@ const sharedServices = [
   TwoFactorAuthService,
   SharedProjectRepository,
   SharedProjectMemberRepo,
-  SharedProjectMemberService
+  SharedProjectMemberService,
+  S3Service
 ]
 
 @Global()

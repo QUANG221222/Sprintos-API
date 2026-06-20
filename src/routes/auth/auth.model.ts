@@ -69,6 +69,15 @@ export const ForgotPasswordBodySchema = UserSchema.pick({ email: true }).extend(
   newPassword: z.string().min(8)
 })
 
+export const GoogleAuthStateSchema = z.object({
+  userAgent: z.string(),
+  ip: z.string()
+})
+
+export const GetAuthorizationUrlResSchema = z.object({
+  url: z.string()
+})
+
 export type RegisterBodyType = z.infer<typeof RegisterBodySchema>
 export type RegisterResType = z.infer<typeof RegisterResSchema>
 export type VerificationCodeType = z.infer<typeof VerificationCodeSchema>
@@ -80,3 +89,5 @@ export type RefreshTokenResType = z.infer<typeof RefreshTokenResSchema>
 export type RefreshTokenType = z.infer<typeof RefreshTokenSchema>
 export type DeviceType = z.infer<typeof DeviceSchema>
 export type ForgotPasswordBodyType = z.infer<typeof ForgotPasswordBodySchema>
+export type GoogleAuthStateType = z.infer<typeof GoogleAuthStateSchema>
+export type GetAuthorizationUrlResType = z.infer<typeof GetAuthorizationUrlResSchema>
