@@ -34,7 +34,11 @@ const configSchema = z.object({
   MICROSOFT_CLIENT_ID: z.string(),
   MICROSOFT_CLIENT_SECRET: z.string(),
   MICROSOFT_REDIRECT_URI: z.string(),
-  CLIENT_REDIRECT_URI: z.string()
+  CLIENT_REDIRECT_URI: z.string(),
+  S3_ACCESS_KEY: z.string(),
+  S3_SECRET_KEY: z.string(),
+  S3_REGION: z.string(),
+  S3_BUCKET_NAME: z.string()
 })
 
 const configServer = configSchema.safeParse(process.env)
