@@ -23,5 +23,10 @@ export const ProjectSchema = z
 
 export const GetProjectDetailResSchema = ProjectSchema
 
+export const GetProjectParamSchema = z.object({
+  projectId: z.coerce.number()
+})
+
 export type ProjectType = z.infer<typeof ProjectSchema>
+export type GetProjectParamType = z.infer<typeof GetProjectParamSchema>
 export type GetProjectDetailResType = z.infer<typeof GetProjectDetailResSchema>

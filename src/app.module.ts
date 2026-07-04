@@ -14,7 +14,7 @@ import { BoardColumnModule } from './routes/board-column/board-column.module'
 import { TaskModule } from './routes/task/task.module'
 import { PermissionModule } from './routes/permission/permission.module'
 import { RoleModule } from './routes/role/role.module'
-import { MediaModule } from './routes/media/media.module';
+import { MediaModule } from './routes/media/media.module'
 
 @Module({
   imports: [
