@@ -1,98 +1,129 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Hướng dẫn Thiết lập và Triển khai Sprintos NestJS API (Docker)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Tài liệu này hướng dẫn bạn cách thiết lập môi trường phát triển (Development) cục bộ bằng Docker, kết nối Database bằng DBeaver và quy trình triển khai (Deployment) lên máy chủ Production.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## I. THIẾT LẬP MÔI TRƯỜNG PHÁT TRIỂN (DEVELOPMENT LOCAL)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### 1. Chuẩn bị file môi trường `.env`
+Tạo file `.env` tại thư mục root của `Sprintos-Nestjs-API` (dựa trên mẫu của `.env.example`).
+Đặc biệt lưu ý các cấu hình cơ sở dữ liệu để tránh xung đột cổng với Postgres chạy trực tiếp trên Windows:
 
-## Project setup
+```env
+DB_USER=wangcoder2k5
+DB_PASSWORD=25092005quang
+DB_NAME=sprintos-db
+DB_PORT=5433 # Sử dụng cổng 5433 để tránh xung đột nếu máy bạn đã cài sẵn Postgres ở cổng 5432
 
-```bash
-$ npm install
+# URL kết nối cho NestJS app (chạy trong mạng nội bộ docker)
+DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public"
 ```
 
-## Compile and run the project
+### 2. Khởi chạy dự án bằng Docker
+Mở Terminal tại thư mục `Sprintos-Nestjs-API` và thực hiện:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Khởi động cơ sở dữ liệu Postgres và NestJS Backend ở chế độ chạy ngầm
+npm run docker:dev-up
 ```
+*Lưu ý: Lần đầu tiên chạy lệnh này sẽ mất chút thời gian để build image và tải thư viện.*
 
-## Run tests
+### 3. Khởi tạo dữ liệu và Phân quyền (Database Setup)
+Sau khi container đã hiển thị trạng thái `Started` thành công, chạy lệnh sau ở máy host để khởi tạo dữ liệu ban đầu:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Chạy cả hai lệnh Seed dữ liệu Admin và quét tạo Permissions cho các Route
+npm run docker:setup
 ```
+*(Nếu muốn chạy riêng lẻ, bạn có thể dùng `npm run docker:seed` hoặc `npm run docker:permissions`)*
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### 4. Tắt môi trường Dev khi không sử dụng
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run docker:dev-down
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## II. KẾT NỐI DATABASE BẰNG DBEAVER
 
-Check out a few resources that may come in handy when working with NestJS:
+Để xem và quản lý dữ liệu trong container PostgreSQL từ máy host bằng DBeaver:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+1. Mở DBeaver và tạo **New Connection** -> chọn **PostgreSQL**.
+2. Điền chính xác các thông số cấu hình lấy từ file `.env` của bạn:
+   - **Host**: `localhost` (hoặc `127.0.0.1`)
+   - **Port**: **`5433`** *(Cổng ngoài host đã đổi từ 5432 sang 5433)*
+   - **Database**: `sprintos-db`
+   - **Username**: `wangcoder2k5`
+   - **Password**: `25092005quang`
+3. Chuyển qua tab **SSL**: Đảm bảo **Disable SSL** (không tích chọn).
+4. Nhấn **Test Connection** để kiểm tra và nhấn **Finish**.
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## III. CÁC SCRIPT HỮU ÍCH TRONG `package.json`
 
-## Stay in touch
+| Lệnh | Ý nghĩa |
+| :--- | :--- |
+| `npm run docker:dev-up` | Khởi chạy Docker Compose (Postgres + NestJS) môi trường Dev |
+| `npm run docker:dev-down` | Dừng và xóa các container dev |
+| `npm run docker:seed` | Khởi tạo 6 Role và tài khoản Admin mặc định |
+| `npm run docker:permissions` | Quét router NestJS và cập nhật phân quyền tự động |
+| `npm run docker:setup` | Chạy gộp cả 2 lệnh `seed` và `permissions` |
+| `npm run docker:migrate` | Chạy cập nhật cấu trúc database dựa trên migration |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+## IV. XỬ LÝ SỰ CỐ THƯỜNG GẶP (TROUBLESHOOTING)
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### 1. Lỗi xác thực tài khoản Postgres (`Authentication failed`)
+* **Hiện tượng**: Log báo lỗi kết nối `Authentication failed for user...` sau khi bạn vừa đổi tài khoản/mật khẩu trong file `.env`.
+* **Lý do**: Docker vẫn tái sử dụng Volume cũ vốn được tạo bằng tài khoản cũ.
+* **Cách sửa**: Chạy lệnh xóa hoàn toàn volume cũ để khởi tạo lại:
+  ```bash
+  docker compose down -v
+  npm run docker:dev-up
+  ```
+
+### 2. Lỗi tràn bộ nhớ RAM (`Heap out of memory`) khi chạy permissions
+* **Lý do**: Lệnh `ts-node` mặc định chạy cơ chế Type-checking biên dịch toàn bộ dự án TypeScript rất nặng.
+* **Cách sửa**: Lệnh đã được cập nhật thêm flag `--transpile-only` để chỉ chuyển dịch code và chạy luôn, giảm lượng tiêu thụ RAM từ 2GB xuống dưới 150MB.
+
+### 3. Lỗi xung đột cổng `5432` trên máy Windows
+* **Lý do**: Máy bạn đã cài sẵn PostgreSQL cục bộ đang chạy.
+* **Cách sửa**: Đảm bảo cấu hình `DB_PORT=5433` trong file `.env`.
+
+---
+
+## V. QUY TRÌNH DEPLOY LÊN PRODUCTION (VPS)
+
+Khi triển khai lên Production, chúng ta sử dụng thư mục độc lập `/Sprintos-Deploy`. Thư mục này chỉ chứa các cấu hình deploy cần thiết và Nginx, không chứa mã nguồn thô của dự án.
+
+### Bước 1: Build và Push Docker Image từ Local
+```bash
+# 1. Đăng nhập Docker Hub
+docker login
+
+# 2. Build image production với dung lượng tối ưu nhất
+docker build --target production -t <username_cua_ban>/sprintos-api:latest .
+
+# 3. Đẩy image lên Docker Hub
+docker push <username_cua_ban>/sprintos-api:latest
+```
+
+### Bước 2: Chạy Migrations database cho Production
+Chạy trực tiếp từ máy local tới database Production (ví dụ: Neon DB) để cập nhật bảng:
+```bash
+# Đảm bảo DATABASE_URL trong .env đang trỏ tới DB Production thực tế
+npx prisma migrate deploy
+```
+
+### Bước 3: Deploy trên VPS
+1. Sao chép thư mục `/Sprintos-Deploy` lên VPS (vào thư mục `/app/sprintos-deploy`).
+2. SSH vào VPS và cập nhật file `.env.production` với các cấu hình bảo mật thực tế.
+3. Chạy các lệnh khởi động trên VPS:
+   ```bash
+   cd /app/sprintos-deploy
+   docker compose pull
+   docker compose up -d
+   ```
