@@ -19,12 +19,14 @@ import { cookieOptions } from '~/shared/constants/auth.constants'
 import { UserAgent } from '~/shared/decorators/user-agent.decorator'
 import { GoogleService } from './google.service'
 import envConfig from '~/shared/config'
+import { MicrosoftService } from './microsoft.service'
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly googleService: GoogleService
+    private readonly googleService: GoogleService,
+    private readonly microsoftService: MicrosoftService
   ) {}
 
   @Post('register')
@@ -119,13 +121,41 @@ export class AuthController {
   async googleCallback(@Query('code') code: string, @Query('state') state: string, @Res() res: Response) {
     try {
       const data = await this.googleService.googleCallback({ code, state })
+
+      res.cookie('accessToken', data.accessToken, cookieOptions)
+      res.cookie('refreshToken', data.refreshToken, cookieOptions)
+
       return res.redirect(
-        `${envConfig.GOOGLE_CLIENT_REDIRECT_URI}?accessToken=${data.accessToken}&refreshToken=${data.refreshToken}`
+        `${envConfig.CLIENT_REDIRECT_URI}?accessToken=${data.accessToken}&refreshToken=${data.refreshToken}`
       )
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Google authentication failed, Please try again anther way'
-      return res.redirect(`${envConfig.GOOGLE_CLIENT_REDIRECT_URI}?errorMessage=${message}`)
+      return res.redirect(`${envConfig.CLIENT_REDIRECT_URI}?errorMessage=${message}`)
+    }
+  }
+
+  @Get('microsoft-link')
+  @IsPublic()
+  @ZodSerializerDto(GetAuthorizationUrlResDTO)
+  getMicrosoftAuthorizationUrl(@UserAgent() userAgent: string, @Ip() ip: string) {
+    return this.microsoftService.getAuthorizationUrl({ userAgent, ip })
+  }
+  @Get('microsoft/callback')
+  @IsPublic()
+  async microsoftCallback(@Query('code') code: string, @Query('state') state: string, @Res() res: Response) {
+    try {
+      const data = await this.microsoftService.microsoftCallback({ code, state })
+
+      res.cookie('accessToken', data.accessToken, cookieOptions)
+      res.cookie('refreshToken', data.refreshToken, cookieOptions)
+
+      return res.redirect(
+        `${envConfig.CLIENT_REDIRECT_URI}?accessToken=${data.accessToken}&refreshToken=${data.refreshToken}`
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Microsoft authentication failed, please try again'
+      return res.redirect(`${envConfig.CLIENT_REDIRECT_URI}?errorMessage=${message}`)
     }
   }
 }

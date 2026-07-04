@@ -99,6 +99,7 @@ async function bootstrap() {
         (p) =>
           p.path.startsWith('/auth') ||
           p.path.startsWith('/profile') ||
+          p.path.startsWith('/media') ||
           (p.path === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
           p.path === '/projects/owned' ||
           p.path === '/projects/joined'

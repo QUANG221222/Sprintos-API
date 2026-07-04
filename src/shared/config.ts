@@ -14,6 +14,10 @@ const configSchema = z.object({
   LOCAL_APP_HOST: z.string().url(),
   WEBSITE_DOMAIN_DEVELOPMENT: z.string().url(),
   WEBSITE_DOMAIN_PRODUCTION: z.string().url(),
+  DB_USER: z.string(),
+  DB_PASSWORD: z.string(),
+  DB_NAME: z.string(),
+  DB_PORT: z.string(),
   DATABASE_URL: z.string(),
   APP_NAME: z.string(),
   SECRET_API_KEY: z.string(),
@@ -27,11 +31,18 @@ const configSchema = z.object({
   ADMIN_NUMBERPHONE: z.string(),
   OTP_EXPIRES_IN: z.string(),
   RESEND_API_KEY: z.string(),
-  BUILD_MODE: z.string().default(process.env.BUILD_MODE || 'dev')
-  // GOOGLE_CLIENT_ID: z.string(),
-  // GOOGLE_CLIENT_SECRET: z.string(),
-  // GOOGLE_REDIRECT_URI: z.string(),
-  // GOOGLE_CLIENT_REDIRECT_URI: z.string()
+  BUILD_MODE: z.string().default(process.env.BUILD_MODE || 'dev'),
+  GOOGLE_CLIENT_ID: z.string(),
+  GOOGLE_CLIENT_SECRET: z.string(),
+  GOOGLE_REDIRECT_URI: z.string(),
+  MICROSOFT_CLIENT_ID: z.string(),
+  MICROSOFT_CLIENT_SECRET: z.string(),
+  MICROSOFT_REDIRECT_URI: z.string(),
+  CLIENT_REDIRECT_URI: z.string(),
+  S3_ACCESS_KEY: z.string(),
+  S3_SECRET_KEY: z.string(),
+  S3_REGION: z.string(),
+  S3_BUCKET_NAME: z.string()
 })
 
 const configServer = configSchema.safeParse(process.env)
