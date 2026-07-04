@@ -322,6 +322,7 @@ model Sprint {
   startDate     DateTime
   endDate       DateTime
   status        SprintStatus @default(PLANNED)
+  boardColumnIds Int[]       @default([])
 
   createdById Int?
   createdBy   User? @relation("SprintCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
