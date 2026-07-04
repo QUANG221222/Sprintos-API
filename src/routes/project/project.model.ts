@@ -2,10 +2,6 @@ import z from 'zod'
 import { ProjectMemberRole } from '~/shared/constants/project.constants'
 import { ProjectSchema } from '~/shared/models/shared-project.model'
 
-export const GetProjectParamSchema = z.object({
-  projectId: z.coerce.number()
-})
-
 export const GetListProjectResSchema = z.object({
   data: z.array(ProjectSchema),
   totalItems: z.number().nonnegative(),
@@ -43,5 +39,4 @@ export const TransferProjectBodySchema = z
 export type CreateProjectBodyType = z.infer<typeof CreateProjectBodySchema>
 export type UpdateProjectBodyType = z.infer<typeof UpdateProjectBodySchema>
 export type GetListProjectResType = z.infer<typeof GetListProjectResSchema>
-export type GetProjectParamType = z.infer<typeof GetProjectParamSchema>
 export type TransferProjectBodyType = z.infer<typeof TransferProjectBodySchema>

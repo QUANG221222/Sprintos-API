@@ -41,6 +41,6 @@ async function bootstrap() {
   app.use(cookieParser())
   await app.listen(envConfig.LOCAL_APP_PORT ?? 8080)
 
-  console.log('Application is running on:', await app.getUrl())
+  console.log('Application is running on port:', envConfig.LOCAL_APP_PORT ?? 8080)
 }
 void bootstrap()

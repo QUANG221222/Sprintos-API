@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, ParseBoolPipe, Post, Put, Query } from '@nestjs/common'
-import { CreateProjectBodyDTO, GetProjectParamDTO, UpdateProjectBodyDTO, TransferProjectBodyDTO } from './project.dto'
+import { CreateProjectBodyDTO, UpdateProjectBodyDTO, TransferProjectBodyDTO } from './project.dto'
 import { ActiveUser } from '~/shared/decorators/active-user.decorator'
 import { ProjectService } from './project.service'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { GetListQueryDTO } from '~/shared/dtos/request.dto'
 import { GetListProjectResSchema } from './project.model'
 import { MessageResDTO } from '~/shared/dtos/response.dto'
-import { GetProjectDetailResDTO } from '~/shared/dtos/shared-project.dto'
+import { GetProjectDetailResDTO, GetProjectParamDTO } from '~/shared/dtos/shared-project.dto'
 
 @Controller('projects')
 export class ProjectController {
