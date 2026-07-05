@@ -1,12 +1,25 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { BoardColumnRepo } from './board-column.repo'
 import { isNotFoundPrismaError } from '~/shared/helpers'
-import { BoardColumnNotFoundError } from './board-column.error'
+import {
+  BoardColumnNotFoundError,
+  InvalidColumnsCountError,
+  ColumnNotBelongToSprintError,
+  DuplicateColumnIdsError,
+  TargetColumnNotFoundError,
+  ColumnContainsTasksError,
+  LastColumnDeletionError
+} from './board-column.error'
 import { CreateBoardColumnBodyType, GetSprintParamType, UpdateBoardColumnBodyType } from './board-column.model'
+import { SprintBoardDetailType } from '~/shared/models/shared-sprint-board.model'
+import { SharedSprintRepo } from '~/shared/repositories/shared-sprint.repo'
 
 @Injectable()
 export class BoardColumnService {
-  constructor(private readonly boardColumnRepo: BoardColumnRepo) {}
+  constructor(
+    private readonly boardColumnRepo: BoardColumnRepo,
+    private readonly sharedSprintRepo: SharedSprintRepo
+  ) {}
 
   async findAllBySprintId(params: GetSprintParamType) {
     return await this.boardColumnRepo.findAllBySprintId(params)
@@ -43,20 +56,18 @@ export class BoardColumnService {
 
     const totalColumns = await this.boardColumnRepo.countBySprintId(column.sprintId)
     if (totalColumns <= 1) {
-      throw new BadRequestException('Cannot delete the last board column in a sprint')
+      throw LastColumnDeletionError
     }
 
     const tasksCount = await this.boardColumnRepo.countTasksInColumn(id)
     if (tasksCount > 0) {
       if (!targetColumnId) {
-        throw new BadRequestException(
-          'Column contains tasks. Please specify a target column to move the tasks to before deleting.'
-        )
+        throw ColumnContainsTasksError
       }
 
       const targetColumn = await this.boardColumnRepo.findById({ boardColumnId: targetColumnId })
       if (!targetColumn || targetColumn.sprintId !== column.sprintId) {
-        throw new BadRequestException('Target column not found or belongs to a different sprint')
+        throw TargetColumnNotFoundError
       }
 
       await this.boardColumnRepo.moveTasksToNewColumn(id, targetColumnId)
@@ -64,7 +75,7 @@ export class BoardColumnService {
 
     try {
       await this.boardColumnRepo.delete(id)
-      return { message: 'Board column deleted successfully' }
+      return await this.sharedSprintRepo.getSprintBoardDetail(column.sprintId)
     } catch (error) {
       if (isNotFoundPrismaError(error)) {
         throw BoardColumnNotFoundError
@@ -73,8 +84,25 @@ export class BoardColumnService {
     }
   }
 
-  async reorder(sprintId: number, columnOrderIds: number[]) {
-    await this.boardColumnRepo.reorderColumns(sprintId, columnOrderIds)
-    return { message: 'Board columns reordered successfully' }
+  async reorder(sprintId: number, columnOrderIds: number[]): Promise<SprintBoardDetailType> {
+    const activeColumns = await this.boardColumnRepo.findActiveColumns(sprintId)
+    const activeColumnIds = activeColumns.map((col) => col.id)
+
+    if (new Set(columnOrderIds).size !== columnOrderIds.length) {
+      throw DuplicateColumnIdsError
+    }
+
+    if (columnOrderIds.length !== activeColumnIds.length) {
+      throw InvalidColumnsCountError
+    }
+
+    const activeSet = new Set(activeColumnIds)
+    for (const id of columnOrderIds) {
+      if (!activeSet.has(id)) {
+        throw ColumnNotBelongToSprintError(id)
+      }
+    }
+
+    return await this.boardColumnRepo.reorderColumns(sprintId, columnOrderIds)
   }
 }

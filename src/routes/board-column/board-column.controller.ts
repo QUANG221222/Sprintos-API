@@ -11,6 +11,7 @@ import {
   ReorderBoardColumnsBodyDTO
 } from './board-column.dto'
 import { MessageResDTO } from '~/shared/dtos/response.dto'
+import { SprintBoardDetailDTO } from '~/shared/dtos/shared-sprint-board.dto'
 
 @Controller('board-columns')
 export class BoardColumnController {
@@ -47,7 +48,7 @@ export class BoardColumnController {
   }
 
   @Put('sprint/:sprintId/reorder')
-  @ZodSerializerDto(MessageResDTO)
+  @ZodSerializerDto(SprintBoardDetailDTO)
   reorder(@Param() params: GetSprintParamDTO, @Body() body: ReorderBoardColumnsBodyDTO) {
     return this.boardColumnService.reorder(params.sprintId, body.columnOrderIds)
   }
