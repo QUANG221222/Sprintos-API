@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '~/shared/services/prisma.service'
+import { SprintBoardDetailType } from '~/shared/models/shared-sprint-board.model'
+import { SourceColumnNotFoundError } from './board-column.error'
 import {
   BoardColumnType,
   CreateBoardColumnBodyType,
@@ -8,21 +10,26 @@ import {
   GetSprintParamType,
   UpdateBoardColumnBodyType
 } from './board-column.model'
+import { SharedSprintRepo } from '~/shared/repositories/shared-sprint.repo'
 
 @Injectable()
 export class BoardColumnRepo {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly sharedSprintRepo: SharedSprintRepo
+  ) {}
 
   async findAllBySprintId(params: GetSprintParamType): Promise<GetListBoardColumnResType> {
-    const sprint = await this.prismaService.sprint.findUnique({
-      where: { id: params.sprintId }
-    })
-
-    const data = await this.prismaService.boardColumn.findMany({
-      where: {
-        sprintId: params.sprintId
-      }
-    })
+    const [sprint, data] = await Promise.all([
+      this.prismaService.sprint.findUnique({
+        where: { id: params.sprintId }
+      }),
+      this.prismaService.boardColumn.findMany({
+        where: {
+          sprintId: params.sprintId
+        }
+      })
+    ])
 
     const columnOrderIds = sprint?.boardColumnIds || []
     const sortedData = [...data].sort((a, b) => {
@@ -106,8 +113,14 @@ export class BoardColumnRepo {
 
   async countBySprintId(sprintId: number): Promise<number> {
     return await this.prismaService.boardColumn.count({
-      where: { sprintId }
+      where: { sprintId, deletedAt: null }
     })
+  }
+
+  async findActiveColumns(sprintId: number): Promise<BoardColumnType[]> {
+    return (await this.prismaService.boardColumn.findMany({
+      where: { sprintId, deletedAt: null }
+    })) as BoardColumnType[]
   }
 
   async countTasksInColumn(columnId: number): Promise<number> {
@@ -116,19 +129,27 @@ export class BoardColumnRepo {
     })
   }
 
-  async moveTasksToNewColumn(sourceColumnId: number, targetColumnId: number): Promise<void> {
+  async moveTasksToNewColumn(sourceColumnId: number, targetColumnId: number): Promise<SprintBoardDetailType> {
+    const column = await this.prismaService.boardColumn.findUnique({
+      where: { id: sourceColumnId }
+    })
+    if (!column) {
+      throw SourceColumnNotFoundError
+    }
     await this.prismaService.task.updateMany({
       where: { boardColumnId: sourceColumnId, deletedAt: null },
       data: { boardColumnId: targetColumnId }
     })
+    return await this.sharedSprintRepo.getSprintBoardDetail(column.sprintId)
   }
 
-  async reorderColumns(sprintId: number, columnOrderIds: number[]): Promise<void> {
+  async reorderColumns(sprintId: number, columnOrderIds: number[]): Promise<SprintBoardDetailType> {
     await this.prismaService.sprint.update({
       where: { id: sprintId },
       data: {
         boardColumnIds: columnOrderIds
       }
     })
+    return await this.sharedSprintRepo.getSprintBoardDetail(sprintId)
   }
 }

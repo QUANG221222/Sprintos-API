@@ -15,6 +15,7 @@ import { SharedProjectRepository } from './repositories/shared-project.repo'
 import { SharedProjectMemberService } from './services/shared-project-member.service'
 import { SharedProjectMemberRepo } from './repositories/shared-project-member.repo'
 import { S3Service } from './services/S3.service'
+import { SharedSprintRepo } from './repositories/shared-sprint.repo'
 
 const sharedServices = [
   PrismaService,
@@ -27,6 +28,7 @@ const sharedServices = [
   SharedProjectRepository,
   SharedProjectMemberRepo,
   SharedProjectMemberService,
+  SharedSprintRepo,
   S3Service
 ]
 
