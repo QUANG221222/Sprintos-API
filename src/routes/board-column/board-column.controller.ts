@@ -5,7 +5,6 @@ import {
   CreateBoardColumnBodyDTO,
   GetBoardColumnDetailResDTO,
   GetBoardColumnParamDTO,
-  GetListBoardColumnResDTO,
   GetSprintParamDTO,
   UpdateBoardColumnBodyDTO,
   ReorderBoardColumnsBodyDTO
@@ -24,7 +23,7 @@ export class BoardColumnController {
   }
 
   @Get('sprint/:sprintId')
-  @ZodSerializerDto(GetListBoardColumnResDTO)
+  @ZodSerializerDto(SprintBoardDetailDTO)
   findAllBySprintId(@Param() params: GetSprintParamDTO) {
     return this.boardColumnService.findAllBySprintId(params)
   }

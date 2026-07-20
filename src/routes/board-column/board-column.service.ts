@@ -11,7 +11,6 @@ import {
   LastColumnDeletionError
 } from './board-column.error'
 import { CreateBoardColumnBodyType, GetSprintParamType, UpdateBoardColumnBodyType } from './board-column.model'
-import { SprintBoardDetailType } from '~/shared/models/shared-sprint-board.model'
 import { SharedSprintRepo } from '~/shared/repositories/shared-sprint.repo'
 
 @Injectable()
@@ -22,7 +21,7 @@ export class BoardColumnService {
   ) {}
 
   async findAllBySprintId(params: GetSprintParamType) {
-    return await this.boardColumnRepo.findAllBySprintId(params)
+    return await this.sharedSprintRepo.getSprintBoardDetail(params.sprintId)
   }
 
   async findById(id: number) {
@@ -84,7 +83,7 @@ export class BoardColumnService {
     }
   }
 
-  async reorder(sprintId: number, columnOrderIds: number[]): Promise<SprintBoardDetailType> {
+  async reorder(sprintId: number, columnOrderIds: number[]) {
     const activeColumns = await this.boardColumnRepo.findActiveColumns(sprintId)
     const activeColumnIds = activeColumns.map((col) => col.id)
 
