@@ -12,6 +12,7 @@ export const SprintSchema = z
     startDate: z.date(),
     endDate: z.date(),
     status: SprintStatusSchema,
+    boardColumnIds: z.array(z.number()),
     createdById: z.number().nullable(),
     updatedById: z.number().nullable(),
     deletedById: z.number().nullable(),

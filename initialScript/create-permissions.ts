@@ -8,6 +8,7 @@ const prisma = new PrismaService()
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
+  app.setGlobalPrefix('api')
   await app.listen(3030)
   const server = app.getHttpAdapter().getInstance()
   const router = server.router
@@ -96,50 +97,71 @@ async function bootstrap() {
     [RoleName.Admin]: (permissions: typeof updatedPermissionsInDb) => permissions,
     [RoleName.User]: (permissions: typeof updatedPermissionsInDb) =>
       permissions.filter(
-        (p) =>
-          p.path.startsWith('/auth') ||
-          p.path.startsWith('/profile') ||
-          p.path.startsWith('/media') ||
-          (p.path === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
-          p.path === '/projects/owned' ||
-          p.path === '/projects/joined'
+        (p) => {
+          const cleanPath = p.path.replace(/^\/api/, '')
+          return (
+            cleanPath.startsWith('/auth') ||
+            cleanPath.startsWith('/profile') ||
+            cleanPath.startsWith('/media') ||
+            (cleanPath.startsWith('/users') && p.method === 'GET') ||
+            (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
+            cleanPath === '/projects/owned' ||
+            cleanPath === '/projects/joined'
+          )
+        }
       ),
     [ProjectMemberRole.CO_OWNER]: (permissions: typeof updatedPermissionsInDb) =>
       permissions.filter(
-        (p) =>
-          (p.path === '/projects' && p.method === 'GET') ||
-          (p.path.startsWith('/project-members') &&
-            (p.method === 'GET' || p.method === 'POST' || p.method === 'PATCH')) ||
-          p.path.startsWith('/sprints') ||
-          p.path.startsWith('/tasks') ||
-          p.path.startsWith('/board-columns')
+        (p) => {
+          const cleanPath = p.path.replace(/^\/api/, '')
+          return (
+            (cleanPath.startsWith('/projects') && p.method === 'GET') ||
+            (cleanPath.startsWith('/project-members') &&
+              (p.method === 'GET' || p.method === 'POST' || p.method === 'PATCH')) ||
+            cleanPath.startsWith('/sprints') ||
+            cleanPath.startsWith('/tasks') ||
+            cleanPath.startsWith('/board-columns')
+          )
+        }
       ),
     [ProjectMemberRole.OWNER]: (permissions: typeof updatedPermissionsInDb) =>
       permissions.filter(
-        (p) =>
-          p.path.startsWith('/projects') ||
-          p.path.startsWith('/project-members') ||
-          p.path.startsWith('/sprints') ||
-          p.path.startsWith('/tasks') ||
-          p.path.startsWith('/board-columns')
+        (p) => {
+          const cleanPath = p.path.replace(/^\/api/, '')
+          return (
+            cleanPath.startsWith('/projects') ||
+            cleanPath.startsWith('/project-members') ||
+            cleanPath.startsWith('/sprints') ||
+            cleanPath.startsWith('/tasks') ||
+            cleanPath.startsWith('/board-columns')
+          )
+        }
       ),
     [ProjectMemberRole.MEMBER]: (permissions: typeof updatedPermissionsInDb) =>
       permissions.filter(
-        (p) =>
-          ((p.path.startsWith('/projects') || p.path.startsWith('/project-members')) && p.method === 'GET') ||
-          p.path.startsWith('/sprints') ||
-          p.path.startsWith('/tasks') ||
-          p.path.startsWith('/board-columns')
+        (p) => {
+          const cleanPath = p.path.replace(/^\/api/, '')
+          return (
+            ((cleanPath.startsWith('/projects') || cleanPath.startsWith('/project-members')) && p.method === 'GET') ||
+            cleanPath.startsWith('/sprints') ||
+            cleanPath.startsWith('/tasks') ||
+            cleanPath.startsWith('/board-columns')
+          )
+        }
       ),
     [ProjectMemberRole.VIEWER]: (permissions: typeof updatedPermissionsInDb) =>
       permissions.filter(
-        (p) =>
-          p.method === 'GET' &&
-          (p.path.startsWith('/projects') ||
-            p.path.startsWith('/project-members') ||
-            p.path.startsWith('/sprints') ||
-            p.path.startsWith('/tasks') ||
-            p.path.startsWith('/board-columns'))
+        (p) => {
+          const cleanPath = p.path.replace(/^\/api/, '')
+          return (
+            p.method === 'GET' &&
+            (cleanPath.startsWith('/projects') ||
+              cleanPath.startsWith('/project-members') ||
+              cleanPath.startsWith('/sprints') ||
+              cleanPath.startsWith('/tasks') ||
+              cleanPath.startsWith('/board-columns'))
+          )
+        }
       )
   }
 

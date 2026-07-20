@@ -15,6 +15,7 @@ import { TaskModule } from './routes/task/task.module'
 import { PermissionModule } from './routes/permission/permission.module'
 import { RoleModule } from './routes/role/role.module'
 import { MediaModule } from './routes/media/media.module'
+import { UserModule } from './routes/user/user.module'
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { MediaModule } from './routes/media/media.module'
     SprintModule,
     BoardColumnModule,
     TaskModule,
-    MediaModule
+    MediaModule,
+    UserModule
   ],
   controllers: [AppController],
   providers: [

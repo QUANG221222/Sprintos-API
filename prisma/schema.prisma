@@ -57,6 +57,13 @@ enum TaskPriority {
   CRITICAL
 }
 
+enum DependencyType {
+  FS
+  SS
+  FF
+  SF
+}
+
 enum NotificationType {
   project_created
   project_updated
@@ -322,6 +329,7 @@ model Sprint {
   startDate     DateTime
   endDate       DateTime
   status        SprintStatus @default(PLANNED)
+  boardColumnIds Int[]       @default([])
 
   createdById Int?
   createdBy   User? @relation("SprintCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -388,6 +396,9 @@ model Task {
   priority      TaskPriority?
   storyPoint    Int           @default(0)
   dueDate       DateTime?
+  startDate     DateTime?
+  duration      Int?          @default(0)
+  parentId      Int?
 
   createdById Int?
   createdBy   User? @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -409,9 +420,32 @@ model Task {
   notifications Notification[]
   boardColumnTaskOrders BoardColumnTaskOrder[]
 
+  parent        Task?         @relation("SubTasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subTasks      Task[]        @relation("SubTasks")
+  predecessors  TaskDependency[] @relation("SuccessorTasks")
+  successors    TaskDependency[] @relation("PredecessorTasks")
+
   @@index([sprintId])
   @@index([boardColumnId])
   @@index([deletedAt])
+}
+
+model TaskDependency {
+  id            Int            @id @default(autoincrement())
+  predecessorId Int
+  successorId   Int
+  type          DependencyType @default(FS)
+  lag           Int            @default(0)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime?      @updatedAt
+
+  predecessor   Task           @relation("PredecessorTasks", fields: [predecessorId], references: [id], onDelete: Cascade)
+  successor     Task           @relation("SuccessorTasks", fields: [successorId], references: [id], onDelete: Cascade)
+
+  @@unique([predecessorId, successorId])
+  @@index([predecessorId])
+  @@index([successorId])
 }
 
 model TaskAssignee {

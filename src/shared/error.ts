@@ -1,4 +1,4 @@
-import { HttpStatus, NotFoundException, UnprocessableEntityException } from '@nestjs/common'
+import { BadRequestException, HttpStatus, NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 
 export const NotFoundRecordException = new NotFoundException({
   message: 'Not Found',
@@ -20,3 +20,9 @@ export const missingEmailsError = (emails: string[], existingEmails: string[]) =
     statusCode: HttpStatus.BAD_REQUEST
   })
 }
+
+export const SprintNotFoundError = new BadRequestException({
+  message: 'Sprint not found',
+  path: 'sprintId',
+  statusCode: HttpStatus.BAD_REQUEST
+})
