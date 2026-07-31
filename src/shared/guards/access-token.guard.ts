@@ -55,18 +55,18 @@ export class AccessTokenGuard implements CanActivate {
     return decodedAccessToken
   }
 
-  private async extractProjectId(request: any): Promise<number | null> {
+  private async extractProjectId(request: any): Promise<string | null> {
     // 1. Direct projectId in params, body, or query
     const projectIdRaw = request.params?.projectId ?? request.body?.projectId ?? request.query?.projectId
-    if (projectIdRaw && !isNaN(Number(projectIdRaw))) {
-      return Number(projectIdRaw)
+    if (projectIdRaw && typeof projectIdRaw === 'string') {
+      return projectIdRaw
     }
 
     // 2. SprintId in params, body, or query
     const sprintIdRaw = request.params?.sprintId ?? request.body?.sprintId ?? request.query?.sprintId
-    if (sprintIdRaw && !isNaN(Number(sprintIdRaw))) {
+    if (sprintIdRaw && typeof sprintIdRaw === 'string') {
       const sprint = await this.prismaService.sprint.findUnique({
-        where: { id: Number(sprintIdRaw) },
+        where: { id: sprintIdRaw },
         select: { projectId: true }
       })
       if (sprint) return sprint.projectId
@@ -74,23 +74,35 @@ export class AccessTokenGuard implements CanActivate {
 
     // 3. TaskId in params, body, or query
     const taskIdRaw = request.params?.taskId ?? request.body?.taskId ?? request.query?.taskId
-    if (taskIdRaw && !isNaN(Number(taskIdRaw))) {
+    if (taskIdRaw && typeof taskIdRaw === 'string') {
       const task = await this.prismaService.task.findUnique({
-        where: { id: Number(taskIdRaw) },
-        select: { sprint: { select: { projectId: true } } }
+        where: { id: taskIdRaw },
+        select: { sprintId: true }
       })
-      if (task?.sprint) return task.sprint.projectId
+      if (task) {
+        const sprint = await this.prismaService.sprint.findUnique({
+          where: { id: task.sprintId },
+          select: { projectId: true }
+        })
+        if (sprint) return sprint.projectId
+      }
     }
 
     // 4. BoardColumnId in params, body, or query
     const boardColumnIdRaw =
       request.params?.boardColumnId ?? request.body?.boardColumnId ?? request.query?.boardColumnId
-    if (boardColumnIdRaw && !isNaN(Number(boardColumnIdRaw))) {
+    if (boardColumnIdRaw && typeof boardColumnIdRaw === 'string') {
       const column = await this.prismaService.boardColumn.findUnique({
-        where: { id: Number(boardColumnIdRaw) },
-        select: { sprint: { select: { projectId: true } } }
+        where: { id: boardColumnIdRaw },
+        select: { sprintId: true }
       })
-      if (column?.sprint) return column.sprint.projectId
+      if (column) {
+        const sprint = await this.prismaService.sprint.findUnique({
+          where: { id: column.sprintId },
+          select: { projectId: true }
+        })
+        if (sprint) return sprint.projectId
+      }
     }
 
     return null
@@ -114,7 +126,7 @@ export class AccessTokenGuard implements CanActivate {
           status: 'ACTIVE',
           deletedAt: null
         },
-        select: {
+        include: {
           role: true
         }
       })

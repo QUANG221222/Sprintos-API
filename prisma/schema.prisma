@@ -265,11 +265,11 @@ model Permission {
 }
 
 model Project {
-  id            Int              @id @default(autoincrement())
+  id            String           @id @default(cuid())
   ownerId       Int
   name          String
   description   String?
-  image      String?
+  image         String?
 
   createdById Int?
   createdBy   User? @relation("ProjectCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -292,8 +292,8 @@ model Project {
 }
 
 model ProjectMember {
-  id          Int                @id @default(autoincrement())
-  projectId   Int
+  id          String             @id @default(cuid())
+  projectId   String
   memberId    Int
   email       String
   roleId      Int
@@ -321,15 +321,15 @@ model ProjectMember {
 }
 
 model Sprint {
-  id            Int          @id @default(autoincrement())
-  projectId     Int
+  id            String       @id @default(cuid())
+  projectId     String
   name          String
   goal          String?
   maxStoryPoint Int          @default(0)
   startDate     DateTime
   endDate       DateTime
   status        SprintStatus @default(PLANNED)
-  boardColumnIds Int[]       @default([])
+  boardColumnIds String[]    @default([])
 
   createdById Int?
   createdBy   User? @relation("SprintCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -352,8 +352,8 @@ model Sprint {
 }
 
 model BoardColumn {
-  id        Int              @id @default(autoincrement())
-  sprintId  Int
+  id        String           @id @default(cuid())
+  sprintId  String
   title     String
   
   createdById Int?
@@ -376,9 +376,9 @@ model BoardColumn {
 }
 
 model BoardColumnTaskOrder {
-  id            Int         @id @default(autoincrement())
-  boardColumnId Int
-  taskId        Int
+  id            String      @id @default(cuid())
+  boardColumnId String
+  taskId        String
   sortOrder     Int 
 
   boardColumn   BoardColumn @relation(fields: [boardColumnId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -388,9 +388,9 @@ model BoardColumnTaskOrder {
 }
 
 model Task {
-  id            Int           @id @default(autoincrement())
-  sprintId      Int
-  boardColumnId Int
+  id            String        @id @default(cuid())
+  sprintId      String
+  boardColumnId String
   title         String
   description   String?
   priority      TaskPriority?
@@ -398,7 +398,7 @@ model Task {
   dueDate       DateTime?
   startDate     DateTime?
   duration      Int?          @default(0)
-  parentId      Int?
+  parentId      String?
 
   createdById Int?
   createdBy   User? @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -431,9 +431,9 @@ model Task {
 }
 
 model TaskDependency {
-  id            Int            @id @default(autoincrement())
-  predecessorId Int
-  successorId   Int
+  id            String         @id @default(cuid())
+  predecessorId String
+  successorId   String
   type          DependencyType @default(FS)
   lag           Int            @default(0)
 
@@ -449,8 +449,8 @@ model TaskDependency {
 }
 
 model TaskAssignee {
-  id     Int  @id @default(autoincrement())
-  taskId Int
+  id     String @id @default(cuid())
+  taskId String
   userId Int
 
   createdById Int?
@@ -473,8 +473,8 @@ model TaskAssignee {
 }
 
 model TaskLabel {
-  id     Int    @id @default(autoincrement())
-  taskId Int
+  id     String @id @default(cuid())
+  taskId String
   label  String
 
   createdById Int?
@@ -494,8 +494,8 @@ model TaskLabel {
 }
 
 model TaskComment {
-  id                Int      @id @default(autoincrement())
-  taskId            Int
+  id                String   @id @default(cuid())
+  taskId            String
   memberId          Int
   memberDisplayName String
   memberAvatar      String?
@@ -521,8 +521,8 @@ model TaskComment {
 }
 
 model TaskAttachment {
-  id        Int      @id @default(autoincrement())
-  taskId    Int
+  id        String   @id @default(cuid())
+  taskId    String
   fileName  String
   fileType  String
   fileUrl   String
@@ -545,8 +545,8 @@ model TaskAttachment {
 }
 
 model ProjectChat {
-  id              Int      @id @default(autoincrement())
-  projectId       Int      @unique
+  id              String   @id @default(cuid())
+  projectId       String   @unique
   lastMessage     String?
   lastMessageTime DateTime?
 
@@ -568,8 +568,8 @@ model ProjectChat {
 }
 
 model ProjectChatMessage {
-  id              Int      @id @default(autoincrement())
-  projectChatId   Int
+  id              String   @id @default(cuid())
+  projectChatId   String
   senderId        Int
   senderName      String
   senderRole      String
@@ -603,10 +603,10 @@ model ProjectChatMessage {
 }
 
 model Notification {
-  id        Int              @id @default(autoincrement())
+  id        String           @id @default(cuid())
   userId    Int?
-  projectId Int?
-  taskId    Int?
+  projectId String?
+  taskId    String?
   type      NotificationType
   title     String
   message   String

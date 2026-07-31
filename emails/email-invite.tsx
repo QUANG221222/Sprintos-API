@@ -6,7 +6,7 @@ interface LinkVerificationInvitationEmailProps {
   email?: string
   role?: string
   websiteDomain?: string
-  projectId?: number
+  projectId?: string
 }
 
 export const LinkVerificationInvitationEmail = ({ token, title, email, role, websiteDomain, projectId }: LinkVerificationInvitationEmailProps) => (
@@ -66,7 +66,7 @@ LinkVerificationInvitationEmail.PreviewProps = {
   email: 'user@example.com',
   role: 'user',
   websiteDomain: 'https://example.com',
-  projectId: 1
+  projectId: '1'
 } as LinkVerificationInvitationEmailProps
 
 export default LinkVerificationInvitationEmail

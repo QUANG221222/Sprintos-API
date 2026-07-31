@@ -7,9 +7,9 @@ export const DependencyTypeSchema = z.enum(['FS', 'SS', 'FF', 'SF'])
 
 export const TaskSchema = z
   .object({
-    id: z.number(),
-    sprintId: z.number(),
-    boardColumnId: z.number(),
+    id: z.string(),
+    sprintId: z.string(),
+    boardColumnId: z.string(),
     title: z.string(),
     description: z.string().nullable(),
     priority: TaskPrioritySchema.nullable(),
@@ -17,7 +17,7 @@ export const TaskSchema = z
     dueDate: z.date().nullable(),
     startDate: z.date().nullable(),
     duration: z.number().int().nullable(),
-    parentId: z.number().nullable(),
+    parentId: z.string().nullable(),
     createdById: z.number().nullable(),
     updatedById: z.number().nullable(),
     deletedById: z.number().nullable(),
@@ -29,22 +29,22 @@ export const TaskSchema = z
 
 export const TaskDependencySchema = z
   .object({
-    id: z.number(),
-    predecessorId: z.number(),
-    successorId: z.number(),
+    id: z.string(),
+    predecessorId: z.string(),
+    successorId: z.string(),
     type: DependencyTypeSchema,
     lag: z.number().int(),
     createdAt: z.date(),
     updatedAt: z.date().nullable(),
-    predecessor: z.object({ id: z.number(), title: z.string() }).optional(),
-    successor: z.object({ id: z.number(), title: z.string() }).optional()
+    predecessor: z.object({ id: z.string(), title: z.string() }).optional(),
+    successor: z.object({ id: z.string(), title: z.string() }).optional()
   })
   .strict()
 
 export const TaskAssigneeSchema = z
   .object({
-    id: z.number(),
-    taskId: z.number(),
+    id: z.string(),
+    taskId: z.string(),
     userId: z.number(),
     user: GetUserProfileResSchema,
     createdById: z.number().nullable().optional(),
@@ -67,8 +67,8 @@ export const TaskDetailSchema = TaskSchema.extend({
 
 export const TaskCommentSchema = z
   .object({
-    id: z.number(),
-    taskId: z.number(),
+    id: z.string(),
+    taskId: z.string(),
     memberId: z.number(),
     memberDisplayName: z.string(),
     memberAvatar: z.string().nullable(),
@@ -81,8 +81,8 @@ export const TaskCommentSchema = z
 
 export const TaskAttachmentSchema = z
   .object({
-    id: z.number(),
-    taskId: z.number(),
+    id: z.string(),
+    taskId: z.string(),
     fileName: z.string(),
     fileType: z.string(),
     fileUrl: z.string(),
@@ -94,19 +94,19 @@ export const TaskAttachmentSchema = z
 
 export const GetTaskParamSchema = z
   .object({
-    taskId: z.coerce.number()
+    taskId: z.string()
   })
   .strict()
 
 export const GetSprintParamSchema = z
   .object({
-    sprintId: z.coerce.number()
+    sprintId: z.string()
   })
   .strict()
 
 export const GetBoardColumnParamSchema = z
   .object({
-    boardColumnId: z.coerce.number()
+    boardColumnId: z.string()
   })
   .strict()
 
@@ -124,8 +124,8 @@ export const GetListTaskResSchema = z
 
 export const CreateTaskBodySchema = z
   .object({
-    sprintId: z.number().positive(),
-    boardColumnId: z.number().positive().optional(),
+    sprintId: z.string(),
+    boardColumnId: z.string().optional(),
     title: z.string(),
     description: z.string().nullable().optional(),
     priority: TaskPrioritySchema.nullable().optional(),
@@ -133,7 +133,7 @@ export const CreateTaskBodySchema = z
     dueDate: z.coerce.date().nullable().optional(),
     startDate: z.coerce.date().nullable().optional(),
     duration: z.number().int().nonnegative().optional(),
-    parentId: z.number().positive().nullable().optional(),
+    parentId: z.string().nullable().optional(),
     assigneeIds: z.array(z.number().positive()).optional()
   })
   .strict()
@@ -158,8 +158,8 @@ export const AddTaskAttachmentBodySchema = z
 
 export const CreateTaskDependencyBodySchema = z
   .object({
-    predecessorId: z.number().positive(),
-    successorId: z.number().positive(),
+    predecessorId: z.string(),
+    successorId: z.string(),
     type: DependencyTypeSchema.optional(),
     lag: z.number().int().nonnegative().optional()
   })
@@ -170,7 +170,7 @@ export const SprintNetworkDiagramResSchema = z
     tasks: z.array(
       TaskSchema.extend({
         assignees: z.array(TaskAssigneeSchema).optional(),
-        parentId: z.number().nullable().optional()
+        parentId: z.string().nullable().optional()
       })
     ),
     dependencies: z.array(TaskDependencySchema)
@@ -179,7 +179,14 @@ export const SprintNetworkDiagramResSchema = z
 
 export const ReorderTasksBodySchema = z
   .object({
-    taskOrderIds: z.array(z.number())
+    taskOrderIds: z.array(z.string())
+  })
+  .strict()
+
+export const MoveTaskBodySchema = z
+  .object({
+    targetColumnId: z.string(),
+    newIndex: z.number().int().min(0)
   })
   .strict()
 
@@ -201,3 +208,5 @@ export type AddTaskAttachmentBodyType = z.infer<typeof AddTaskAttachmentBodySche
 export type CreateTaskDependencyBodyType = z.infer<typeof CreateTaskDependencyBodySchema>
 export type SprintNetworkDiagramResType = z.infer<typeof SprintNetworkDiagramResSchema>
 export type ReorderTasksBodyType = z.infer<typeof ReorderTasksBodySchema>
+export type MoveTaskBodyType = z.infer<typeof MoveTaskBodySchema>
+

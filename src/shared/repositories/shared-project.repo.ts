@@ -9,7 +9,7 @@ export class SharedProjectRepository {
         private readonly prismaService: PrismaService
     ) {}
 
-    async findProjectById(projectId: number): Promise<GetProjectDetailResType | null> {
+    async findProjectById(projectId: string): Promise<GetProjectDetailResType | null> {
         const project = await this.prismaService.project.findFirst({
             where: {
                 id: projectId,

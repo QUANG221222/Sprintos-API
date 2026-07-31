@@ -63,7 +63,7 @@ export class SprintRepo {
     })
   }
 
-  async update({ id, body, userId }: { id: number; body: UpdateSprintBodyType; userId: number }): Promise<SprintType> {
+  async update({ id, body, userId }: { id: string; body: UpdateSprintBodyType; userId: number }): Promise<SprintType> {
     return await this.prismaService.sprint.update({
       where: {
         id,
@@ -77,7 +77,7 @@ export class SprintRepo {
     })
   }
 
-  async delete({ id, userId }: { id: number; userId: number }, isHard?: boolean): Promise<SprintType> {
+  async delete({ id, userId }: { id: string; userId: number }, isHard?: boolean): Promise<SprintType> {
     return isHard
       ? await this.prismaService.sprint.delete({
           where: {

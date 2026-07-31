@@ -230,7 +230,7 @@ export class ProjectRepo {
     body,
     updatedById
   }: {
-    id: number
+    id: string
     body: UpdateProjectBodyType
     updatedById: number
   }): Promise<GetProjectDetailResType> {
@@ -263,7 +263,7 @@ export class ProjectRepo {
   }
 
   async delete(
-    { id, deletedById }: { id: number; deletedById: number },
+    { id, deletedById }: { id: string; deletedById: number },
     isHard?: boolean
   ): Promise<GetProjectDetailResType> {
     const project = isHard
@@ -315,11 +315,11 @@ export class ProjectRepo {
     ownerRoleId,
     coOwnerRoleId
   }: {
-    projectId: number
+    projectId: string
     newOwnerId: number
     requesterId: number
-    requesterMemberId?: number
-    targetMemberId: number
+    requesterMemberId?: string
+    targetMemberId: string
     ownerRoleId: number
     coOwnerRoleId: number
   }): Promise<GetProjectDetailResType> {

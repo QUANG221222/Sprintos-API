@@ -1,10 +1,9 @@
 import { Body, Controller, Delete, Get, Param, ParseBoolPipe, Post, Put, Query } from '@nestjs/common'
-import { CreateProjectBodyDTO, UpdateProjectBodyDTO, TransferProjectBodyDTO } from './project.dto'
+import { CreateProjectBodyDTO, UpdateProjectBodyDTO, TransferProjectBodyDTO, GetListProjectResDTO } from './project.dto'
 import { ActiveUser } from '~/shared/decorators/active-user.decorator'
 import { ProjectService } from './project.service'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { GetListQueryDTO } from '~/shared/dtos/request.dto'
-import { GetListProjectResSchema } from './project.model'
 import { MessageResDTO } from '~/shared/dtos/response.dto'
 import { GetProjectDetailResDTO, GetProjectParamDTO } from '~/shared/dtos/shared-project.dto'
 
@@ -13,19 +12,19 @@ export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
   @Get()
-  @ZodSerializerDto(GetListProjectResSchema)
+  @ZodSerializerDto(GetListProjectResDTO)
   findAll(@Query() query: GetListQueryDTO, @ActiveUser('userId') userId: number) {
     return this.projectService.findAll(query, userId)
   }
 
   @Get('owned')
-  @ZodSerializerDto(GetListProjectResSchema)
+  @ZodSerializerDto(GetListProjectResDTO)
   findAllOwnedByUser(@ActiveUser('userId') userId: number, @Query() query: GetListQueryDTO) {
     return this.projectService.findAllOwnedByUser(userId, query)
   }
 
   @Get('joined')
-  @ZodSerializerDto(GetListProjectResSchema)
+  @ZodSerializerDto(GetListProjectResDTO)
   findAllJoinedByUser(@ActiveUser('userId') userId: number, @Query() query: GetListQueryDTO) {
     return this.projectService.findAllJoinedByUser(userId, query)
   }

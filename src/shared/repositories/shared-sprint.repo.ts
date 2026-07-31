@@ -7,13 +7,16 @@ import { SprintNotFoundError } from '~/shared/error'
 export class SharedSprintRepo {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getSprintBoardDetail(sprintId: number): Promise<SprintBoardDetailType> {
+  async getSprintBoardDetail(sprintId: string): Promise<SprintBoardDetailType> {
     const sprint = await this.prismaService.sprint.findUnique({
       where: { id: sprintId, deletedAt: null },
       include: {
         boardColumns: {
           where: { deletedAt: null },
           include: {
+            taskOrders: {
+              orderBy: { sortOrder: 'asc' }
+            },
             tasks: {
               where: { deletedAt: null },
               include: {
@@ -53,15 +56,31 @@ export class SharedSprintRepo {
     if (!sprint) {
       throw SprintNotFoundError
     }
-    // Sort columns based on boardColumnIds order
-    const sortedColumns = [...sprint.boardColumns].sort((a, b) => {
-      const indexA = sprint.boardColumnIds.indexOf(a.id)
-      const indexB = sprint.boardColumnIds.indexOf(b.id)
-      return (indexA === -1 ? 9999 : indexA) - (indexB === -1 ? 9999 : indexB)
-    })
+    // Sort tasks in each column by taskOrders sortOrder, and sort columns based on boardColumnIds order
+    const sortedColumns = sprint.boardColumns
+      .map((col) => {
+        const orderMap = new Map(col.taskOrders.map((to) => [to.taskId, to.sortOrder]))
+        const sortedTasks = [...col.tasks].sort((a, b) => {
+          const orderA = orderMap.get(a.id) ?? 9999
+          const orderB = orderMap.get(b.id) ?? 9999
+          return orderA - orderB
+        })
+        const { taskOrders, ...colData } = col
+        return {
+          ...colData,
+          tasks: sortedTasks
+        }
+      })
+      .sort((a, b) => {
+        const indexA = sprint.boardColumnIds.indexOf(a.id)
+        const indexB = sprint.boardColumnIds.indexOf(b.id)
+        return (indexA === -1 ? 9999 : indexA) - (indexB === -1 ? 9999 : indexB)
+      })
+
     return {
       ...sprint,
       boardColumns: sortedColumns
     } as any
   }
+
 }

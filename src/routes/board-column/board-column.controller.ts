@@ -43,7 +43,7 @@ export class BoardColumnController {
   @Delete(':boardColumnId')
   @ZodSerializerDto(MessageResDTO)
   delete(@Param() params: GetBoardColumnParamDTO, @Query('targetColumnId') targetColumnId?: string) {
-    return this.boardColumnService.delete(params.boardColumnId, targetColumnId ? Number(targetColumnId) : undefined)
+    return this.boardColumnService.delete(params.boardColumnId, targetColumnId)
   }
 
   @Put('sprint/:sprintId/reorder')

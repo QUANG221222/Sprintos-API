@@ -39,7 +39,7 @@ export class ProjectService {
     return await this.projectRepo.findAllJoinedByUser(userId, query)
   }
 
-  async findById(id: number) {
+  async findById(id: string) {
     return await this.sharedProjectRepo.findProjectById(id)
   }
 
@@ -91,7 +91,7 @@ export class ProjectService {
     return updatedProject
   }
 
-  async update({ id, body, updatedById }: { id: number; body: CreateProjectBodyType; updatedById: number }) {
+  async update({ id, body, updatedById }: { id: string; body: CreateProjectBodyType; updatedById: number }) {
     try {
       return await this.projectRepo.update({ id, body, updatedById })
     } catch (error) {
@@ -102,7 +102,7 @@ export class ProjectService {
     }
   }
 
-  async delete({ id, deletedById }: { id: number; deletedById: number }, isHard?: boolean) {
+  async delete({ id, deletedById }: { id: string; deletedById: number }, isHard?: boolean) {
     try {
       await this.projectRepo.delete({ id, deletedById }, isHard)
 
@@ -120,7 +120,7 @@ export class ProjectService {
     newOwnerId,
     requesterId
   }: {
-    projectId: number
+    projectId: string
     newOwnerId: number
     requesterId: number
   }) {
