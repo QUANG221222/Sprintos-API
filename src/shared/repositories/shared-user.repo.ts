@@ -3,7 +3,7 @@ import { PrismaService } from '../services/prisma.service'
 import { UserType } from '../models/shared-user.model'
 import { RoleType } from '../models/shared-role.model'
 
-export type WhereUniqueUserType = { id: number } | { email: string }
+export type WhereUniqueUserType = { id: string } | { email: string }
 @Injectable()
 export class SharedUserRepository {
   constructor(private readonly prismaService: PrismaService) {}

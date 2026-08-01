@@ -13,19 +13,19 @@ export class ProjectController {
 
   @Get()
   @ZodSerializerDto(GetListProjectResDTO)
-  findAll(@Query() query: GetListQueryDTO, @ActiveUser('userId') userId: number) {
+  findAll(@Query() query: GetListQueryDTO, @ActiveUser('userId') userId: string) {
     return this.projectService.findAll(query, userId)
   }
 
   @Get('owned')
   @ZodSerializerDto(GetListProjectResDTO)
-  findAllOwnedByUser(@ActiveUser('userId') userId: number, @Query() query: GetListQueryDTO) {
+  findAllOwnedByUser(@ActiveUser('userId') userId: string, @Query() query: GetListQueryDTO) {
     return this.projectService.findAllOwnedByUser(userId, query)
   }
 
   @Get('joined')
   @ZodSerializerDto(GetListProjectResDTO)
-  findAllJoinedByUser(@ActiveUser('userId') userId: number, @Query() query: GetListQueryDTO) {
+  findAllJoinedByUser(@ActiveUser('userId') userId: string, @Query() query: GetListQueryDTO) {
     return this.projectService.findAllJoinedByUser(userId, query)
   }
 
@@ -37,7 +37,7 @@ export class ProjectController {
 
   @Post()
   @ZodSerializerDto(GetProjectDetailResDTO)
-  create(@Body() body: CreateProjectBodyDTO, @ActiveUser('userId') ownerId: number) {
+  create(@Body() body: CreateProjectBodyDTO, @ActiveUser('userId') ownerId: string) {
     return this.projectService.create({ body, ownerId })
   }
 
@@ -46,7 +46,7 @@ export class ProjectController {
   update(
     @Param() params: GetProjectParamDTO,
     @Body() body: UpdateProjectBodyDTO,
-    @ActiveUser('userId') updatedById: number
+    @ActiveUser('userId') updatedById: string
   ) {
     return this.projectService.update({ id: params.projectId, body, updatedById })
   }
@@ -55,7 +55,7 @@ export class ProjectController {
   @ZodSerializerDto(MessageResDTO)
   delete(
     @Param() params: GetProjectParamDTO,
-    @ActiveUser('userId') deletedById: number,
+    @ActiveUser('userId') deletedById: string,
     @Query('isHard', new ParseBoolPipe({ optional: true })) isHard?: boolean
   ) {
     return this.projectService.delete({ id: params.projectId, deletedById }, isHard)
@@ -66,7 +66,7 @@ export class ProjectController {
   transfer(
     @Param() params: GetProjectParamDTO,
     @Body() body: TransferProjectBodyDTO,
-    @ActiveUser('userId') requesterId: number
+    @ActiveUser('userId') requesterId: string
   ) {
     return this.projectService.transfer({
       projectId: params.projectId,

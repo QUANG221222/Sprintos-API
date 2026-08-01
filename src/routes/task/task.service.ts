@@ -51,7 +51,7 @@ export class TaskService {
     return task
   }
 
-  async create(body: CreateTaskBodyType, userId: number) {
+  async create(body: CreateTaskBodyType, userId: string) {
     if (body.boardColumnId) {
       const column = await this.taskRepo.findBoardColumnById(body.boardColumnId)
       if (!column) {
@@ -88,7 +88,7 @@ export class TaskService {
     return await this.taskRepo.create(body, userId)
   }
 
-  async update({ id, body, userId }: { id: string; body: UpdateTaskBodyType; userId: number }) {
+  async update({ id, body, userId }: { id: string; body: UpdateTaskBodyType; userId: string }) {
     if (body.parentId !== undefined || body.sprintId !== undefined || body.boardColumnId !== undefined) {
       const task = await this.taskRepo.findById({ taskId: id })
       if (!task) {
@@ -136,7 +136,7 @@ export class TaskService {
     }
 
     let targetProjectId: string | null = null
-    let validateIds: number[] | undefined = undefined
+    let validateIds: string[] | undefined = undefined
 
     if (body.sprintId !== undefined) {
       targetProjectId = await this.taskRepo.getProjectIdBySprintId(body.sprintId)
@@ -181,7 +181,7 @@ export class TaskService {
     }
   }
 
-  async delete({ id, userId }: { id: string; userId: number }, isHard?: boolean) {
+  async delete({ id, userId }: { id: string; userId: string }, isHard?: boolean) {
     try {
       await this.taskRepo.delete({ id, userId }, isHard)
       return { message: 'Task deleted successfully' }
@@ -193,7 +193,7 @@ export class TaskService {
     }
   }
 
-  async addComment({ taskId, memberId, body }: { taskId: string; memberId: number; body: AddTaskCommentBodyType }) {
+  async addComment({ taskId, memberId, body }: { taskId: string; memberId: string; body: AddTaskCommentBodyType }) {
     return await this.taskRepo.addComment(taskId, memberId, body)
   }
 

@@ -10,7 +10,7 @@ import { Prisma } from '~/generated/prisma/client'
 export class ProjectRepo {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async findAll(pagination: GetListQueryType, userId: number): Promise<GetListProjectResType> {
+  async findAll(pagination: GetListQueryType, userId: string): Promise<GetListProjectResType> {
     const { page, limit } = pagination
     const skip = (page - 1) * limit
     const take = limit
@@ -77,7 +77,7 @@ export class ProjectRepo {
     }
   }
 
-  async findAllOwnedByUser(userId: number, pagination: GetListQueryType): Promise<GetListProjectResType> {
+  async findAllOwnedByUser(userId: string, pagination: GetListQueryType): Promise<GetListProjectResType> {
     const { page, limit } = pagination
     const skip = (page - 1) * limit
     const take = limit
@@ -122,7 +122,7 @@ export class ProjectRepo {
     }
   }
 
-  async findAllJoinedByUser(userId: number, pagination: GetListQueryType): Promise<GetListProjectResType | null> {
+  async findAllJoinedByUser(userId: string, pagination: GetListQueryType): Promise<GetListProjectResType | null> {
     const { page, limit } = pagination
     const skip = (page - 1) * limit
     const take = limit
@@ -195,7 +195,7 @@ export class ProjectRepo {
     membersToCreate
   }: {
     projectData: Omit<CreateProjectBodyType, 'members'>
-    ownerId: number
+    ownerId: string
     membersToCreate: Prisma.ProjectMemberUncheckedCreateWithoutProjectInput[]
   }): Promise<GetProjectDetailResType> {
     const project = await this.prismaService.project.create({
@@ -232,7 +232,7 @@ export class ProjectRepo {
   }: {
     id: string
     body: UpdateProjectBodyType
-    updatedById: number
+    updatedById: string
   }): Promise<GetProjectDetailResType> {
     const project = await this.prismaService.project.update({
       where: {
@@ -263,7 +263,7 @@ export class ProjectRepo {
   }
 
   async delete(
-    { id, deletedById }: { id: string; deletedById: number },
+    { id, deletedById }: { id: string; deletedById: string },
     isHard?: boolean
   ): Promise<GetProjectDetailResType> {
     const project = isHard
@@ -316,12 +316,12 @@ export class ProjectRepo {
     coOwnerRoleId
   }: {
     projectId: string
-    newOwnerId: number
-    requesterId: number
+    newOwnerId: string
+    requesterId: string
     requesterMemberId?: string
     targetMemberId: string
-    ownerRoleId: number
-    coOwnerRoleId: number
+    ownerRoleId: string
+    coOwnerRoleId: string
   }): Promise<GetProjectDetailResType> {
     return await this.prismaService.$transaction(async (tx) => {
       // 1. Update Project Owner

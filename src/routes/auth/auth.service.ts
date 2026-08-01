@@ -198,10 +198,10 @@ export class AuthService {
     roleId,
     roleName
   }: {
-    userId: number
+    userId: string
     email: string
-    deviceId: number
-    roleId: number
+    deviceId: string
+    roleId: string
     roleName: string
   }) {
     // Generate access token and refresh token

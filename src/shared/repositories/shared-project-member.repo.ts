@@ -16,7 +16,7 @@ export class SharedProjectMemberRepo {
 
   async findMemberByProjectAndMemberId(
     projectId: string,
-    memberId: number
+    memberId: string
   ): Promise<GetProjectMemberDetailResType | null> {
     const member = await this.prismaService.projectMember.findFirst({
       where: {
@@ -80,7 +80,7 @@ export class SharedProjectMemberRepo {
     id: string,
     inviteToken: string,
     role: (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole],
-    invitedById?: number
+    invitedById?: string
   ): Promise<GetProjectMemberDetailResType> {
     const roleId = await this.sharedRoleRepository.getRoleIdByName(role)
     const member = await this.prismaService.projectMember.update({
@@ -105,7 +105,7 @@ export class SharedProjectMemberRepo {
   }
 
   async createInvite(
-    body: CreateInvitationProjectMemberBodyType & { invitedById?: number }
+    body: CreateInvitationProjectMemberBodyType & { invitedById?: string }
   ): Promise<GetProjectMemberDetailResType> {
     const roleId = await this.sharedRoleRepository.getRoleIdByName(body.role)
 

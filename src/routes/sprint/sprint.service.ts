@@ -22,11 +22,11 @@ export class SprintService {
     return sprint
   }
 
-  async create(body: CreateSprintBodyType, userId: number) {
+  async create(body: CreateSprintBodyType, userId: string) {
     return await this.sprintRepo.create(body, userId)
   }
 
-  async update({ id, body, userId }: { id: string; body: UpdateSprintBodyType; userId: number }) {
+  async update({ id, body, userId }: { id: string; body: UpdateSprintBodyType; userId: string }) {
     try {
       return await this.sprintRepo.update({ id, body, userId })
     } catch (error) {
@@ -37,7 +37,7 @@ export class SprintService {
     }
   }
 
-  async delete({ id, userId }: { id: string; userId: number }, isHard?: boolean) {
+  async delete({ id, userId }: { id: string; userId: string }, isHard?: boolean) {
     try {
       await this.sprintRepo.delete({ id, userId }, isHard)
       return { message: 'Sprint deleted successfully' }

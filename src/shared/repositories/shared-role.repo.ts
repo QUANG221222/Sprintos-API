@@ -6,12 +6,12 @@ import { RoleType } from '../models/shared-role.model'
 
 @Injectable()
 export class SharedRoleRepository {
-  private clientRoleId: number | null = null
-  private adminRoleId: number | null = null
-  private ownerRoleId: number | null = null
-  private coOwnerRoleId: number | null = null
-  private memberRoleId: number | null = null
-  private viewerRoleId: number | null = null
+  private clientRoleId: string | null = null
+  private adminRoleId: string | null = null
+  private ownerRoleId: string | null = null
+  private coOwnerRoleId: string | null = null
+  private memberRoleId: string | null = null
+  private viewerRoleId: string | null = null
 
   constructor(private readonly prismaService: PrismaService) {}
   private async getRole(roleName: string) {

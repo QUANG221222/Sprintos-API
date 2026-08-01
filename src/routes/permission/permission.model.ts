@@ -17,7 +17,7 @@ export const GetPermissionQuerySchema = z
   .strict()
 
 export const GetPermissionParamsSchema = z.object({
-  permissionId: z.coerce.number().int().positive()
+  permissionId: z.string()
 })
 
 export const GetPermissionDetailResSchema = PermissionSchema

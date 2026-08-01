@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core'
+import { createId } from '@paralleldrive/cuid2'
 import { AppModule } from '~/app.module'
 import { HTTPMethod, RoleName } from '~/shared/constants/role.constants'
 import { ProjectMemberRole } from '~/shared/constants/project.constants'
@@ -76,7 +77,10 @@ async function bootstrap() {
   // Thêm các routes này dưới dạng permissions database
   if (routesToAdd.length > 0) {
     const permssionToAdd = await prisma.permission.createMany({
-      data: routesToAdd,
+      data: routesToAdd.map((route) => ({
+        id: createId(),
+        ...route
+      })),
       skipDuplicates: true
     })
     console.log('Permissions added:', permssionToAdd.count)

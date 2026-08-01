@@ -26,7 +26,7 @@ export class UserController {
 
   @Get('me')
   @ZodSerializerDto(GetUserProfileResDTO)
-  getMe(@ActiveUser('userId') userId: number) {
+  getMe(@ActiveUser('userId') userId: string) {
     return this.userService.findById(userId)
   }
 
@@ -40,7 +40,7 @@ export class UserController {
   @ZodSerializerDto(CreateUserResDTO)
   create(
     @Body() body: CreateUserBodyDTO,
-    @ActiveUser('userId') userId: number,
+    @ActiveUser('userId') userId: string,
     @ActiveUser('roleName') roleName: string
   ) {
     return this.userService.create({
@@ -55,7 +55,7 @@ export class UserController {
   update(
     @Param() params: GetUserParamsDTO,
     @Body() body: UpdateUserBodyDTO,
-    @ActiveUser('userId') userId: number,
+    @ActiveUser('userId') userId: string,
     @ActiveUser('roleName') roleName: string
   ) {
     return this.userService.update({
@@ -69,7 +69,7 @@ export class UserController {
   @Delete(':id')
   delete(
     @Param() params: GetUserParamsDTO,
-    @ActiveUser('userId') userId: number,
+    @ActiveUser('userId') userId: string,
     @ActiveUser('roleName') roleName: string
   ) {
     return this.userService.delete({

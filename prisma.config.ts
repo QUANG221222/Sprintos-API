@@ -3,12 +3,16 @@
 import 'dotenv/config'
 import { defineConfig } from 'prisma/config'
 
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  `postgresql://${process.env.DB_USER || 'wangcoder2k5'}:${process.env.DB_PASSWORD || '25092005quang'}@db:5432/${process.env.DB_NAME || 'sprintos-db'}?schema=public`
+
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations'
   },
   datasource: {
-    url: process.env['DATABASE_URL']
+    url: databaseUrl
   }
 })

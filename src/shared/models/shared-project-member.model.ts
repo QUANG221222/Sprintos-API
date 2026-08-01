@@ -4,16 +4,16 @@ import { ProjectMemberRole, ProjectMemberStatus } from '../constants/project.con
 export const ProjectMemberSchema = z.object({
   id: z.string(),
   projectId: z.string(),
-  memberId: z.number(),
+  memberId: z.string(),
   email: z.string().email(),
   role: z.nativeEnum(ProjectMemberRole),
   status: z.nativeEnum(ProjectMemberStatus),
   inviteToken: z.string().nullable(),
   joinAt: z.date().nullable(),
 
-  invitedById: z.number().nullable(),
-  updatedById: z.number().nullable(),
-  deletedById: z.number().nullable(),
+  invitedById: z.string().nullable(),
+  updatedById: z.string().nullable(),
+  deletedById: z.string().nullable(),
 
   invitedAt: z.date(),
   updatedAt: z.date().nullable(),

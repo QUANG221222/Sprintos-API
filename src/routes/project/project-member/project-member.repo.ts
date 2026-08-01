@@ -79,7 +79,7 @@ export class ProjectMemberRepo {
     })
   }
 
-  async verifyInvite(id: string, updatedById: number): Promise<GetProjectMemberDetailResType> {
+  async verifyInvite(id: string, updatedById: string): Promise<GetProjectMemberDetailResType> {
     const member = await this.prismaService.projectMember.update({
       where: {
         id,
@@ -101,7 +101,7 @@ export class ProjectMemberRepo {
     }
   }
 
-  async updateRole(id: string, roleName: string, updatedById: number) {
+  async updateRole(id: string, roleName: string, updatedById: string) {
     const roleId = await this.sharedRoleRepository.getRoleIdByName(roleName)
 
     const member = await this.prismaService.projectMember.update({
@@ -124,7 +124,7 @@ export class ProjectMemberRepo {
     }
   }
 
-  async deleteByProjectMemberId({ id, deletedById }: { id: string; deletedById: number }, isHard?: boolean) {
+  async deleteByProjectMemberId({ id, deletedById }: { id: string; deletedById: string }, isHard?: boolean) {
     return isHard
       ? this.prismaService.projectMember.delete({
           where: {

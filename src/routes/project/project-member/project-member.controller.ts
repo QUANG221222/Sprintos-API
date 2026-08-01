@@ -32,7 +32,7 @@ export class ProjectMemberController {
 
   @Post('invite')
   @ZodSerializerDto(GetProjectMembersDetailResDTO)
-  invite(@Body() body: InviteProjectMemberBodyDTO, @ActiveUser('userId') invitedById: number) {
+  invite(@Body() body: InviteProjectMemberBodyDTO, @ActiveUser('userId') invitedById: string) {
     return this.sharedProjectMemberService.invite({ ...body, invitedById })
   }
 
@@ -48,7 +48,7 @@ export class ProjectMemberController {
   updateRole(
     @Param() params: GetProjectMemberParamDTO,
     @Body() body: UpdateProjectMemberRoleBodyDTO,
-    @ActiveUser('userId') requesterId: number
+    @ActiveUser('userId') requesterId: string
   ) {
     return this.projectMemberService.updateRole({ memberId: params.memberId, body, requesterId })
   }
@@ -58,7 +58,7 @@ export class ProjectMemberController {
   delete(
     @Param() params: GetProjectMemberParamDTO,
     @Query() query: ProjectMemberProjectQueryDTO,
-    @ActiveUser('userId') requesterId: number
+    @ActiveUser('userId') requesterId: string
   ) {
     return this.projectMemberService.removeMember(
       {

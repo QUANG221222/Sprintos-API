@@ -18,9 +18,9 @@ export const TaskSchema = z
     startDate: z.date().nullable(),
     duration: z.number().int().nullable(),
     parentId: z.string().nullable(),
-    createdById: z.number().nullable(),
-    updatedById: z.number().nullable(),
-    deletedById: z.number().nullable(),
+    createdById: z.string().nullable(),
+    updatedById: z.string().nullable(),
+    deletedById: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date().nullable(),
     deletedAt: z.date().nullable()
@@ -45,11 +45,11 @@ export const TaskAssigneeSchema = z
   .object({
     id: z.string(),
     taskId: z.string(),
-    userId: z.number(),
+    userId: z.string(),
     user: GetUserProfileResSchema,
-    createdById: z.number().nullable().optional(),
-    updatedById: z.number().nullable().optional(),
-    deletedById: z.number().nullable().optional(),
+    createdById: z.string().nullable().optional(),
+    updatedById: z.string().nullable().optional(),
+    deletedById: z.string().nullable().optional(),
     createdAt: z.date().optional(),
     updatedAt: z.date().nullable().optional(),
     deletedAt: z.date().nullable().optional()
@@ -69,7 +69,7 @@ export const TaskCommentSchema = z
   .object({
     id: z.string(),
     taskId: z.string(),
-    memberId: z.number(),
+    memberId: z.string(),
     memberDisplayName: z.string(),
     memberAvatar: z.string().nullable(),
     content: z.string(),
@@ -134,7 +134,7 @@ export const CreateTaskBodySchema = z
     startDate: z.coerce.date().nullable().optional(),
     duration: z.number().int().nonnegative().optional(),
     parentId: z.string().nullable().optional(),
-    assigneeIds: z.array(z.number().positive()).optional()
+    assigneeIds: z.array(z.string()).optional()
   })
   .strict()
 

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
-    container_name: sprintos_db_dev
+    container_name: sprintos_db
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -33,6 +33,7 @@ services:
       # Ghi đè DATABASE_URL để kết nối tới database container (db:5432) thay vì localhost
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public
       NODE_ENV: development
+      NODE_OPTIONS: '--max-old-space-size=4096'
     volumes:
       - .:/app
       - /app/node_modules
@@ -49,7 +50,31 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    profiles:
+      - dev
+
+  # Service Production cho NestJS API
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: sprintos_api_prod
+    ports:
+      - '8080:8080'
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "npx prisma migrate deploy && node dist/src/main.js"
+    restart: always
+    profiles:
+      - prod
 
 volumes:
   postgres_dev_data:
-

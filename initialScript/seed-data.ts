@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { NestFactory } from '@nestjs/core'
+import { createId } from '@paralleldrive/cuid2'
 import { AppModule } from '~/app.module'
 import { PrismaService } from '~/shared/services/prisma.service'
 import { HashingService } from '~/shared/services/hashing.service'
@@ -66,6 +67,8 @@ async function main() {
   await prisma.device.deleteMany()
   await prisma.verificationCode.deleteMany()
   await prisma.user.deleteMany()
+  await prisma.role.deleteMany()
+  await prisma.permission.deleteMany()
   console.log('✅ Business data clean reset complete.')
 
   // ==========================================
@@ -92,7 +95,8 @@ async function main() {
 
   const routesToAdd = availableRoutes.filter((item) => !perssionInDbMap[`{${item.method}-${item.path}}`])
   if (routesToAdd.length > 0) {
-    await prisma.permission.createMany({ data: routesToAdd, skipDuplicates: true })
+    const dataWithId = routesToAdd.map((r) => ({ id: createId(), ...r }))
+    await prisma.permission.createMany({ data: dataWithId, skipDuplicates: true })
   }
 
   const updatedPermissionsInDb = await prisma.permission.findMany({ where: { deletedAt: null } })
@@ -110,7 +114,7 @@ async function main() {
   for (const roleDef of requiredRoles) {
     const existing = await prisma.role.findFirst({ where: { name: roleDef.name, deletedAt: null } })
     if (!existing) {
-      await prisma.role.create({ data: { name: roleDef.name, description: roleDef.description } })
+      await prisma.role.create({ data: { id: createId(), name: roleDef.name, description: roleDef.description } })
     } else {
       await prisma.role.update({ where: { id: existing.id }, data: { description: roleDef.description } })
     }
@@ -205,7 +209,7 @@ async function main() {
   const roleMap = allRoles.reduce((acc, r) => {
     acc[r.name] = r.id
     return acc
-  }, {} as Record<string, number>)
+  }, {} as Record<string, string>)
 
   console.log(`✅ Configured ${updatedPermissionsInDb.length} Permissions across 6 Roles.`)
 
@@ -519,6 +523,7 @@ async function main() {
             }
           })
           totalTasksCount++
+          createdTasksList.push(subTask1)
 
           const subTask2 = await prisma.task.create({
             data: {
@@ -536,6 +541,7 @@ async function main() {
             }
           })
           totalTasksCount++
+          createdTasksList.push(subTask2)
         }
 
         if (tTemp.col === 'In Progress' || tTemp.col === 'In Review') {

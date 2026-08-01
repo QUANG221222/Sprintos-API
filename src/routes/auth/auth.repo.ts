@@ -50,7 +50,7 @@ export class AuthRepo {
   }
 
   async findUniqueVerificationCode(
-    uniqueValue: { email_code_type: { email: string; code: string; type: TypeOfVerificationCodeType } } | { id: number }
+    uniqueValue: { email_code_type: { email: string; code: string; type: TypeOfVerificationCodeType } } | { id: string }
   ): Promise<VerificationCodeType | null> {
     return await this.prismaService.verificationCode.findUnique({
       where: uniqueValue
@@ -58,7 +58,7 @@ export class AuthRepo {
   }
 
   deleteVerificationCode(
-    uniqueValue: { email_code_type: { email: string; code: string; type: TypeOfVerificationCodeType } } | { id: number }
+    uniqueValue: { email_code_type: { email: string; code: string; type: TypeOfVerificationCodeType } } | { id: string }
   ): Promise<VerificationCodeType> {
     return this.prismaService.verificationCode.delete({
       where: uniqueValue
@@ -66,9 +66,9 @@ export class AuthRepo {
   }
 
   createRefreshToken(data: {
-    userId: number
+    userId: string
     token: string
-    deviceId: number
+    deviceId: string
     expiresAt: Date
   }): Promise<RefreshTokenType> {
     return this.prismaService.refreshToken.create({
@@ -111,7 +111,7 @@ export class AuthRepo {
     })
   }
 
-  updateDevice(deviceId: number, data: Partial<DeviceType>): Promise<DeviceType> {
+  updateDevice(deviceId: string, data: Partial<DeviceType>): Promise<DeviceType> {
     return this.prismaService.device.update({
       where: { id: deviceId },
       data

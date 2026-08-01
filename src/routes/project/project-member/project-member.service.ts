@@ -56,9 +56,9 @@ export class ProjectMemberService {
     body,
     requesterId
   }: {
-    memberId: number
+    memberId: string
     body: UpdateProjectMemberRoleBodyType
-    requesterId: number
+    requesterId: string
   }) {
     try {
       const { projectId, role } = body
@@ -113,9 +113,9 @@ export class ProjectMemberService {
       projectId,
       requesterId
     }: {
-      memberId: number
+      memberId: string
       projectId: string
-      requesterId: number
+      requesterId: string
     },
     isHard?: boolean
   ) {

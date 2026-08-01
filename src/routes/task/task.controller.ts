@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, Patch, Post, Put, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, ParseBoolPipe, Patch, Post, Put, Query } from '@nestjs/common'
 import { TaskService } from './task.service'
 import { ZodSerializerDto } from 'nestjs-zod'
 import {
@@ -46,7 +46,7 @@ export class TaskController {
 
   @Post()
   @ZodSerializerDto(GetTaskDetailResDTO)
-  create(@Body() body: CreateTaskBodyDTO, @ActiveUser('userId') userId: number) {
+  create(@Body() body: CreateTaskBodyDTO, @ActiveUser('userId') userId: string) {
     return this.taskService.create(body, userId)
   }
 
@@ -58,7 +58,7 @@ export class TaskController {
 
   @Put(':taskId')
   @ZodSerializerDto(GetTaskDetailResDTO)
-  update(@Param() params: GetTaskParamDTO, @Body() body: UpdateTaskBodyDTO, @ActiveUser('userId') userId: number) {
+  update(@Param() params: GetTaskParamDTO, @Body() body: UpdateTaskBodyDTO, @ActiveUser('userId') userId: string) {
     return this.taskService.update({ id: params.taskId, body, userId })
   }
 
@@ -66,7 +66,7 @@ export class TaskController {
   @ZodSerializerDto(MessageResDTO)
   delete(
     @Param() params: GetTaskParamDTO,
-    @ActiveUser('userId') userId: number,
+    @ActiveUser('userId') userId: string,
     @Query('isHard', new ParseBoolPipe({ optional: true })) isHard?: boolean
   ) {
     return this.taskService.delete({ id: params.taskId, userId }, isHard)
@@ -83,7 +83,7 @@ export class TaskController {
   addComment(
     @Param() params: GetTaskParamDTO,
     @Body() body: AddTaskCommentBodyDTO,
-    @ActiveUser('userId') memberId: number
+    @ActiveUser('userId') memberId: string
   ) {
     return this.taskService.addComment({ taskId: params.taskId, memberId, body })
   }
@@ -106,4 +106,3 @@ export class TaskController {
     return this.taskService.moveTask(params.taskId, body.targetColumnId, body.newIndex)
   }
 }
-

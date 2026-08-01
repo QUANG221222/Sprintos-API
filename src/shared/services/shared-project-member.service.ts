@@ -24,7 +24,7 @@ export class SharedProjectMemberService {
     private readonly sharedProjectMemberRepo: SharedProjectMemberRepo
   ) {}
 
-  async invite(body: InviteProjectMemberBodyType & { invitedById?: number }) {
+  async invite(body: InviteProjectMemberBodyType & { invitedById?: string }) {
     try {
       // Destructure projectId and members from the body
       const { projectId, members, invitedById } = body

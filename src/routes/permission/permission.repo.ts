@@ -38,7 +38,7 @@ export class PermissionRepository {
     }
   }
 
-  async findById(permissionId: number): Promise<GetPermissionDetailResType | null> {
+  async findById(permissionId: string): Promise<GetPermissionDetailResType | null> {
     return await this.prismaService.permission.findUnique({
       where: {
         id: permissionId,
@@ -51,7 +51,7 @@ export class PermissionRepository {
     createdById,
     data
   }: {
-    createdById: number | null
+    createdById: string | null
     data: CreatePermissionBodyType
   }): Promise<GetPermissionDetailResType> {
     return await this.prismaService.permission.create({
@@ -67,8 +67,8 @@ export class PermissionRepository {
     updatedById,
     data
   }: {
-    permissionId: number
-    updatedById: number | null
+    permissionId: string
+    updatedById: string | null
     data: Partial<CreatePermissionBodyType>
   }): Promise<GetPermissionDetailResType> {
     return await this.prismaService.permission.update({
@@ -85,7 +85,7 @@ export class PermissionRepository {
   }
 
   async delete(
-    { permissionId, deletedById }: { permissionId: number; deletedById: number | null },
+    { permissionId, deletedById }: { permissionId: string; deletedById: string | null },
     isHard?: boolean
   ): Promise<PermissionType> {
     return isHard

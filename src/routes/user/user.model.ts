@@ -26,7 +26,7 @@ export const GetUsersQuerySchema = z
 
 export const GetUserParamsSchema = z
   .object({
-    id: z.coerce.number().int().positive()
+    id: z.string()
   })
   .strict()
 

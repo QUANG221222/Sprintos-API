@@ -36,7 +36,7 @@ export class UserRepository {
     }
   }
 
-  create({ createdById, data }: { createdById: number | null; data: CreateUserBodyType }): Promise<UserType> {
+  create({ createdById, data }: { createdById: string | null; data: CreateUserBodyType }): Promise<UserType> {
     return this.prismaService.user.create({
       data: {
         ...data,
@@ -45,7 +45,7 @@ export class UserRepository {
     })
   }
 
-  delete({ id, deletedById }: { id: number; deletedById: number | null }, isHard?: boolean): Promise<UserType> {
+  delete({ id, deletedById }: { id: string; deletedById: string | null }, isHard?: boolean): Promise<UserType> {
     return isHard
       ? this.prismaService.user.delete({
           where: {

@@ -27,15 +27,15 @@ export class ProjectService {
     private readonly sharedRoleRepository: SharedRoleRepository
   ) {}
 
-  async findAll(query: GetListQueryType, userId: number) {
+  async findAll(query: GetListQueryType, userId: string) {
     return await this.projectRepo.findAll(query, userId)
   }
 
-  async findAllOwnedByUser(userId: number, query: GetListQueryType) {
+  async findAllOwnedByUser(userId: string, query: GetListQueryType) {
     return await this.projectRepo.findAllOwnedByUser(userId, query)
   }
 
-  async findAllJoinedByUser(userId: number, query: GetListQueryType) {
+  async findAllJoinedByUser(userId: string, query: GetListQueryType) {
     return await this.projectRepo.findAllJoinedByUser(userId, query)
   }
 
@@ -43,7 +43,7 @@ export class ProjectService {
     return await this.sharedProjectRepo.findProjectById(id)
   }
 
-  async create({ body, ownerId }: { body: CreateProjectBodyType; ownerId: number }) {
+  async create({ body, ownerId }: { body: CreateProjectBodyType; ownerId: string }) {
     const { members, ...projectData } = body
     const owner = await this.sharedUserRepository.findUnique({ id: ownerId })
     if (!owner) {
@@ -91,7 +91,7 @@ export class ProjectService {
     return updatedProject
   }
 
-  async update({ id, body, updatedById }: { id: string; body: CreateProjectBodyType; updatedById: number }) {
+  async update({ id, body, updatedById }: { id: string; body: CreateProjectBodyType; updatedById: string }) {
     try {
       return await this.projectRepo.update({ id, body, updatedById })
     } catch (error) {
@@ -102,7 +102,7 @@ export class ProjectService {
     }
   }
 
-  async delete({ id, deletedById }: { id: string; deletedById: number }, isHard?: boolean) {
+  async delete({ id, deletedById }: { id: string; deletedById: string }, isHard?: boolean) {
     try {
       await this.projectRepo.delete({ id, deletedById }, isHard)
 
@@ -121,8 +121,8 @@ export class ProjectService {
     requesterId
   }: {
     projectId: string
-    newOwnerId: number
-    requesterId: number
+    newOwnerId: string
+    requesterId: string
   }) {
     if (newOwnerId === requesterId) {
       throw CannotTransferToSelfError
