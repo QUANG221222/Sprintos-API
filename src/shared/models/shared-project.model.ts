@@ -8,6 +8,7 @@ export const ProjectSchema = z
     name: z.string(),
     description: z.string().nullable(),
     image: z.string().nullable(),
+    workTypes: z.array(z.string()).default([]),
     members: z.array(ProjectMemberSchema),
     // sprints: z.array(SprintSchema)
     // notifications: z.array(NotificationSchema)

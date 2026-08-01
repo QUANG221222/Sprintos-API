@@ -45,7 +45,7 @@ export const CreateSprintBodySchema = z
     projectId: z.string(),
     name: z.string(),
     goal: z.string().nullable().optional(),
-    maxStoryPoint: z.number().int().nonnegative(),
+    maxStoryPoint: z.number().int().nonnegative().optional().default(30),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
     status: SprintStatusSchema.optional()

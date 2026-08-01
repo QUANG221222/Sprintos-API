@@ -110,7 +110,8 @@ async function bootstrap() {
             (cleanPath.startsWith('/users') && p.method === 'GET') ||
             (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
             cleanPath === '/projects/owned' ||
-            cleanPath === '/projects/joined'
+            cleanPath === '/projects/joined' ||
+            cleanPath.startsWith('/reports')
           )
         }
       ),
@@ -124,7 +125,8 @@ async function bootstrap() {
               (p.method === 'GET' || p.method === 'POST' || p.method === 'PATCH')) ||
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
-            cleanPath.startsWith('/board-columns')
+            cleanPath.startsWith('/board-columns') ||
+            cleanPath.startsWith('/reports')
           )
         }
       ),
@@ -137,7 +139,8 @@ async function bootstrap() {
             cleanPath.startsWith('/project-members') ||
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
-            cleanPath.startsWith('/board-columns')
+            cleanPath.startsWith('/board-columns') ||
+            cleanPath.startsWith('/reports')
           )
         }
       ),
@@ -149,7 +152,8 @@ async function bootstrap() {
             ((cleanPath.startsWith('/projects') || cleanPath.startsWith('/project-members')) && p.method === 'GET') ||
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
-            cleanPath.startsWith('/board-columns')
+            cleanPath.startsWith('/board-columns') ||
+            cleanPath.startsWith('/reports')
           )
         }
       ),
@@ -163,7 +167,8 @@ async function bootstrap() {
               cleanPath.startsWith('/project-members') ||
               cleanPath.startsWith('/sprints') ||
               cleanPath.startsWith('/tasks') ||
-              cleanPath.startsWith('/board-columns'))
+              cleanPath.startsWith('/board-columns') ||
+              cleanPath.startsWith('/reports'))
           )
         }
       )

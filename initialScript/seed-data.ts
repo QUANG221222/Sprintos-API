@@ -134,7 +134,8 @@ async function main() {
             (cleanPath.startsWith('/users') && p.method === 'GET') ||
             (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
             cleanPath === '/projects/owned' ||
-            cleanPath === '/projects/joined'
+            cleanPath === '/projects/joined' ||
+            cleanPath.startsWith('/reports')
           )
         }
       ),
@@ -147,7 +148,8 @@ async function main() {
             (cleanPath.startsWith('/project-members') && (p.method === 'GET' || p.method === 'POST' || p.method === 'PATCH')) ||
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
-            cleanPath.startsWith('/board-columns')
+            cleanPath.startsWith('/board-columns') ||
+            cleanPath.startsWith('/reports')
           )
         }
       ),
@@ -160,7 +162,8 @@ async function main() {
             cleanPath.startsWith('/project-members') ||
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
-            cleanPath.startsWith('/board-columns')
+            cleanPath.startsWith('/board-columns') ||
+            cleanPath.startsWith('/reports')
           )
         }
       ),
@@ -172,7 +175,8 @@ async function main() {
             ((cleanPath.startsWith('/projects') || cleanPath.startsWith('/project-members')) && p.method === 'GET') ||
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
-            cleanPath.startsWith('/board-columns')
+            cleanPath.startsWith('/board-columns') ||
+            cleanPath.startsWith('/reports')
           )
         }
       ),
@@ -186,7 +190,8 @@ async function main() {
               cleanPath.startsWith('/project-members') ||
               cleanPath.startsWith('/sprints') ||
               cleanPath.startsWith('/tasks') ||
-              cleanPath.startsWith('/board-columns'))
+              cleanPath.startsWith('/board-columns') ||
+              cleanPath.startsWith('/reports'))
           )
         }
       )
@@ -217,7 +222,7 @@ async function main() {
   // 4. CREATE USERS & ASSIGN SYSTEM ROLES
   // ==========================================
   console.log('\n👤 Step 4: Seeding Test Users & assigning System Roles...')
-  const defaultPassword = 'c'
+  const defaultPassword = 'sprintos@!'
   const hashedPassword = await hashingService.hash(defaultPassword)
 
   // System Admin User (System Role: ADMIN)

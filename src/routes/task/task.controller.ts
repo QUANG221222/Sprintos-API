@@ -13,7 +13,6 @@ import {
   UpdateTaskBodyDTO,
   CreateTaskDependencyBodyDTO,
   TaskDependencyResDTO,
-  SprintNetworkDiagramResDTO,
   GetBoardColumnParamDTO,
   ReorderTasksBodyDTO,
   MoveTaskBodyDTO
@@ -36,12 +35,6 @@ export class TaskController {
   @ZodSerializerDto(MessageResDTO)
   deleteDependency(@Param('dependencyId') dependencyId: string) {
     return this.taskService.deleteDependency(dependencyId)
-  }
-
-  @Get('sprint/:sprintId/network-diagram')
-  @ZodSerializerDto(SprintNetworkDiagramResDTO)
-  getSprintNetworkDiagram(@Param() params: GetSprintParamDTO) {
-    return this.taskService.getSprintNetworkDiagram(params.sprintId)
   }
 
   @Post()

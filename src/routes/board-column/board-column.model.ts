@@ -8,9 +8,9 @@ export const BoardColumnSchema = z
     createdAt: z.date(),
     updatedAt: z.date().nullable(),
     deletedAt: z.date().nullable(),
-    createdById: z.number().nullable(),
-    updatedById: z.number().nullable(),
-    deletedById: z.number().nullable()
+    createdById: z.string().nullable(),
+    updatedById: z.string().nullable(),
+    deletedById: z.string().nullable()
   })
   .strict()
 
@@ -38,7 +38,9 @@ export const GetListBoardColumnResSchema = z
 export const CreateBoardColumnBodySchema = z
   .object({
     sprintId: z.string(),
-    title: z.string().min(1).max(50)
+    title: z.string().min(1).max(50),
+    order: z.number().optional(),
+    position: z.number().optional()
   })
   .strict()
 

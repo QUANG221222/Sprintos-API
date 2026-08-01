@@ -14,6 +14,8 @@ export const CreateProjectBodySchema = z
   .object({
     name: z.string(),
     description: z.string().optional(),
+    image: z.string().optional(),
+    workTypes: z.array(z.string()).optional(),
     members: z
       .array(
         z.object({
@@ -27,7 +29,9 @@ export const CreateProjectBodySchema = z
 
 export const UpdateProjectBodySchema = CreateProjectBodySchema.pick({
   name: true,
-  description: true
+  description: true,
+  image: true,
+  workTypes: true
 }).strict()
 
 export const TransferProjectBodySchema = z

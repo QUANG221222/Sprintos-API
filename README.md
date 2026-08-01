@@ -45,6 +45,17 @@ npm run docker:dev-down
 
 ---
 
+## II. DANH SÁCH TÀI KHOẢN MẪU & SEED DATA
+
+Chi tiết toàn bộ **15 tài khoản kiểm thử**, **6 dự án mẫu**, **18 Sprints**, **144 Tasks** và danh sách phân quyền đã được viết thành tài liệu riêng tại file:
+👉 **[SEED_DATA.md](file:///e:/Sprintos-Web/Sprintos-Version-2/Sprintos-Nestjs-API/SEED_DATA.md)**
+
+* **Mật khẩu mặc định cho TẤT CẢ tài khoản:** `sprintos@!`
+* **Admin Account:** `admin@sprintos.com` / `sprintos@!`
+* **Lệnh khởi tạo lại dữ liệu:** `npm run seed:data` (hoặc `npm run docker:seed`)
+
+---
+
 ## II. KẾT NỐI DATABASE BẰNG DBEAVER
 
 Để xem và quản lý dữ liệu trong container PostgreSQL từ máy host bằng DBeaver:
