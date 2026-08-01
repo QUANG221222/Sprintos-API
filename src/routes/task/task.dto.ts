@@ -14,7 +14,8 @@ import {
   CreateTaskDependencyBodySchema,
   TaskDependencySchema,
   SprintNetworkDiagramResSchema,
-  ReorderTasksBodySchema
+  ReorderTasksBodySchema,
+  MoveTaskBodySchema
 } from './task.model'
 
 export class GetTaskDetailResDTO extends createZodDto(GetTaskDetailResSchema) {}
@@ -46,4 +47,6 @@ export class TaskDependencyResDTO extends createZodDto(TaskDependencySchema) {}
 export class SprintNetworkDiagramResDTO extends createZodDto(SprintNetworkDiagramResSchema) {}
 
 export class ReorderTasksBodyDTO extends createZodDto(ReorderTasksBodySchema) {}
+
+export class MoveTaskBodyDTO extends createZodDto(MoveTaskBodySchema) {}
 

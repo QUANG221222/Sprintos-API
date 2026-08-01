@@ -48,7 +48,7 @@ export const DuplicateTaskIdsError = new UnprocessableEntityException({
   statusCode: HttpStatus.UNPROCESSABLE_ENTITY
 })
 
-export const TaskNotBelongToColumnError = (taskId: number) =>
+export const TaskNotBelongToColumnError = (taskId: string | number) =>
   new UnprocessableEntityException({
     message: `Task with ID ${taskId} does not exist in this column or has been deleted`,
     path: 'taskOrderIds',

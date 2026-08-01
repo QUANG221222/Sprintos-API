@@ -2,8 +2,8 @@ import { z } from 'zod'
 import { ProjectMemberRole, ProjectMemberStatus } from '../constants/project.constants'
 
 export const ProjectMemberSchema = z.object({
-  id: z.number(),
-  projectId: z.number(),
+  id: z.string(),
+  projectId: z.string(),
   memberId: z.number(),
   email: z.string().email(),
   role: z.nativeEnum(ProjectMemberRole),

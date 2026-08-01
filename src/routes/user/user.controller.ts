@@ -24,6 +24,12 @@ export class UserController {
     })
   }
 
+  @Get('me')
+  @ZodSerializerDto(GetUserProfileResDTO)
+  getMe(@ActiveUser('userId') userId: number) {
+    return this.userService.findById(userId)
+  }
+
   @Get(':id')
   @ZodSerializerDto(GetUserProfileResDTO)
   findById(@Param() params: GetUserParamsDTO) {

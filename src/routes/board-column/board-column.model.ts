@@ -2,8 +2,8 @@ import z from 'zod'
 
 export const BoardColumnSchema = z
   .object({
-    id: z.number(),
-    sprintId: z.number(),
+    id: z.string(),
+    sprintId: z.string(),
     title: z.string().min(1).max(50),
     createdAt: z.date(),
     updatedAt: z.date().nullable(),
@@ -16,13 +16,13 @@ export const BoardColumnSchema = z
 
 export const GetBoardColumnParamSchema = z
   .object({
-    boardColumnId: z.coerce.number()
+    boardColumnId: z.string()
   })
   .strict()
 
 export const GetSprintParamSchema = z
   .object({
-    sprintId: z.coerce.number()
+    sprintId: z.string()
   })
   .strict()
 
@@ -37,7 +37,7 @@ export const GetListBoardColumnResSchema = z
 
 export const CreateBoardColumnBodySchema = z
   .object({
-    sprintId: z.number().positive(),
+    sprintId: z.string(),
     title: z.string().min(1).max(50)
   })
   .strict()
@@ -50,7 +50,7 @@ export const UpdateBoardColumnBodySchema = z
 
 export const ReorderBoardColumnsBodySchema = z
   .object({
-    columnOrderIds: z.array(z.number())
+    columnOrderIds: z.array(z.string())
   })
   .strict()
 

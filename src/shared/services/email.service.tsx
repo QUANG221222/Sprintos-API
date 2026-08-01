@@ -33,7 +33,7 @@ export class EmailService {
     })
   }
 
-  sendInvitationLink(payload: { email: string; token: string; websiteDomain: string; role: string, projectId: number }) {
+  sendInvitationLink(payload: { email: string; token: string; websiteDomain: string; role: string; projectId: string }) {
     const subject = 'Your Link Invitation Verification Code'
 
     return this.resend.emails.send({

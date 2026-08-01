@@ -24,7 +24,7 @@ export class BoardColumnService {
     return await this.sharedSprintRepo.getSprintBoardDetail(params.sprintId)
   }
 
-  async findById(id: number) {
+  async findById(id: string) {
     const boardColumn = await this.boardColumnRepo.findById({ boardColumnId: id })
     if (!boardColumn) {
       throw BoardColumnNotFoundError
@@ -36,7 +36,7 @@ export class BoardColumnService {
     return await this.boardColumnRepo.create(body)
   }
 
-  async update({ id, body }: { id: number; body: UpdateBoardColumnBodyType }) {
+  async update({ id, body }: { id: string; body: UpdateBoardColumnBodyType }) {
     try {
       return await this.boardColumnRepo.update({ id, body })
     } catch (error) {
@@ -47,7 +47,7 @@ export class BoardColumnService {
     }
   }
 
-  async delete(id: number, targetColumnId?: number) {
+  async delete(id: string, targetColumnId?: string) {
     const column = await this.boardColumnRepo.findById({ boardColumnId: id })
     if (!column) {
       throw BoardColumnNotFoundError
@@ -83,7 +83,7 @@ export class BoardColumnService {
     }
   }
 
-  async reorder(sprintId: number, columnOrderIds: number[]) {
+  async reorder(sprintId: string, columnOrderIds: string[]) {
     const activeColumns = await this.boardColumnRepo.findActiveColumns(sprintId)
     const activeColumnIds = activeColumns.map((col) => col.id)
 

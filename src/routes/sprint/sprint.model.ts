@@ -4,15 +4,15 @@ export const SprintStatusSchema = z.enum(['PLANNED', 'ACTIVE', 'COMPLETED'])
 
 export const SprintSchema = z
   .object({
-    id: z.number(),
-    projectId: z.number(),
+    id: z.string(),
+    projectId: z.string(),
     name: z.string(),
     goal: z.string().nullable(),
     maxStoryPoint: z.number().int(),
     startDate: z.date(),
     endDate: z.date(),
     status: SprintStatusSchema,
-    boardColumnIds: z.array(z.number()),
+    boardColumnIds: z.array(z.string()),
     createdById: z.number().nullable(),
     updatedById: z.number().nullable(),
     deletedById: z.number().nullable(),
@@ -24,7 +24,7 @@ export const SprintSchema = z
 
 export const GetSprintParamSchema = z
   .object({
-    sprintId: z.coerce.number()
+    sprintId: z.string()
   })
   .strict()
 
@@ -42,7 +42,7 @@ export const GetListSprintResSchema = z
 
 export const CreateSprintBodySchema = z
   .object({
-    projectId: z.number().positive(),
+    projectId: z.string(),
     name: z.string(),
     goal: z.string().nullable().optional(),
     maxStoryPoint: z.number().int().nonnegative(),

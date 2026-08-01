@@ -9,7 +9,7 @@ export const SprintBoardColumnTaskSchema = TaskSchema.extend({
 
 export const SprintBoardColumnSchema = BoardColumnSchema.extend({
   tasks: z.array(SprintBoardColumnTaskSchema)
-}).strict()
+}).strip()
 
 export const SprintBoardDetailSchema = SprintSchema.omit({ boardColumnIds: true }).extend({
   boardColumns: z.array(SprintBoardColumnSchema)

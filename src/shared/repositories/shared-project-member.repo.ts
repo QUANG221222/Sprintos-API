@@ -15,7 +15,7 @@ export class SharedProjectMemberRepo {
   ) {}
 
   async findMemberByProjectAndMemberId(
-    projectId: number,
+    projectId: string,
     memberId: number
   ): Promise<GetProjectMemberDetailResType | null> {
     const member = await this.prismaService.projectMember.findFirst({
@@ -35,7 +35,7 @@ export class SharedProjectMemberRepo {
     }
   }
 
-  async findMemberByProjectAndEmail(projectId: number, email: string): Promise<GetProjectMemberDetailResType | null> {
+  async findMemberByProjectAndEmail(projectId: string, email: string): Promise<GetProjectMemberDetailResType | null> {
     const member = await this.prismaService.projectMember.findFirst({
       where: {
         projectId,
@@ -54,7 +54,7 @@ export class SharedProjectMemberRepo {
   }
 
   async findInviteByToken(
-    projectId: number,
+    projectId: string,
     email: string,
     token: string
   ): Promise<GetProjectMemberDetailResType | null> {
@@ -77,7 +77,7 @@ export class SharedProjectMemberRepo {
   }
 
   async updateInviteToken(
-    id: number,
+    id: string,
     inviteToken: string,
     role: (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole],
     invitedById?: number

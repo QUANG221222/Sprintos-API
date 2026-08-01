@@ -114,7 +114,7 @@ export class ProjectMemberService {
       requesterId
     }: {
       memberId: number
-      projectId: number
+      projectId: string
       requesterId: number
     },
     isHard?: boolean

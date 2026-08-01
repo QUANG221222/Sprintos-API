@@ -10,7 +10,7 @@ export const GetProjectMemberParamSchema = z
   .strict()
 
 export const GetProjectMemberListQuerySchema = GetListQuerySchema.extend({
-  projectId: z.coerce.number().positive(),
+  projectId: z.string(),
   roleName: z.nativeEnum(ProjectMemberRole).optional(),
   nameMember: z.string().optional(),
   emailMember: z.string().optional()
@@ -18,7 +18,7 @@ export const GetProjectMemberListQuerySchema = GetListQuerySchema.extend({
 
 export const ProjectMemberProjectQuerySchema = z
   .object({
-    projectId: z.coerce.number().positive(),
+    projectId: z.string(),
     isHard: z.coerce
       .string()
       .optional()
@@ -40,7 +40,7 @@ export const GetListProjectMemberResSchema = z
 
 export const CreateProjectMemberBodySchema = z
   .object({
-    projectId: z.number().positive(),
+    projectId: z.string(),
     memberId: z.number().positive(),
     email: z.string().email(),
     role: z.nativeEnum(ProjectMemberRole),
@@ -62,7 +62,7 @@ export const UpdateProjectMemberBodySchema = z
 
 export const InviteProjectMemberBodySchema = z
   .object({
-    projectId: z.number().positive(),
+    projectId: z.string(),
     members: z
       .array(
         z.object({
@@ -76,7 +76,7 @@ export const InviteProjectMemberBodySchema = z
 
 export const VerifyProjectMemberInviteBodySchema = z
   .object({
-    projectId: z.number().positive(),
+    projectId: z.string(),
     email: z.string().email(),
     token: z.string().min(1)
   })
@@ -84,7 +84,7 @@ export const VerifyProjectMemberInviteBodySchema = z
 
 export const UpdateProjectMemberRoleBodySchema = z
   .object({
-    projectId: z.number().positive(),
+    projectId: z.string(),
     role: z.nativeEnum(ProjectMemberRole)
   })
   .strict()

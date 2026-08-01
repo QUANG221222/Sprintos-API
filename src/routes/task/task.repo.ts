@@ -178,7 +178,7 @@ export class TaskRepo {
     })
   }
 
-  async getProjectIdBySprintId(sprintId: number): Promise<number | null> {
+  async getProjectIdBySprintId(sprintId: string): Promise<string | null> {
     const sprint = await this.prismaService.sprint.findFirst({
       where: { id: sprintId, deletedAt: null },
       select: { projectId: true }
@@ -186,7 +186,7 @@ export class TaskRepo {
     return sprint ? sprint.projectId : null
   }
 
-  async getProjectIdByTaskId(taskId: number): Promise<number | null> {
+  async getProjectIdByTaskId(taskId: string): Promise<string | null> {
     const task = await this.prismaService.task.findFirst({
       where: { id: taskId, deletedAt: null },
       select: {
@@ -198,7 +198,7 @@ export class TaskRepo {
     return task?.sprint ? task.sprint.projectId : null
   }
 
-  async validateProjectMembers(projectId: number, assigneeIds: number[]): Promise<boolean> {
+  async validateProjectMembers(projectId: string, assigneeIds: number[]): Promise<boolean> {
     const uniqueIds = Array.from(new Set(assigneeIds))
     if (uniqueIds.length === 0) return true
 
@@ -217,7 +217,7 @@ export class TaskRepo {
     return members.length === uniqueIds.length
   }
 
-  async update({ id, body, userId }: { id: number; body: UpdateTaskBodyType; userId: number }): Promise<TaskType> {
+  async update({ id, body, userId }: { id: string; body: UpdateTaskBodyType; userId: number }): Promise<TaskType> {
     const { assigneeIds, ...taskData } = body
 
     if (taskData.sprintId !== undefined) {
@@ -265,7 +265,7 @@ export class TaskRepo {
     })
   }
 
-  async delete({ id, userId }: { id: number; userId: number }, isHard?: boolean): Promise<TaskType> {
+  async delete({ id, userId }: { id: string; userId: number }, isHard?: boolean): Promise<TaskType> {
     return isHard
       ? await this.prismaService.task.delete({
           where: {
@@ -285,8 +285,8 @@ export class TaskRepo {
   }
 
   async createDependency(
-    predecessorId: number,
-    successorId: number,
+    predecessorId: string,
+    successorId: string,
     type: DependencyType,
     lag: number
   ) {
@@ -300,7 +300,7 @@ export class TaskRepo {
     })
   }
 
-  async deleteDependency(dependencyId: number) {
+  async deleteDependency(dependencyId: string) {
     return await this.prismaService.taskDependency.delete({
       where: {
         id: dependencyId
@@ -308,25 +308,25 @@ export class TaskRepo {
     })
   }
 
-  async findDependencyById(id: number) {
+  async findDependencyById(id: string) {
     return await this.prismaService.taskDependency.findUnique({
       where: { id }
     })
   }
 
-  async findDependencyByTasks(predecessorId: number, successorId: number) {
+  async findDependencyByTasks(predecessorId: string, successorId: string) {
     return await this.prismaService.taskDependency.findFirst({
       where: { predecessorId, successorId }
     })
   }
 
-  async getDependenciesByPredecessorId(predecessorId: number) {
+  async getDependenciesByPredecessorId(predecessorId: string) {
     return await this.prismaService.taskDependency.findMany({
       where: { predecessorId }
     })
   }
 
-  async getDependenciesBySprintId(sprintId: number) {
+  async getDependenciesBySprintId(sprintId: string) {
     return await this.prismaService.taskDependency.findMany({
       where: {
         predecessor: { sprintId, deletedAt: null },
@@ -339,7 +339,7 @@ export class TaskRepo {
     })
   }
 
-  async getTasksWithAssigneesBySprintId(sprintId: number) {
+  async getTasksWithAssigneesBySprintId(sprintId: string) {
     return await this.prismaService.task.findMany({
       where: {
         sprintId,
@@ -377,7 +377,7 @@ export class TaskRepo {
     })
   }
 
-  async addComment(taskId: number, memberId: number, body: AddTaskCommentBodyType): Promise<TaskCommentType> {
+  async addComment(taskId: string, memberId: number, body: AddTaskCommentBodyType): Promise<TaskCommentType> {
     return await this.prismaService.taskComment.create({
       data: {
         taskId,
@@ -389,7 +389,7 @@ export class TaskRepo {
     })
   }
 
-  async addAttachment(taskId: number, body: AddTaskAttachmentBodyType): Promise<TaskAttachmentType> {
+  async addAttachment(taskId: string, body: AddTaskAttachmentBodyType): Promise<TaskAttachmentType> {
     return await this.prismaService.taskAttachment.create({
       data: {
         taskId,
@@ -400,13 +400,13 @@ export class TaskRepo {
     })
   }
 
-  async findBoardColumnById(boardColumnId: number) {
+  async findBoardColumnById(boardColumnId: string) {
     return await this.prismaService.boardColumn.findFirst({
       where: { id: boardColumnId, deletedAt: null }
     })
   }
 
-  async findActiveTasksByColumnId(boardColumnId: number) {
+  async findActiveTasksByColumnId(boardColumnId: string) {
     return await this.prismaService.task.findMany({
       where: {
         boardColumnId,
@@ -415,7 +415,7 @@ export class TaskRepo {
     })
   }
 
-  async reorderTasks(boardColumnId: number, taskOrderIds: number[]): Promise<void> {
+  async reorderTasks(boardColumnId: string, taskOrderIds: string[]): Promise<void> {
     await this.prismaService.$transaction([
       this.prismaService.boardColumnTaskOrder.deleteMany({
         where: { boardColumnId }
@@ -429,5 +429,67 @@ export class TaskRepo {
       })
     ])
   }
+
+  async moveTask(taskId: string, targetColumnId: string, newIndex: number): Promise<void> {
+    const task = await this.prismaService.task.findUnique({
+      where: { id: taskId }
+    })
+    if (!task) return
+
+    const sourceColumnId = task.boardColumnId
+
+    await this.prismaService.$transaction(async (tx) => {
+      // 1. Update task boardColumnId
+      await tx.task.update({
+        where: { id: taskId },
+        data: { boardColumnId: targetColumnId }
+      })
+
+      // 2. Handle source column if moved across columns
+      if (sourceColumnId !== targetColumnId) {
+        const sourceOrders = await tx.boardColumnTaskOrder.findMany({
+          where: { boardColumnId: sourceColumnId, taskId: { not: taskId } },
+          orderBy: { sortOrder: 'asc' }
+        })
+
+        await tx.boardColumnTaskOrder.deleteMany({
+          where: { boardColumnId: sourceColumnId }
+        })
+
+        if (sourceOrders.length > 0) {
+          await tx.boardColumnTaskOrder.createMany({
+            data: sourceOrders.map((o, idx) => ({
+              boardColumnId: sourceColumnId,
+              taskId: o.taskId,
+              sortOrder: idx
+            }))
+          })
+        }
+      }
+
+      // 3. Handle target column
+      const targetOrders = await tx.boardColumnTaskOrder.findMany({
+        where: { boardColumnId: targetColumnId, taskId: { not: taskId } },
+        orderBy: { sortOrder: 'asc' }
+      })
+
+      const targetTaskIds = targetOrders.map((o) => o.taskId)
+      const validIndex = Math.max(0, Math.min(newIndex, targetTaskIds.length))
+      targetTaskIds.splice(validIndex, 0, taskId)
+
+      await tx.boardColumnTaskOrder.deleteMany({
+        where: { boardColumnId: targetColumnId }
+      })
+
+      await tx.boardColumnTaskOrder.createMany({
+        data: targetTaskIds.map((tId, idx) => ({
+          boardColumnId: targetColumnId,
+          taskId: tId,
+          sortOrder: idx
+        }))
+      })
+    })
+  }
 }
+
 

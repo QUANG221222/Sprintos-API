@@ -43,7 +43,7 @@ export class TaskService {
     return await this.sharedSprintRepo.getSprintBoardDetail(params.sprintId)
   }
 
-  async findById(id: number) {
+  async findById(id: string) {
     const task = await this.taskRepo.findById({ taskId: id })
     if (!task) {
       throw TaskNotFoundError
@@ -88,7 +88,7 @@ export class TaskService {
     return await this.taskRepo.create(body, userId)
   }
 
-  async update({ id, body, userId }: { id: number; body: UpdateTaskBodyType; userId: number }) {
+  async update({ id, body, userId }: { id: string; body: UpdateTaskBodyType; userId: number }) {
     if (body.parentId !== undefined || body.sprintId !== undefined || body.boardColumnId !== undefined) {
       const task = await this.taskRepo.findById({ taskId: id })
       if (!task) {
@@ -127,7 +127,7 @@ export class TaskService {
       }
 
       const currentParentId = body.parentId !== undefined ? body.parentId : task.parentId
-      if (currentParentId !== null && body.sprintId !== undefined) {
+      if (currentParentId !== null && currentParentId !== undefined && body.sprintId !== undefined) {
         const parentTask = await this.taskRepo.findById({ taskId: currentParentId })
         if (parentTask && body.sprintId !== parentTask.sprintId) {
           throw SprintMismatchError
@@ -135,7 +135,7 @@ export class TaskService {
       }
     }
 
-    let targetProjectId: number | null = null
+    let targetProjectId: string | null = null
     let validateIds: number[] | undefined = undefined
 
     if (body.sprintId !== undefined) {
@@ -181,7 +181,7 @@ export class TaskService {
     }
   }
 
-  async delete({ id, userId }: { id: number; userId: number }, isHard?: boolean) {
+  async delete({ id, userId }: { id: string; userId: number }, isHard?: boolean) {
     try {
       await this.taskRepo.delete({ id, userId }, isHard)
       return { message: 'Task deleted successfully' }
@@ -193,11 +193,11 @@ export class TaskService {
     }
   }
 
-  async addComment({ taskId, memberId, body }: { taskId: number; memberId: number; body: AddTaskCommentBodyType }) {
+  async addComment({ taskId, memberId, body }: { taskId: string; memberId: number; body: AddTaskCommentBodyType }) {
     return await this.taskRepo.addComment(taskId, memberId, body)
   }
 
-  async addAttachment({ taskId, body }: { taskId: number; body: AddTaskAttachmentBodyType }) {
+  async addAttachment({ taskId, body }: { taskId: string; body: AddTaskAttachmentBodyType }) {
     return await this.taskRepo.addAttachment(taskId, body)
   }
 
@@ -205,10 +205,10 @@ export class TaskService {
   // Dependency Management & AON/AOA Network Diagram
   // ===================
 
-  async checkCycle(predecessorId: number, successorId: number): Promise<boolean> {
+  async checkCycle(predecessorId: string, successorId: string): Promise<boolean> {
     if (predecessorId === successorId) return true
 
-    const visited = new Set<number>()
+    const visited = new Set<string>()
     const queue = [successorId]
 
     while (queue.length > 0) {
@@ -256,7 +256,7 @@ export class TaskService {
     return await this.taskRepo.createDependency(predecessorId, successorId, type, lag)
   }
 
-  async deleteDependency(dependencyId: number) {
+  async deleteDependency(dependencyId: string) {
     const dep = await this.taskRepo.findDependencyById(dependencyId)
     if (!dep) {
       throw TaskDependencyNotFoundError
@@ -265,7 +265,7 @@ export class TaskService {
     return { message: 'Task dependency deleted successfully' }
   }
 
-  async getSprintNetworkDiagram(sprintId: number): Promise<SprintNetworkDiagramResType> {
+  async getSprintNetworkDiagram(sprintId: string): Promise<SprintNetworkDiagramResType> {
     const [tasks, dependencies] = await Promise.all([
       this.taskRepo.getTasksWithAssigneesBySprintId(sprintId),
       this.taskRepo.getDependenciesBySprintId(sprintId)
@@ -277,7 +277,7 @@ export class TaskService {
     }
   }
 
-  async reorderTasks(boardColumnId: number, taskOrderIds: number[]) {
+  async reorderTasks(boardColumnId: string, taskOrderIds: string[]) {
     const boardColumn = await this.taskRepo.findBoardColumnById(boardColumnId)
     if (!boardColumn) {
       throw BoardColumnNotFoundError
@@ -304,4 +304,24 @@ export class TaskService {
     await this.taskRepo.reorderTasks(boardColumnId, taskOrderIds)
     return await this.sharedSprintRepo.getSprintBoardDetail(boardColumn.sprintId)
   }
+
+  async moveTask(taskId: string, targetColumnId: string, newIndex: number) {
+    const task = await this.taskRepo.findById({ taskId })
+    if (!task) {
+      throw TaskNotFoundError
+    }
+
+    const targetColumn = await this.taskRepo.findBoardColumnById(targetColumnId)
+    if (!targetColumn) {
+      throw BoardColumnNotFoundError
+    }
+
+    if (task.sprintId !== targetColumn.sprintId) {
+      throw TaskErrorConstraintViolation
+    }
+
+    await this.taskRepo.moveTask(taskId, targetColumnId, newIndex)
+    return await this.sharedSprintRepo.getSprintBoardDetail(task.sprintId)
+  }
 }
+

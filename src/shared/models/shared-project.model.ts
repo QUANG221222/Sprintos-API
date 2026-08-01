@@ -3,7 +3,7 @@ import { ProjectMemberSchema } from './shared-project-member.model'
 
 export const ProjectSchema = z
   .object({
-    id: z.number(),
+    id: z.string(),
     ownerId: z.number(),
     name: z.string(),
     description: z.string().nullable(),
@@ -24,7 +24,7 @@ export const ProjectSchema = z
 export const GetProjectDetailResSchema = ProjectSchema
 
 export const GetProjectParamSchema = z.object({
-  projectId: z.coerce.number()
+  projectId: z.string()
 })
 
 export type ProjectType = z.infer<typeof ProjectSchema>

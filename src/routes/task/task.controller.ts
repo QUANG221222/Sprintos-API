@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, Post, Put, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, Patch, Post, Put, Query } from '@nestjs/common'
 import { TaskService } from './task.service'
 import { ZodSerializerDto } from 'nestjs-zod'
 import {
@@ -15,7 +15,8 @@ import {
   TaskDependencyResDTO,
   SprintNetworkDiagramResDTO,
   GetBoardColumnParamDTO,
-  ReorderTasksBodyDTO
+  ReorderTasksBodyDTO,
+  MoveTaskBodyDTO
 } from './task.dto'
 import { MessageResDTO } from '~/shared/dtos/response.dto'
 import { ActiveUser } from '~/shared/decorators/active-user.decorator'
@@ -33,7 +34,7 @@ export class TaskController {
 
   @Delete('dependencies/:dependencyId')
   @ZodSerializerDto(MessageResDTO)
-  deleteDependency(@Param('dependencyId', ParseIntPipe) dependencyId: number) {
+  deleteDependency(@Param('dependencyId') dependencyId: string) {
     return this.taskService.deleteDependency(dependencyId)
   }
 
@@ -98,4 +99,11 @@ export class TaskController {
   reorderTasks(@Param() params: GetBoardColumnParamDTO, @Body() body: ReorderTasksBodyDTO) {
     return this.taskService.reorderTasks(params.boardColumnId, body.taskOrderIds)
   }
+
+  @Patch(':taskId/move')
+  @ZodSerializerDto(SprintBoardDetailDTO)
+  moveTask(@Param() params: GetTaskParamDTO, @Body() body: MoveTaskBodyDTO) {
+    return this.taskService.moveTask(params.taskId, body.targetColumnId, body.newIndex)
+  }
 }
+

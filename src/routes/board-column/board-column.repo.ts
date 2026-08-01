@@ -38,7 +38,7 @@ export class BoardColumnRepo {
       if (indexA !== -1 && indexB !== -1) return indexA - indexB
       if (indexA !== -1) return -1
       if (indexB !== -1) return 1
-      return a.id - b.id
+      return a.id.localeCompare(b.id)
     })
 
     return {
@@ -75,7 +75,7 @@ export class BoardColumnRepo {
     return createdColumn
   }
 
-  async update({ id, body }: { id: number; body: UpdateBoardColumnBodyType }): Promise<BoardColumnType> {
+  async update({ id, body }: { id: string; body: UpdateBoardColumnBodyType }): Promise<BoardColumnType> {
     return (await this.prismaService.boardColumn.update({
       where: {
         id
@@ -87,7 +87,7 @@ export class BoardColumnRepo {
     })) as BoardColumnType
   }
 
-  async delete(id: number): Promise<BoardColumnType> {
+  async delete(id: string): Promise<BoardColumnType> {
     const deletedColumn = (await this.prismaService.boardColumn.delete({
       where: {
         id
@@ -111,25 +111,25 @@ export class BoardColumnRepo {
     return deletedColumn
   }
 
-  async countBySprintId(sprintId: number): Promise<number> {
+  async countBySprintId(sprintId: string): Promise<number> {
     return await this.prismaService.boardColumn.count({
       where: { sprintId, deletedAt: null }
     })
   }
 
-  async findActiveColumns(sprintId: number): Promise<BoardColumnType[]> {
+  async findActiveColumns(sprintId: string): Promise<BoardColumnType[]> {
     return (await this.prismaService.boardColumn.findMany({
       where: { sprintId, deletedAt: null }
     })) as BoardColumnType[]
   }
 
-  async countTasksInColumn(columnId: number): Promise<number> {
+  async countTasksInColumn(columnId: string): Promise<number> {
     return await this.prismaService.task.count({
       where: { boardColumnId: columnId, deletedAt: null }
     })
   }
 
-  async moveTasksToNewColumn(sourceColumnId: number, targetColumnId: number): Promise<SprintBoardDetailType> {
+  async moveTasksToNewColumn(sourceColumnId: string, targetColumnId: string): Promise<SprintBoardDetailType> {
     const column = await this.prismaService.boardColumn.findUnique({
       where: { id: sourceColumnId }
     })
@@ -143,7 +143,7 @@ export class BoardColumnRepo {
     return await this.sharedSprintRepo.getSprintBoardDetail(column.sprintId)
   }
 
-  async reorderColumns(sprintId: number, columnOrderIds: number[]): Promise<SprintBoardDetailType> {
+  async reorderColumns(sprintId: string, columnOrderIds: string[]): Promise<SprintBoardDetailType> {
     await this.prismaService.sprint.update({
       where: { id: sprintId },
       data: {

@@ -14,7 +14,7 @@ export class SprintService {
     return await this.sprintRepo.findAllByProjectId(params, query)
   }
 
-  async findById(id: number) {
+  async findById(id: string) {
     const sprint = await this.sprintRepo.findById({ sprintId: id })
     if (!sprint) {
       throw SprintNotFoundError
@@ -26,7 +26,7 @@ export class SprintService {
     return await this.sprintRepo.create(body, userId)
   }
 
-  async update({ id, body, userId }: { id: number; body: UpdateSprintBodyType; userId: number }) {
+  async update({ id, body, userId }: { id: string; body: UpdateSprintBodyType; userId: number }) {
     try {
       return await this.sprintRepo.update({ id, body, userId })
     } catch (error) {
@@ -37,7 +37,7 @@ export class SprintService {
     }
   }
 
-  async delete({ id, userId }: { id: number; userId: number }, isHard?: boolean) {
+  async delete({ id, userId }: { id: string; userId: number }, isHard?: boolean) {
     try {
       await this.sprintRepo.delete({ id, userId }, isHard)
       return { message: 'Sprint deleted successfully' }

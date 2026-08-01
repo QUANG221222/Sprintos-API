@@ -12,7 +12,7 @@ export const InvalidColumnsCountError = new BadRequestException({
   statusCode: HttpStatus.BAD_REQUEST
 })
 
-export const ColumnNotBelongToSprintError = (columnId: number) =>
+export const ColumnNotBelongToSprintError = (columnId: string | number) =>
   new BadRequestException({
     message: `Column with ID ${columnId} does not exist in this sprint or has been deleted`,
     path: 'columnOrderIds',
