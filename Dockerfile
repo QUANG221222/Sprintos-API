@@ -16,10 +16,9 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build NestJS
+# Build NestJS (tăng max-old-space-size lên 4GB tránh out of memory khi compile)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
-
-CMD [ "npm", "run", "start:dev" ]
 
 # ============ Stage 2: Production ============
 FROM node:20-alpine AS production
