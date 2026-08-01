@@ -5,7 +5,7 @@ import { ProjectMemberSchema } from '~/shared/models/shared-project-member.model
 
 export const GetProjectMemberParamSchema = z
   .object({
-    memberId: z.coerce.number()
+    memberId: z.string()
   })
   .strict()
 
@@ -41,7 +41,7 @@ export const GetListProjectMemberResSchema = z
 export const CreateProjectMemberBodySchema = z
   .object({
     projectId: z.string(),
-    memberId: z.number().positive(),
+    memberId: z.string(),
     email: z.string().email(),
     role: z.nativeEnum(ProjectMemberRole),
     status: z.nativeEnum(ProjectMemberStatus).optional(),

@@ -29,7 +29,7 @@ export class RoleRepository {
     return { totalItems, data, page, limit, totalPages: Math.ceil(totalItems / limit) }
   }
 
-  findById(id: number): Promise<RolePermissionType | null> {
+  findById(id: string): Promise<RolePermissionType | null> {
     const role = this.prismaService.role.findUnique({
       where: {
         id,
@@ -46,7 +46,7 @@ export class RoleRepository {
     return role
   }
 
-  create({ createdById, data }: { createdById: number | null; data: CreateRoleBodyType }): Promise<RoleType> {
+  create({ createdById, data }: { createdById: string | null; data: CreateRoleBodyType }): Promise<RoleType> {
     return this.prismaService.role.create({
       data: {
         createdById: createdById,
@@ -60,8 +60,8 @@ export class RoleRepository {
     updatedById,
     data
   }: {
-    id: number
-    updatedById: number | null
+    id: string
+    updatedById: string | null
     data: UpdateRoleBodyType
   }): Promise<RoleType> {
     // Check if role exists and not deleted
@@ -101,7 +101,7 @@ export class RoleRepository {
     })
   }
 
-  delete({ id, deletedById }: { id: number; deletedById: number | null }, isHard?: boolean): Promise<RoleType> {
+  delete({ id, deletedById }: { id: string; deletedById: string | null }, isHard?: boolean): Promise<RoleType> {
     return isHard
       ? this.prismaService.role.delete({
           where: {

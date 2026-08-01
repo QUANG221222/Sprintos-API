@@ -23,7 +23,7 @@ export const GetRoleDetailResSchema = RolePermissionsSchema
 
 export const GetRoleParamsSchema = z
   .object({
-    id: z.coerce.number().int().positive()
+    id: z.string()
   })
   .strict()
 
@@ -41,7 +41,7 @@ export const UpdateRoleBodySchema = RoleSchema.pick({
   description: true
 })
   .extend({
-    permissionIds: z.array(z.number())
+    permissionIds: z.array(z.string())
   })
   .strict()
 

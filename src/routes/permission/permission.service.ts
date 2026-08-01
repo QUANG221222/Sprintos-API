@@ -13,7 +13,7 @@ export class PermissionService {
     return await this.permissionRepository.list(pagination)
   }
 
-  async findById(permissionId: number) {
+  async findById(permissionId: string) {
     const permission = await this.permissionRepository.findById(permissionId)
     if (!permission) {
       throw NotFoundRecordException
@@ -21,7 +21,7 @@ export class PermissionService {
     return permission
   }
 
-  async create({ createdById, data }: { createdById: number | null; data: CreatePermissionBodyType }) {
+  async create({ createdById, data }: { createdById: string | null; data: CreatePermissionBodyType }) {
     try {
       return await this.permissionRepository.create({ createdById, data })
     } catch (error) {
@@ -37,8 +37,8 @@ export class PermissionService {
     updatedById,
     data
   }: {
-    permissionId: number
-    updatedById: number | null
+    permissionId: string
+    updatedById: string | null
     data: UpdatePermissionBodyType
   }) {
     try {
@@ -56,7 +56,7 @@ export class PermissionService {
   }
 
   async delete(
-    { permissionId, deletedById }: { permissionId: number; deletedById: number | null; isHard?: boolean },
+    { permissionId, deletedById }: { permissionId: string; deletedById: string | null; isHard?: boolean },
     isHard?: boolean
   ) {
     try {

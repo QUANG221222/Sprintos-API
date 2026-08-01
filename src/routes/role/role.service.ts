@@ -14,7 +14,7 @@ export class RoleService {
     return this.roleRepository.list({ page, limit })
   }
 
-  async findById(id: number) {
+  async findById(id: string) {
     const role = await this.roleRepository.findById(id)
     if (!role) {
       throw NotFoundRecordException
@@ -22,7 +22,7 @@ export class RoleService {
     return role
   }
 
-  async create({ createdById, data }: { createdById: number | null; data: CreateRoleBodyType }) {
+  async create({ createdById, data }: { createdById: string | null; data: CreateRoleBodyType }) {
     try {
       const role = await this.roleRepository.create({
         createdById,
@@ -37,7 +37,7 @@ export class RoleService {
     }
   }
 
-  private async verifyRole(roleId: number) {
+  private async verifyRole(roleId: string) {
     const role = await this.roleRepository.findById(roleId)
     if (!role) {
       throw NotFoundRecordException
@@ -49,7 +49,7 @@ export class RoleService {
     }
   }
 
-  async update({ id, updatedById, data }: { id: number; updatedById: number | null; data: UpdateRoleBodyType }) {
+  async update({ id, updatedById, data }: { id: string; updatedById: string | null; data: UpdateRoleBodyType }) {
     try {
       await this.verifyRole(id)
       const updatedRole = await this.roleRepository.update({
@@ -69,7 +69,7 @@ export class RoleService {
     }
   }
 
-  async delete({ id, deletedById }: { id: number; deletedById: number | null }, isHard?: boolean) {
+  async delete({ id, deletedById }: { id: string; deletedById: string | null }, isHard?: boolean) {
     try {
       await this.verifyRole(id)
       await this.roleRepository.delete({ id, deletedById }, isHard)

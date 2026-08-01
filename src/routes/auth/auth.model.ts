@@ -10,7 +10,7 @@ export const RegisterBodySchema = UserSchema.pick({
 export const RegisterResSchema = UserSchema.omit({ password: true, totpSecret: true })
 
 export const VerificationCodeSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   email: z.string().email(),
   code: z.string(),
   type: z.nativeEnum(TypeOfVerificationCode),
@@ -44,8 +44,8 @@ export const LoginResSchema = z.object({
 export const RefreshTokenSchema = z
   .object({
     token: z.string(),
-    userId: z.number(),
-    deviceId: z.number(),
+    userId: z.string(),
+    deviceId: z.string(),
     expiresAt: z.date(),
     createdAt: z.date()
   })
@@ -54,8 +54,8 @@ export const RefreshTokenSchema = z
 export const RefreshTokenResSchema = LoginResSchema
 
 export const DeviceSchema = z.object({
-  id: z.number(),
-  userId: z.number(),
+  id: z.string(),
+  userId: z.string(),
   userAgent: z.string(),
   ip: z.string(),
   lastActive: z.date(),

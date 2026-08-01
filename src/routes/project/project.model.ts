@@ -32,7 +32,7 @@ export const UpdateProjectBodySchema = CreateProjectBodySchema.pick({
 
 export const TransferProjectBodySchema = z
   .object({
-    newOwnerId: z.number().int().positive()
+    newOwnerId: z.string()
   })
   .strict()
 

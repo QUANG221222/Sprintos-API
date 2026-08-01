@@ -19,7 +19,7 @@ export class SprintController {
 
   @Post()
   @ZodSerializerDto(GetSprintDetailResDTO)
-  create(@Body() body: CreateSprintBodyDTO, @ActiveUser('userId') userId: number) {
+  create(@Body() body: CreateSprintBodyDTO, @ActiveUser('userId') userId: string) {
     return this.sprintService.create(body, userId)
   }
 
@@ -37,7 +37,7 @@ export class SprintController {
 
   @Put(':sprintId')
   @ZodSerializerDto(GetSprintDetailResDTO)
-  update(@Param() params: GetSprintParamDTO, @Body() body: UpdateSprintBodyDTO, @ActiveUser('userId') userId: number) {
+  update(@Param() params: GetSprintParamDTO, @Body() body: UpdateSprintBodyDTO, @ActiveUser('userId') userId: string) {
     return this.sprintService.update({ id: params.sprintId, body, userId })
   }
 
@@ -45,7 +45,7 @@ export class SprintController {
   @ZodSerializerDto(MessageResDTO)
   delete(
     @Param() params: GetSprintParamDTO,
-    @ActiveUser('userId') userId: number,
+    @ActiveUser('userId') userId: string,
     @Query('isHard', new ParseBoolPipe({ optional: true })) isHard?: boolean
   ) {
     return this.sprintService.delete({ id: params.sprintId, userId }, isHard)

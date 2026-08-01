@@ -1,8 +1,8 @@
 export interface AccessTokenPayloadCreate {
-  userId: number
+  userId: string
   email: string
-  deviceId: number
-  roleId: number
+  deviceId: string
+  roleId: string
   roleName: string
 }
 
@@ -11,7 +11,7 @@ export interface AccessTokenPayLoad extends AccessTokenPayloadCreate {
   iat: number
 }
 export interface RefreshTokenPayloadCreate {
-  userId: number
+  userId: string
 }
 
 export interface RefreshTokenPayload extends RefreshTokenPayloadCreate {

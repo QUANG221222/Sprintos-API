@@ -2,11 +2,11 @@ import { z } from 'zod'
 import { UserStatus } from '../constants/auth.constants'
 
 export const UserSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   email: z.string().email(),
   password: z.string().min(6).max(100),
   displayName: z.string().min(2).max(100),
-  roleId: z.number().positive(),
+  roleId: z.string(),
   totpSecret: z.string().nullable(),
   status: z.nativeEnum(UserStatus),
   phoneNumber: z.string().max(20).nullable(),
@@ -16,9 +16,9 @@ export const UserSchema = z.object({
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).nullable(),
   avatar: z.string().nullable(),
   avatarPublicId: z.string().nullable(),
-  createdById: z.number().nullable(),
-  updatedById: z.number().nullable(),
-  deletedById: z.number().nullable(),
+  createdById: z.string().nullable(),
+  updatedById: z.string().nullable(),
+  deletedById: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date().nullable(),
   deletedAt: z.date().nullable()

@@ -150,7 +150,7 @@ export class TaskRepo {
     })) as any
   }
 
-  async create(body: CreateTaskBodyType, userId: number): Promise<TaskType> {
+  async create(body: CreateTaskBodyType, userId: string): Promise<TaskType> {
     const { assigneeIds, ...taskData } = body
     let boardColumnId = taskData.boardColumnId
     if (!boardColumnId) {
@@ -198,7 +198,7 @@ export class TaskRepo {
     return task?.sprint ? task.sprint.projectId : null
   }
 
-  async validateProjectMembers(projectId: string, assigneeIds: number[]): Promise<boolean> {
+  async validateProjectMembers(projectId: string, assigneeIds: string[]): Promise<boolean> {
     const uniqueIds = Array.from(new Set(assigneeIds))
     if (uniqueIds.length === 0) return true
 
@@ -217,7 +217,7 @@ export class TaskRepo {
     return members.length === uniqueIds.length
   }
 
-  async update({ id, body, userId }: { id: string; body: UpdateTaskBodyType; userId: number }): Promise<TaskType> {
+  async update({ id, body, userId }: { id: string; body: UpdateTaskBodyType; userId: string }): Promise<TaskType> {
     const { assigneeIds, ...taskData } = body
 
     if (taskData.sprintId !== undefined) {
@@ -265,7 +265,7 @@ export class TaskRepo {
     })
   }
 
-  async delete({ id, userId }: { id: string; userId: number }, isHard?: boolean): Promise<TaskType> {
+  async delete({ id, userId }: { id: string; userId: string }, isHard?: boolean): Promise<TaskType> {
     return isHard
       ? await this.prismaService.task.delete({
           where: {
@@ -377,7 +377,7 @@ export class TaskRepo {
     })
   }
 
-  async addComment(taskId: string, memberId: number, body: AddTaskCommentBodyType): Promise<TaskCommentType> {
+  async addComment(taskId: string, memberId: string, body: AddTaskCommentBodyType): Promise<TaskCommentType> {
     return await this.prismaService.taskComment.create({
       data: {
         taskId,

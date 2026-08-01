@@ -113,7 +113,7 @@ export class AccessTokenGuard implements CanActivate {
     const path = request.route.path
     const method = request.method as keyof typeof HTTPMethod
 
-    const roleIdsToCheck: number[] = [globalRoleId]
+    const roleIdsToCheck: string[] = [globalRoleId]
 
     // Try to extract projectId from request context
     const projectId = await this.extractProjectId(request)

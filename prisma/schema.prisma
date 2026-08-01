@@ -93,11 +93,11 @@ enum NotificationType {
 // ===================
 
 model User {
-  id             Int              @id @default(autoincrement())
+  id             String           @id @default(cuid(2))
   email          String           @unique 
   password       String           
   displayName    String           
-  roleId         Int
+  roleId         String
   role           Role               @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   totpSecret                  String?               @db.VarChar(1000)
   status         UserStatus       @default(INACTIVE)
@@ -112,14 +112,14 @@ model User {
   // 1 user có thể tạo ra nhiều user khác
   // 1 user chỉ có thể được tạo ra bởi 1 user khác
   // Tự quan hệ 1-n
-  createdById  Int?
+  createdById  String?
   createdBy    User?  @relation("CreatorUsers", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   createdUsers User[] @relation("CreatorUsers")
 
-  updatedById  Int?
+  updatedById  String?
   updatedBy    User?  @relation("UpdatorUsers", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   updatedUsers User[] @relation("UpdatorUsers")
-  deletedById  Int?
+  deletedById  String?
   deletedBy    User?  @relation("DeletorUsers", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   deletedUsers User[] @relation("DeletorUsers")
 
@@ -181,7 +181,7 @@ model User {
 }
 
 model VerificationCode {
-  id    Int                  @id @default(autoincrement())
+  id    String               @id @default(cuid(2))
   email String               @db.VarChar(500)
   code  String               @db.VarChar(50)
   type  VerificationCodeType
@@ -195,8 +195,8 @@ model VerificationCode {
 }
 
 model Device {
-  id            Int            @id @default(autoincrement())
-  userId        Int
+  id            String         @id @default(cuid(2))
+  userId        String
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction) 
   userAgent     String
   ip            String
@@ -208,9 +208,9 @@ model Device {
 
 model RefreshToken {
   token     String   @unique @db.VarChar(1000)
-  userId    Int
+  userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  deviceId  Int 
+  deviceId  String 
   device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   expiresAt DateTime
   createdAt DateTime @default(now())
@@ -219,7 +219,7 @@ model RefreshToken {
 }
 
 model Role {
-  id          Int          @id @default(autoincrement())
+  id          String       @id @default(cuid(2))
   name        String       @db.VarChar(500)
   description String       @default("")
   isActive    Boolean      @default(true)
@@ -227,11 +227,11 @@ model Role {
   users       User[]
   roles       ProjectMember[]
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("RoleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("RoleUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("RoleDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   deletedAt DateTime?
@@ -242,7 +242,7 @@ model Role {
 }
 
 model Permission {
-  id          Int        @id @default(autoincrement())
+  id          String     @id @default(cuid(2))
   name        String     @db.VarChar(500)
   description String     @default("")
   path        String     @db.VarChar(1000)
@@ -250,11 +250,11 @@ model Permission {
   module      String     @default("") @db.VarChar(500)
   roles       Role[]
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("PermissionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("PermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("PermissionDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   deletedAt DateTime?
@@ -265,17 +265,17 @@ model Permission {
 }
 
 model Project {
-  id            String           @id @default(cuid())
-  ownerId       Int
+  id            String           @id @default(cuid(2))
+  ownerId       String
   name          String
   description   String?
   image         String?
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("ProjectCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("ProjectUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("ProjectDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   createdAt     DateTime         @default(now())
@@ -292,21 +292,21 @@ model Project {
 }
 
 model ProjectMember {
-  id          String             @id @default(cuid())
+  id          String             @id @default(cuid(2))
   projectId   String
-  memberId    Int
+  memberId    String
   email       String
-  roleId      Int
+  roleId      String
   role        Role                 @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   status      ProjectMemberStatus @default(PENDING)
   inviteToken String?
   joinAt      DateTime?
 
-  invitedById Int?
+  invitedById String?
   invitedBy   User? @relation("ProjectMemberInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("ProjectMemberUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("ProjectMemberDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
 
@@ -321,7 +321,7 @@ model ProjectMember {
 }
 
 model Sprint {
-  id            String       @id @default(cuid())
+  id            String       @id @default(cuid(2))
   projectId     String
   name          String
   goal          String?
@@ -331,11 +331,11 @@ model Sprint {
   status        SprintStatus @default(PLANNED)
   boardColumnIds String[]    @default([])
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("SprintCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("SprintUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("SprintDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
 
@@ -352,15 +352,15 @@ model Sprint {
 }
 
 model BoardColumn {
-  id        String           @id @default(cuid())
+  id        String           @id @default(cuid(2))
   sprintId  String
   title     String
   
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("BoardColumnCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("BoardColumnUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("BoardColumnDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
 
@@ -376,7 +376,7 @@ model BoardColumn {
 }
 
 model BoardColumnTaskOrder {
-  id            String      @id @default(cuid())
+  id            String      @id @default(cuid(2))
   boardColumnId String
   taskId        String
   sortOrder     Int 
@@ -388,7 +388,7 @@ model BoardColumnTaskOrder {
 }
 
 model Task {
-  id            String        @id @default(cuid())
+  id            String        @id @default(cuid(2))
   sprintId      String
   boardColumnId String
   title         String
@@ -400,11 +400,11 @@ model Task {
   duration      Int?          @default(0)
   parentId      String?
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("TaskUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("TaskDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   createdAt     DateTime      @default(now())
@@ -431,7 +431,7 @@ model Task {
 }
 
 model TaskDependency {
-  id            String         @id @default(cuid())
+  id            String         @id @default(cuid(2))
   predecessorId String
   successorId   String
   type          DependencyType @default(FS)
@@ -449,15 +449,15 @@ model TaskDependency {
 }
 
 model TaskAssignee {
-  id     String @id @default(cuid())
+  id     String @id @default(cuid(2))
   taskId String
-  userId Int
+  userId String
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("TaskAssigneeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("TaskAssigneeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("TaskAssigneeDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   createdAt     DateTime @default(now())
@@ -473,15 +473,15 @@ model TaskAssignee {
 }
 
 model TaskLabel {
-  id     String @id @default(cuid())
+  id     String @id @default(cuid(2))
   taskId String
   label  String
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("TaskLabelCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("TaskLabelUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("TaskLabelDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   createdAt     DateTime @default(now())
@@ -494,18 +494,18 @@ model TaskLabel {
 }
 
 model TaskComment {
-  id                String   @id @default(cuid())
+  id                String   @id @default(cuid(2))
   taskId            String
-  memberId          Int
+  memberId          String
   memberDisplayName String
   memberAvatar      String?
   content           String
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("TaskCommentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("TaskCommentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("TaskCommentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   createdAt         DateTime @default(now())
@@ -521,17 +521,17 @@ model TaskComment {
 }
 
 model TaskAttachment {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid(2))
   taskId    String
   fileName  String
   fileType  String
   fileUrl   String
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("TaskAttachmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("TaskAttachmentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("TaskAttachmentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   createdAt DateTime @default(now())
@@ -545,16 +545,16 @@ model TaskAttachment {
 }
 
 model ProjectChat {
-  id              String   @id @default(cuid())
+  id              String   @id @default(cuid(2))
   projectId       String   @unique
   lastMessage     String?
   lastMessageTime DateTime?
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("ProjectChatCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("ProjectChatUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("ProjectChatDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   createdAt       DateTime @default(now())
@@ -568,9 +568,9 @@ model ProjectChat {
 }
 
 model ProjectChatMessage {
-  id              String   @id @default(cuid())
+  id              String   @id @default(cuid(2))
   projectChatId   String
-  senderId        Int
+  senderId        String
   senderName      String
   senderRole      String
   senderAvatarUrl String?
@@ -583,11 +583,11 @@ model ProjectChatMessage {
   timestamp       DateTime @default(now())
   isDeleted       Boolean  @default(false)
 
-  createdById Int?
+  createdById String?
   createdBy   User? @relation("ProjectChatMessageCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedById Int?
+  updatedById String?
   updatedBy   User? @relation("ProjectChatMessageUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  deletedById Int?
+  deletedById String?
   deletedBy   User? @relation("ProjectChatMessageDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   createdAt       DateTime @default(now())
@@ -603,8 +603,8 @@ model ProjectChatMessage {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    Int?
+  id        String           @id @default(cuid(2))
+  userId    String?
   projectId String?
   taskId    String?
   type      NotificationType

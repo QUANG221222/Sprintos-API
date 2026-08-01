@@ -46,12 +46,6 @@ RUN npx prisma generate
 # Copy build output từ stage 1
 COPY --from=builder /app/dist ./dist
 
-# Đổi ownership
-RUN chown -R nestjs:nodejs /app
-
-# Switch sang user non-root
-USER nestjs
-
 EXPOSE 8080
 
 # Dùng dumb-init để handle SIGTERM đúng
