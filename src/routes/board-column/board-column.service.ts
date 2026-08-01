@@ -8,7 +8,8 @@ import {
   DuplicateColumnIdsError,
   TargetColumnNotFoundError,
   ColumnContainsTasksError,
-  LastColumnDeletionError
+  LastColumnDeletionError,
+  CannotDeleteDoneColumnError
 } from './board-column.error'
 import { CreateBoardColumnBodyType, GetSprintParamType, UpdateBoardColumnBodyType } from './board-column.model'
 import { SharedSprintRepo } from '~/shared/repositories/shared-sprint.repo'
@@ -51,6 +52,10 @@ export class BoardColumnService {
     const column = await this.boardColumnRepo.findById({ boardColumnId: id })
     if (!column) {
       throw BoardColumnNotFoundError
+    }
+
+    if (column.title.trim().toLowerCase() === 'done') {
+      throw CannotDeleteDoneColumnError
     }
 
     const totalColumns = await this.boardColumnRepo.countBySprintId(column.sprintId)

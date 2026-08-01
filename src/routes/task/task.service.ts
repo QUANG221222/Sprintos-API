@@ -27,8 +27,7 @@ import {
   CreateTaskBodyType,
   GetSprintParamType,
   UpdateTaskBodyType,
-  CreateTaskDependencyBodyType,
-  SprintNetworkDiagramResType
+  CreateTaskDependencyBodyType
 } from './task.model'
 import { SharedSprintRepo } from '~/shared/repositories/shared-sprint.repo'
 
@@ -265,18 +264,6 @@ export class TaskService {
     return { message: 'Task dependency deleted successfully' }
   }
 
-  async getSprintNetworkDiagram(sprintId: string): Promise<SprintNetworkDiagramResType> {
-    const [tasks, dependencies] = await Promise.all([
-      this.taskRepo.getTasksWithAssigneesBySprintId(sprintId),
-      this.taskRepo.getDependenciesBySprintId(sprintId)
-    ])
-
-    return {
-      tasks: tasks as any,
-      dependencies: dependencies as any
-    }
-  }
-
   async reorderTasks(boardColumnId: string, taskOrderIds: string[]) {
     const boardColumn = await this.taskRepo.findBoardColumnById(boardColumnId)
     if (!boardColumn) {
@@ -324,4 +311,3 @@ export class TaskService {
     return await this.sharedSprintRepo.getSprintBoardDetail(task.sprintId)
   }
 }
-

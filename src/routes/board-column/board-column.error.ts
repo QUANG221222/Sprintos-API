@@ -48,3 +48,9 @@ export const LastColumnDeletionError = new BadRequestException({
   path: 'columnId',
   statusCode: HttpStatus.BAD_REQUEST
 })
+
+export const CannotDeleteDoneColumnError = new BadRequestException({
+  message: 'The mandatory "Done" column is required for tracking completed tasks and cannot be deleted.',
+  path: 'columnId',
+  statusCode: HttpStatus.BAD_REQUEST
+})

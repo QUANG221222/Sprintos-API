@@ -16,6 +16,7 @@ import { PermissionModule } from './routes/permission/permission.module'
 import { RoleModule } from './routes/role/role.module'
 import { MediaModule } from './routes/media/media.module'
 import { UserModule } from './routes/user/user.module'
+import { ReportModule } from './routes/report/report.module'
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { UserModule } from './routes/user/user.module'
     BoardColumnModule,
     TaskModule,
     MediaModule,
-    UserModule
+    UserModule,
+    ReportModule
   ],
   controllers: [AppController],
   providers: [

@@ -55,12 +55,58 @@ export class SprintRepo {
   }
 
   async create(body: CreateSprintBodyType, userId: string): Promise<SprintType> {
-    return await this.prismaService.sprint.create({
+    const newSprint = await this.prismaService.sprint.create({
       data: {
         ...body,
         createdById: userId
       }
     })
+
+    // Find previous sprint in the project to inherit customized board columns
+    const previousSprint = await this.prismaService.sprint.findFirst({
+      where: {
+        projectId: body.projectId,
+        id: { not: newSprint.id },
+        deletedAt: null
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        boardColumns: {
+          where: { deletedAt: null }
+        }
+      }
+    })
+
+    if (previousSprint && previousSprint.boardColumns.length > 0) {
+      const orderIds = previousSprint.boardColumnIds || []
+      const sortedPrevCols = [...previousSprint.boardColumns].sort((a, b) => {
+        const idxA = orderIds.indexOf(a.id)
+        const idxB = orderIds.indexOf(b.id)
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB
+        return 0
+      })
+      const columnTitles = sortedPrevCols.map((c) => c.title)
+
+      const createdColumnIds: string[] = []
+      for (const title of columnTitles) {
+        const col = await this.prismaService.boardColumn.create({
+          data: {
+            sprintId: newSprint.id,
+            title
+          }
+        })
+        createdColumnIds.push(col.id)
+      }
+
+      return await this.prismaService.sprint.update({
+        where: { id: newSprint.id },
+        data: {
+          boardColumnIds: createdColumnIds
+        }
+      })
+    }
+
+    return newSprint
   }
 
   async update({ id, body, userId }: { id: string; body: UpdateSprintBodyType; userId: string }): Promise<SprintType> {
