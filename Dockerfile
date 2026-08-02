@@ -25,16 +25,20 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install dumb-init để handle signals đúng cách
-RUN apk add --no-cache dumb-init
+# Install dumb-init, libc6-compat và openssl cho Prisma
+RUN apk add --no-cache dumb-init libc6-compat openssl
 
 # Tạo user non-root
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# Copy package files
+# Copy package files and scripts
 COPY package*.json ./
+COPY tsconfig.json ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
+COPY emails ./emails/
+COPY initialScript ./initialScript/
 
 # Chỉ install production dependencies
 RUN npm ci --only=production && npm cache clean --force

@@ -6,9 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "init-seed-data": "ts-node --transpile-only initialScript/seed-data.ts",
     "seed:data": "ts-node --transpile-only initialScript/seed-data.ts",
-    "seed:all": "ts-node --transpile-only initialScript/seed-data.ts",
+    "seed:init": "ts-node --transpile-only initialScript/index.ts",
     "create-permissions": "ts-node --transpile-only initialScript/create-permissions.ts",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -60,6 +59,8 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.9.4",
     "rxjs": "^7.8.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
   },
