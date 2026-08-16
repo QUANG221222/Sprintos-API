@@ -107,6 +107,7 @@ async function bootstrap() {
             cleanPath.startsWith('/auth') ||
             cleanPath.startsWith('/profile') ||
             cleanPath.startsWith('/media') ||
+            cleanPath === '/users/me' ||
             (cleanPath.startsWith('/users') && p.method === 'GET') ||
             (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
             cleanPath === '/projects/owned' ||

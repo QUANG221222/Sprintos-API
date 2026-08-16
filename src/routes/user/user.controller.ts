@@ -5,6 +5,7 @@ import {
   GetUserParamsDTO,
   GetUsersQueryDTO,
   GetUsersResDTO,
+  UpdateProfileBodyDTO,
   UpdateUserBodyDTO
 } from './user.dto'
 import { ZodSerializerDto } from 'nestjs-zod'
@@ -15,6 +16,7 @@ import { ActiveUser } from '~/shared/decorators/active-user.decorator'
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
   @Get()
   @ZodSerializerDto(GetUsersResDTO)
   list(@Query() query: GetUsersQueryDTO) {
@@ -28,6 +30,18 @@ export class UserController {
   @ZodSerializerDto(GetUserProfileResDTO)
   getMe(@ActiveUser('userId') userId: string) {
     return this.userService.findById(userId)
+  }
+
+  @Put('me')
+  @ZodSerializerDto(UpdateUserProfileResDTO)
+  updateMe(
+    @ActiveUser('userId') userId: string,
+    @Body() body: UpdateProfileBodyDTO
+  ) {
+    return this.userService.updateProfile({
+      userId,
+      data: body
+    })
   }
 
   @Get(':id')

@@ -1,6 +1,11 @@
 import { SharedRoleRepository } from '~/shared/repositories/shared-role.repo'
 import { ForbiddenException, Injectable } from '@nestjs/common'
-import { CreateUserBodyType, GetUsersQueryType, UpdateUserBodyType } from './user.model'
+import {
+  CreateUserBodyType,
+  GetUsersQueryType,
+  UpdateProfileBodyType,
+  UpdateUserBodyType
+} from './user.model'
 import { UserRepository } from './user.repo'
 import { UserType } from '~/shared/models/shared-user.model'
 import {
@@ -17,6 +22,7 @@ import {
 import { HashingService } from '~/shared/services/hashing.service'
 import { SharedUserRepository } from '~/shared/repositories/shared-user.repo'
 import { RoleName } from '~/shared/constants/role.constants'
+import { S3Service } from '~/shared/services/S3.service'
 
 @Injectable()
 export class UserService {
@@ -24,11 +30,32 @@ export class UserService {
     private readonly userRepository: UserRepository,
     private readonly sharedUserRepository: SharedUserRepository,
     private readonly hashingService: HashingService,
-    private readonly sharedRoleRepository: SharedRoleRepository
+    private readonly sharedRoleRepository: SharedRoleRepository,
+    private readonly s3Service: S3Service
   ) {}
 
   list(navigation: GetUsersQueryType) {
     return this.userRepository.list(navigation)
+  }
+
+  /**
+   * Helper to extract S3 object key from URL or raw fileKey
+   */
+  private extractS3Key(avatarUrl?: string | null): string | null {
+    if (!avatarUrl) return null
+    if (avatarUrl.startsWith('avatar-user/') || avatarUrl.startsWith('uploads/')) {
+      return avatarUrl.split('?')[0]
+    }
+    try {
+      const url = new URL(avatarUrl)
+      const pathname = url.pathname.replace(/^\/+/, '')
+      if (pathname.startsWith('avatar-user/') || pathname.startsWith('uploads/')) {
+        return pathname
+      }
+    } catch {
+      // Not a standard URL
+    }
+    return null
   }
 
   async findById(id: string) {
@@ -38,15 +65,93 @@ export class UserService {
     if (!user) {
       throw NotFoundRecordException
     }
+
+    // If user has an S3 avatar, generate a fresh presigned GET URL
+    if (user.avatar) {
+      const s3Key = user.avatarPublicId || this.extractS3Key(user.avatar)
+      if (s3Key) {
+        try {
+          const presignedGetUrl = await this.s3Service.createPresignedGetUrl(s3Key, 7 * 24 * 3600)
+          return {
+            ...user,
+            avatar: presignedGetUrl
+          }
+        } catch (error) {
+          console.error('Failed to generate presigned GET URL for avatar:', error)
+        }
+      }
+    }
+
     return user
   }
 
+  /**
+   * Self-profile update endpoint for current logged-in user
+   * Automatically deletes old avatar from S3 if a new avatar is provided
+   */
+  async updateProfile({
+    userId,
+    data
+  }: {
+    userId: string
+    data: UpdateProfileBodyType
+  }) {
+    const currentUser = await this.sharedUserRepository.findUnique({
+      id: userId
+    })
+    if (!currentUser) {
+      throw NotFoundRecordException
+    }
+
+    // Check if avatar is being updated and user already has an existing avatar in S3
+    const newAvatarKey = data.avatarPublicId || this.extractS3Key(data.avatar)
+    const oldAvatarKey = currentUser.avatarPublicId || this.extractS3Key(currentUser.avatar)
+
+    if (newAvatarKey && oldAvatarKey && newAvatarKey !== oldAvatarKey) {
+      try {
+        console.log(`[UserService] Replacing old avatar in S3: ${oldAvatarKey}`)
+        await this.s3Service.deleteObject(oldAvatarKey)
+      } catch (err) {
+        console.error('Failed to delete old avatar from S3:', err)
+      }
+    }
+
+    const updatedUser = await this.sharedUserRepository.update(
+      { id: userId },
+      {
+        ...data,
+        avatarPublicId: newAvatarKey || currentUser.avatarPublicId,
+        updatedById: userId
+      }
+    )
+
+    if (!updatedUser) {
+      throw NotFoundRecordException
+    }
+
+    // Return with signed avatar URL
+    if (updatedUser.avatar) {
+      const s3Key = updatedUser.avatarPublicId || this.extractS3Key(updatedUser.avatar)
+      if (s3Key) {
+        try {
+          const presignedGetUrl = await this.s3Service.createPresignedGetUrl(s3Key, 7 * 24 * 3600)
+          return {
+            ...updatedUser,
+            avatar: presignedGetUrl
+          }
+        } catch {
+          // fallback
+        }
+      }
+    }
+
+    return updatedUser
+  }
+
   private async verifyRole({ roleNameAgent, roleIdTarget }) {
-    // Agent is admin can allow
     if (roleNameAgent === RoleName.Admin) {
       return true
     } else {
-      // Agent is not admin cannot create or update user with role is admin
       const adminRoleId = await this.sharedRoleRepository.getAdminRoleId()
       if (roleIdTarget === adminRoleId) {
         throw new ForbiddenException('Error.CannotSetAdminRoleToUser')
@@ -65,7 +170,6 @@ export class UserService {
     createdByRoleName: string
   }): Promise<UserType | null> {
     try {
-      // Only admin can create user with role is ADMIN
       await this.verifyRole({
         roleNameAgent: createdByRoleName,
         roleIdTarget: data.roleId
@@ -109,7 +213,6 @@ export class UserService {
     updatedByRoleName: string
   }) {
     try {
-      // Cannot update by yourself
       this.verifyYourself({ userAgentId: updateById, userTargetId: id })
       const currentUser = await this.sharedUserRepository.findUnique({
         id
@@ -117,11 +220,8 @@ export class UserService {
       if (!currentUser) {
         throw NotFoundRecordException
       }
-      // Get first RoleId of update user to check if agent can update or not
-      // Not use date.RoleId because it can use wrong RoleId by client
       const roleIdTarget = currentUser.roleId
 
-      // Only admin can update user with role is ADMIN
       await this.verifyRole({
         roleNameAgent: updatedByRoleName,
         roleIdTarget
@@ -150,9 +250,9 @@ export class UserService {
       throw error
     }
   }
+
   async delete({ id, deletedById, deletedByRoleName }: { id: string; deletedById: string; deletedByRoleName: string }) {
     try {
-      // Cannot delete by yourself
       this.verifyYourself({ userAgentId: deletedById, userTargetId: id })
 
       const currentUser = await this.sharedUserRepository.findUnique({
@@ -162,7 +262,6 @@ export class UserService {
         throw NotFoundRecordException
       }
       const roleIdTarget = currentUser.roleId
-      // Only admin can delete user with role is ADMIN
       await this.verifyRole({
         roleNameAgent: deletedByRoleName,
         roleIdTarget

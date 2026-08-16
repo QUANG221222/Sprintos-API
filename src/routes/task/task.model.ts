@@ -136,9 +136,9 @@ export const CreateTaskBodySchema = z
     parentId: z.string().nullable().optional(),
     assigneeIds: z.array(z.string()).optional()
   })
-  .strict()
+  .strip()
 
-export const UpdateTaskBodySchema = CreateTaskBodySchema.partial().strict()
+export const UpdateTaskBodySchema = CreateTaskBodySchema.partial().strip()
 
 export const AddTaskCommentBodySchema = z
   .object({
