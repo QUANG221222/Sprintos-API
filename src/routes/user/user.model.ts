@@ -35,6 +35,7 @@ export const CreateUserBodySchema = UserSchema.pick({
   displayName: true,
   phoneNumber: true,
   avatar: true,
+  avatarPublicId: true,
   status: true,
   password: true,
   roleId: true
@@ -42,8 +43,20 @@ export const CreateUserBodySchema = UserSchema.pick({
 
 export const UpdateUserBodySchema = CreateUserBodySchema
 
+export const UpdateProfileBodySchema = UserSchema.pick({
+  displayName: true,
+  phoneNumber: true,
+  avatar: true,
+  avatarPublicId: true,
+  address: true,
+  dob: true,
+  bio: true,
+  gender: true
+}).partial()
+
 export type GetUsersResType = z.infer<typeof GetUsersResSchema>
 export type GetUsersQueryType = z.infer<typeof GetUsersQuerySchema>
 export type GetUserParamsType = z.infer<typeof GetUserParamsSchema>
 export type CreateUserBodyType = z.infer<typeof CreateUserBodySchema>
 export type UpdateUserBodyType = z.infer<typeof UpdateUserBodySchema>
+export type UpdateProfileBodyType = z.infer<typeof UpdateProfileBodySchema>

@@ -105,6 +105,41 @@ export class AccessTokenGuard implements CanActivate {
       }
     }
 
+    // 5. PredecessorId, SuccessorId, or ParentId in body (for dependency or subtask creation)
+    const relatedTaskId =
+      request.body?.predecessorId ??
+      request.body?.successorId ??
+      request.body?.parentId
+    if (relatedTaskId && typeof relatedTaskId === 'string') {
+      const task = await this.prismaService.task.findUnique({
+        where: { id: relatedTaskId },
+        select: { sprintId: true }
+      })
+      if (task) {
+        const sprint = await this.prismaService.sprint.findUnique({
+          where: { id: task.sprintId },
+          select: { projectId: true }
+        })
+        if (sprint) return sprint.projectId
+      }
+    }
+
+    // 6. DependencyId in params (for DELETE /tasks/dependencies/:dependencyId)
+    const dependencyIdRaw = request.params?.dependencyId
+    if (dependencyIdRaw && typeof dependencyIdRaw === 'string') {
+      const dependency = await this.prismaService.taskDependency.findUnique({
+        where: { id: dependencyIdRaw },
+        select: {
+          predecessor: {
+            select: { sprint: { select: { projectId: true } } }
+          }
+        }
+      })
+      if (dependency?.predecessor?.sprint?.projectId) {
+        return dependency.predecessor.sprint.projectId
+      }
+    }
+
     return null
   }
 
