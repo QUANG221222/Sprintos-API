@@ -32,6 +32,7 @@ const configSchema = z.object({
   OTP_EXPIRES_IN: z.string(),
   RESEND_API_KEY: z.string(),
   BUILD_MODE: z.string().default(process.env.BUILD_MODE || 'dev'),
+  COOKIE_DOMAIN: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
   GOOGLE_REDIRECT_URI: z.string(),

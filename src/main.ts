@@ -1,3 +1,4 @@
+import { NestExpressApplication } from '@nestjs/platform-express'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import envConfig from './shared/config'
@@ -21,9 +22,15 @@ if (processors && processors.allProcessors) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
+  app.set('trust proxy', 1)
   app.setGlobalPrefix('api')
+
+  app.enableCors({
+    origin: [envConfig.WEBSITE_DOMAIN_PRODUCTION, envConfig.WEBSITE_DOMAIN_DEVELOPMENT],
+    credentials: true
+  })
 
   const config = new DocumentBuilder()
     .setTitle('Sprintos API')

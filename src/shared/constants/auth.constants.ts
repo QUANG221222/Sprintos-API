@@ -41,6 +41,6 @@ export const cookieOptions = {
   secure: isProduction, // prevent cookie access in non-HTTPS
   sameSite: isProduction ? ('none' as const) : ('lax' as const), // CSRF protection
   path: '/', // cookie available for entire site
-  domain: isProduction ? process.env.COOKIE_DOMAIN : undefined, // set domain in production
+  domain: isProduction ? (envConfig.COOKIE_DOMAIN || undefined) : undefined, // set domain in production
   maxAge: ms('1 days') // cookie expiry time
 } as const
