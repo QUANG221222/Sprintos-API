@@ -33,6 +33,7 @@ import { EmailService } from '~/shared/services/email.service'
 import { TypeOfVerificationCode, TypeOfVerificationCodeType, UserStatus } from '~/shared/constants/auth.constants'
 import { SharedRoleRepository } from '~/shared/repositories/shared-role.repo'
 import { Request } from 'express'
+import { QueueService } from '../queue/queue.service'
 
 @Injectable()
 export class AuthService {
@@ -42,7 +43,8 @@ export class AuthService {
     private readonly authRepo: AuthRepo,
     private readonly emailService: EmailService,
     private readonly hashingService: HashingService,
-    private readonly tokenService: TokenService
+    private readonly tokenService: TokenService,
+    private readonly queueService: QueueService
   ) {}
 
   async register(data: RegisterBodyType) {
@@ -99,11 +101,14 @@ export class AuthService {
       type: type,
       expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPIRES_IN as StringValue))
     })
-    const { error } = await this.emailService.sendLink({ email, code, websiteDomain, type })
+    
+    await this.queueService.sendVerificationEmail({
+      email,
+      code,
+      websiteDomain,
+      type
+    })
 
-    if (error) {
-      throw FailedToSendOTPException
-    }
     return {
       message: 'Verification email sent successfully'
     }

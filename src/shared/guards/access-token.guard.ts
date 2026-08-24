@@ -140,6 +140,18 @@ export class AccessTokenGuard implements CanActivate {
       }
     }
 
+    // 7. MemberId in params (for /project-members/:memberId)
+    const memberIdRaw = request.params?.memberId
+    if (memberIdRaw && typeof memberIdRaw === 'string') {
+      const member = await this.prismaService.projectMember.findFirst({
+        where: {
+          OR: [{ id: memberIdRaw }, { memberId: memberIdRaw }]
+        },
+        select: { projectId: true }
+      })
+      if (member?.projectId) return member.projectId
+    }
+
     return null
   }
 

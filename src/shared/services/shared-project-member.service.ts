@@ -15,13 +15,15 @@ import {
   ProjectMemberInvalidReferenceError
 } from '~/routes/project/project-member/project-member.error'
 import { SharedProjectMemberRepo } from '../repositories/shared-project-member.repo'
+import { QueueService } from '~/routes/queue/queue.service'
 
 @Injectable()
 export class SharedProjectMemberService {
   constructor(
     private readonly sharedUserRepo: SharedUserRepository,
     private readonly emailService: EmailService,
-    private readonly sharedProjectMemberRepo: SharedProjectMemberRepo
+    private readonly sharedProjectMemberRepo: SharedProjectMemberRepo,
+    private readonly queueService: QueueService
   ) {}
 
   async invite(body: InviteProjectMemberBodyType & { invitedById?: string }) {
@@ -57,7 +59,7 @@ export class SharedProjectMemberService {
           const inviteToken = uuidv4()
           const [updatedMember] = await Promise.all([
             this.sharedProjectMemberRepo.updateInviteToken(existingMember.id, inviteToken, role, invitedById),
-            this.emailService.sendInvitationLink({
+            this.queueService.sendInvitationEmail({
               email,
               token: inviteToken,
               websiteDomain: WebsiteDomain,
@@ -79,7 +81,7 @@ export class SharedProjectMemberService {
               inviteToken,
               invitedById
             }),
-            this.emailService.sendInvitationLink({
+            this.queueService.sendInvitationEmail({
               email,
               token: inviteToken,
               websiteDomain: WebsiteDomain,
