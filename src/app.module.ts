@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { ScheduleModule } from '@nestjs/schedule'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { SharedModule } from './shared/shared.module'
@@ -17,10 +18,15 @@ import { RoleModule } from './routes/role/role.module'
 import { MediaModule } from './routes/media/media.module'
 import { UserModule } from './routes/user/user.module'
 import { ReportModule } from './routes/report/report.module'
+import { QueueModule } from './routes/queue/queue.module'
+import { NotificationModule } from './routes/notification/notification.module'
+import { ChatModule } from './routes/chat/chat.module'
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     SharedModule,
+    QueueModule,
     AuthModule,
     PermissionModule,
     RoleModule,
@@ -31,7 +37,9 @@ import { ReportModule } from './routes/report/report.module'
     TaskModule,
     MediaModule,
     UserModule,
-    ReportModule
+    ReportModule,
+    NotificationModule,
+    ChatModule
   ],
   controllers: [AppController],
   providers: [

@@ -112,7 +112,9 @@ async function bootstrap() {
             (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
             cleanPath === '/projects/owned' ||
             cleanPath === '/projects/joined' ||
-            cleanPath.startsWith('/reports')
+            cleanPath.startsWith('/reports') ||
+            cleanPath.startsWith('/notifications') ||
+            cleanPath.startsWith('/project-chats')
           )
         }
       ),
@@ -127,7 +129,9 @@ async function bootstrap() {
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
             cleanPath.startsWith('/board-columns') ||
-            cleanPath.startsWith('/reports')
+            cleanPath.startsWith('/reports') ||
+            cleanPath.startsWith('/notifications') ||
+            cleanPath.startsWith('/project-chats')
           )
         }
       ),
@@ -141,7 +145,9 @@ async function bootstrap() {
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
             cleanPath.startsWith('/board-columns') ||
-            cleanPath.startsWith('/reports')
+            cleanPath.startsWith('/reports') ||
+            cleanPath.startsWith('/notifications') ||
+            cleanPath.startsWith('/project-chats')
           )
         }
       ),
@@ -154,7 +160,9 @@ async function bootstrap() {
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
             cleanPath.startsWith('/board-columns') ||
-            cleanPath.startsWith('/reports')
+            cleanPath.startsWith('/reports') ||
+            cleanPath.startsWith('/notifications') ||
+            cleanPath.startsWith('/project-chats')
           )
         }
       ),
@@ -169,7 +177,9 @@ async function bootstrap() {
               cleanPath.startsWith('/sprints') ||
               cleanPath.startsWith('/tasks') ||
               cleanPath.startsWith('/board-columns') ||
-              cleanPath.startsWith('/reports'))
+              cleanPath.startsWith('/reports') ||
+              cleanPath.startsWith('/notifications') ||
+              cleanPath.startsWith('/project-chats'))
           )
         }
       )
