@@ -42,8 +42,9 @@ export class BoardColumnController {
 
   @Delete(':boardColumnId')
   @ZodSerializerDto(MessageResDTO)
-  delete(@Param() params: GetBoardColumnParamDTO, @Query('targetColumnId') targetColumnId?: string) {
-    return this.boardColumnService.delete(params.boardColumnId, targetColumnId)
+  async delete(@Param() params: GetBoardColumnParamDTO, @Query('targetColumnId') targetColumnId?: string) {
+    const res = (await this.boardColumnService.delete(params.boardColumnId, targetColumnId)) as any
+    return { message: res?.message || 'Board column deleted successfully' }
   }
 
   @Put('sprint/:sprintId/reorder')

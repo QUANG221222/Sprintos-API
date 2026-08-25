@@ -43,11 +43,12 @@ export class SprintController {
 
   @Delete(':sprintId')
   @ZodSerializerDto(MessageResDTO)
-  delete(
+  async delete(
     @Param() params: GetSprintParamDTO,
     @ActiveUser('userId') userId: string,
     @Query('isHard', new ParseBoolPipe({ optional: true })) isHard?: boolean
   ) {
-    return this.sprintService.delete({ id: params.sprintId, userId }, isHard)
+    const res = (await this.sprintService.delete({ id: params.sprintId, userId }, isHard)) as any
+    return { message: res?.message || 'Sprint deleted successfully' }
   }
 }

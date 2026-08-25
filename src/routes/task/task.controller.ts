@@ -33,8 +33,9 @@ export class TaskController {
 
   @Delete('dependencies/:dependencyId')
   @ZodSerializerDto(MessageResDTO)
-  deleteDependency(@Param('dependencyId') dependencyId: string) {
-    return this.taskService.deleteDependency(dependencyId)
+  async deleteDependency(@Param('dependencyId') dependencyId: string) {
+    const res = (await this.taskService.deleteDependency(dependencyId)) as any
+    return { message: res?.message || 'Task dependency deleted successfully' }
   }
 
   @Post()
@@ -57,12 +58,13 @@ export class TaskController {
 
   @Delete(':taskId')
   @ZodSerializerDto(MessageResDTO)
-  delete(
+  async delete(
     @Param() params: GetTaskParamDTO,
     @ActiveUser('userId') userId: string,
     @Query('isHard', new ParseBoolPipe({ optional: true })) isHard?: boolean
   ) {
-    return this.taskService.delete({ id: params.taskId, userId }, isHard)
+    const res = (await this.taskService.delete({ id: params.taskId, userId }, isHard)) as any
+    return { message: res?.message || 'Task deleted successfully' }
   }
 
   @Get('sprint/:sprintId')

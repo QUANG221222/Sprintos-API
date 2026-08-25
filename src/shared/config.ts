@@ -44,7 +44,7 @@ const configSchema = z.object({
   S3_SECRET_KEY: z.string(),
   S3_REGION: z.string(),
   S3_BUCKET_NAME: z.string(),
-  REDIS_HOST: z.string().default('localhost'),
+  REDIS_HOST: z.string().default('127.0.0.1'),
   REDIS_PORT: z.string().default('6379'),
 })
 

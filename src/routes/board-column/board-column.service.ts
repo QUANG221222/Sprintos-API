@@ -51,7 +51,7 @@ export class BoardColumnService {
   async delete(id: string, targetColumnId?: string) {
     const column = await this.boardColumnRepo.findById({ boardColumnId: id })
     if (!column) {
-      throw BoardColumnNotFoundError
+      return { message: 'Board column deleted successfully' }
     }
 
     if (column.title.trim().toLowerCase() === 'done') {
