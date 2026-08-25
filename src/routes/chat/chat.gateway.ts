@@ -33,11 +33,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: Socket) {
     const user = await authenticateSocket(client, this.tokenService)
-    if (!user) {
-      client.disconnect()
-      return
+    if (user) {
+      this.logger.log(`User ${user.userId} connected to Chat Gateway`)
+    } else {
+      this.logger.warn(`Chat socket connected: ${client.id}`)
     }
-    this.logger.log(`User ${user.userId} connected to Chat Gateway`)
   }
 
   handleDisconnect(client: Socket) {
@@ -45,13 +45,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('chat:join_project')
-  async handleJoinProject(@ConnectedSocket() client: Socket, @MessageBody() data: { projectId: string }) {
-    const user = client.data.user
-    if (!user || !data.projectId) return
-
+  handleJoinProject(@ConnectedSocket() client: Socket, @MessageBody() data: { projectId: string }) {
+    if (!data.projectId) return
     const room = `project:${data.projectId}`
     client.join(room)
-    this.logger.log(`User ${user.userId} joined chat room: ${room}`)
+    this.logger.log(`Client ${client.id} joined chat room: ${room}`)
     return { status: 'joined', room }
   }
 
@@ -71,6 +69,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       projectId: string
       message?: string
       senderRole?: string
+      senderId?: string
+      senderName?: string
+      senderAvatarUrl?: string
       attachment?: {
         fileName: string
         fileType: string
@@ -80,17 +81,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
   ) {
-    const user = client.data.user
-    if (!user || !data.projectId) return
+    let user = client.data.user
+    if (!user) {
+      user = await authenticateSocket(client, this.tokenService)
+    }
+
+    const senderId = user?.userId || data.senderId
+    if (!senderId || !data.projectId) {
+      this.logger.warn(`Cannot send chat message: missing senderId or projectId`)
+      return
+    }
 
     const chat = await this.chatService.findOrCreateChat(data.projectId)
 
     const savedMessage = await this.chatService.saveMessage({
       projectChatId: chat.id,
-      senderId: user.userId,
-      senderName: user.name || user.email || 'Member',
+      senderId,
+      senderName: data.senderName || user?.name || user?.email || 'Member',
       senderRole: data.senderRole || 'MEMBER',
-      senderAvatarUrl: user.avatar || null,
+      senderAvatarUrl: data.senderAvatarUrl || user?.avatar || null,
       message: data.message || null,
       attachmentFileName: data.attachment?.fileName || null,
       attachmentFileType: data.attachment?.fileType || null,
@@ -107,17 +116,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('chat:typing')
-  handleTyping(
+  async handleTyping(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { projectId: string; isTyping: boolean }
+    @MessageBody() data: { projectId: string; isTyping: boolean; userId?: string; userName?: string }
   ) {
-    const user = client.data.user
-    if (!user || !data.projectId) return
+    let user = client.data.user
+    if (!user) {
+      user = await authenticateSocket(client, this.tokenService)
+    }
+
+    const userId = user?.userId || data.userId
+    if (!userId || !data.projectId) return
 
     const room = `project:${data.projectId}`
     client.to(room).emit('chat:user_typing', {
-      userId: user.userId,
-      userName: user.name || user.email,
+      userId,
+      userName: data.userName || user?.name || user?.email || 'Member',
       isTyping: data.isTyping
     })
   }

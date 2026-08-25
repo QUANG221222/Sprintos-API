@@ -90,15 +90,19 @@ export class AccessTokenGuard implements CanActivate {
 
     // 4. BoardColumnId in params, body, or query
     const boardColumnIdRaw =
-      request.params?.boardColumnId ?? request.body?.boardColumnId ?? request.query?.boardColumnId
+      request.params?.boardColumnId ??
+      request.params?.id ??
+      request.body?.boardColumnId ??
+      request.query?.boardColumnId ??
+      request.query?.targetColumnId
     if (boardColumnIdRaw && typeof boardColumnIdRaw === 'string') {
-      const column = await this.prismaService.boardColumn.findUnique({
-        where: { id: boardColumnIdRaw },
+      const column = await this.prismaService.boardColumn.findFirst({
+        where: { id: boardColumnIdRaw, deletedAt: null },
         select: { sprintId: true }
       })
       if (column) {
-        const sprint = await this.prismaService.sprint.findUnique({
-          where: { id: column.sprintId },
+        const sprint = await this.prismaService.sprint.findFirst({
+          where: { id: column.sprintId, deletedAt: null },
           select: { projectId: true }
         })
         if (sprint) return sprint.projectId

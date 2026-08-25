@@ -30,6 +30,11 @@ export async function authenticateSocket(
       }
     }
 
+    // 4. Fallback từ Handshake Query
+    if (!accessToken && socket.handshake.query) {
+      accessToken = (socket.handshake.query.token || socket.handshake.query.accessToken) as string
+    }
+
     if (!accessToken) {
       return null
     }
@@ -37,7 +42,8 @@ export async function authenticateSocket(
     const payload = await tokenService.verifyAccessToken(accessToken)
     socket.data.user = payload
     return payload
-  } catch (error) {
+  } catch (error: any) {
+    console.log(error)
     return null
   }
 }

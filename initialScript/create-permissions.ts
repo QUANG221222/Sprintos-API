@@ -109,9 +109,11 @@ async function bootstrap() {
             cleanPath.startsWith('/media') ||
             cleanPath === '/users/me' ||
             (cleanPath.startsWith('/users') && p.method === 'GET') ||
-            (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
-            cleanPath === '/projects/owned' ||
-            cleanPath === '/projects/joined' ||
+            cleanPath.startsWith('/projects') ||
+            cleanPath.startsWith('/project-members') ||
+            cleanPath.startsWith('/sprints') ||
+            cleanPath.startsWith('/board-columns') ||
+            cleanPath.startsWith('/tasks') ||
             cleanPath.startsWith('/reports') ||
             cleanPath.startsWith('/notifications') ||
             cleanPath.startsWith('/project-chats')

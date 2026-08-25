@@ -29,9 +29,10 @@ export class BoardGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: Socket) {
     const user = await authenticateSocket(client, this.tokenService)
-    if (!user) {
-      client.disconnect()
-      return
+    if (user) {
+      this.logger.log(`Board socket authenticated: ${client.id} (user: ${user.userId})`)
+    } else {
+      this.logger.warn(`Board socket connected: ${client.id}`)
     }
   }
 
@@ -53,6 +54,26 @@ export class BoardGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!data.sprintId) return
     const room = `sprint:${data.sprintId}`
     client.leave(room)
+  }
+
+  @SubscribeMessage('yjs:sync_update')
+  handleYjsUpdate(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { sprintId: string; update: string | number[] }
+  ) {
+    if (!data.sprintId || !data.update) return
+    const room = `sprint:${data.sprintId}`
+    client.to(room).emit('yjs:sync_update', data)
+  }
+
+  @SubscribeMessage('yjs:awareness')
+  handleYjsAwareness(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { sprintId: string; awarenessState: any }
+  ) {
+    if (!data.sprintId || !data.awarenessState) return
+    const room = `sprint:${data.sprintId}`
+    client.to(room).emit('yjs:awareness', data)
   }
 
   emitTaskCreated(sprintId: string, task: any) {
