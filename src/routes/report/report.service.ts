@@ -207,17 +207,10 @@ export class ReportService {
     return { memberDistribution }
   }
 
-  async getSprintNetworkDiagram(sprintId: string): Promise<SprintNetworkDiagramResType> {
-    const [tasks, dependencies] = await Promise.all([
-      this.reportRepo.getTasksWithFullDetailsBySprintId(sprintId),
-      this.reportRepo.getDependenciesBySprintId(sprintId)
-    ])
-
-    const taskMap = new Map<string, any>()
-    for (const task of tasks) {
-      taskMap.set(task.id, task)
-    }
-
+  /**
+   * Helper to perform CPM (Critical Path Method) Forward and Backward passes
+   */
+  private computeCpmSchedule(tasks: any[], dependencies: any[]) {
     const formattedDeps = dependencies.map((dep) => ({
       id: dep.id,
       predecessorId: dep.predecessorId,
@@ -226,7 +219,6 @@ export class ReportService {
       lag: dep.lag || 0
     }))
 
-    // Maps for predecessor and successor dependency objects
     const incomingDepsMap = new Map<string, typeof formattedDeps>()
     const outgoingDepsMap = new Map<string, typeof formattedDeps>()
 
@@ -244,13 +236,45 @@ export class ReportService {
       }
     }
 
-    // CPM Calculation - Forward Pass (ES & EF)
+    // Cycle detection via DFS
+    const visited = new Map<string, number>() // 0 = unvisited, 1 = visiting, 2 = visited
+    let hasCycle = false
+
+    const checkCycle = (taskId: string) => {
+      visited.set(taskId, 1)
+      const outgoing = outgoingDepsMap.get(taskId) || []
+      for (const dep of outgoing) {
+        const state = visited.get(dep.successorId) || 0
+        if (state === 1) {
+          hasCycle = true
+          return
+        }
+        if (state === 0) {
+          checkCycle(dep.successorId)
+        }
+      }
+      visited.set(taskId, 2)
+    }
+
+    for (const task of tasks) {
+      if (!visited.has(task.id)) {
+        checkCycle(task.id)
+      }
+    }
+
+    // Forward Pass (ES & EF)
     const earlyStartMap = new Map<string, number>()
     const earlyFinishMap = new Map<string, number>()
 
+    for (const task of tasks) {
+      const duration = task.duration && task.duration > 0 ? task.duration : (task.storyPoint > 0 ? task.storyPoint : 1)
+      earlyStartMap.set(task.id, 0)
+      earlyFinishMap.set(task.id, duration)
+    }
+
     let changed = true
     let iterations = 0
-    const maxIterations = Math.max(tasks.length * 5, 50)
+    const maxIterations = hasCycle ? tasks.length : Math.max(tasks.length * 4, 30)
 
     while (changed && iterations < maxIterations) {
       changed = false
@@ -309,16 +333,20 @@ export class ReportService {
       }
     }
 
-    // CPM Calculation - Backward Pass (LS & LF)
+    // Backward Pass (LS & LF)
     const lateStartMap = new Map<string, number>()
     const lateFinishMap = new Map<string, number>()
 
+    // Initialize terminal tasks (no outgoing dependencies) to project criticalPathLength
     for (const task of tasks) {
       const outgoing = outgoingDepsMap.get(task.id) || []
+      const duration = task.duration && task.duration > 0 ? task.duration : (task.storyPoint > 0 ? task.storyPoint : 1)
       if (outgoing.length === 0) {
         lateFinishMap.set(task.id, criticalPathLength)
-        const duration = task.duration && task.duration > 0 ? task.duration : (task.storyPoint > 0 ? task.storyPoint : 1)
-        lateStartMap.set(task.id, criticalPathLength - duration)
+        lateStartMap.set(task.id, Math.max(0, criticalPathLength - duration))
+      } else {
+        lateFinishMap.set(task.id, Infinity)
+        lateStartMap.set(task.id, Infinity)
       }
     }
 
@@ -341,7 +369,7 @@ export class ReportService {
             const succLS = lateStartMap.get(succId)
             const succLF = lateFinishMap.get(succId)
 
-            if (succLS !== undefined && succLF !== undefined) {
+            if (succLS !== undefined && succLS !== Infinity && succLF !== undefined && succLF !== Infinity) {
               let allowedLF = Infinity
               switch (dep.type) {
                 case 'SS':
@@ -364,20 +392,31 @@ export class ReportService {
             }
           }
 
+          // Fallback if none of successors have resolved yet: use criticalPathLength
+          if (minAllowedLF === Infinity && lateFinishMap.get(task.id) === Infinity) {
+            minAllowedLF = criticalPathLength
+          }
+
           if (minAllowedLF !== Infinity) {
             const currentLF = lateFinishMap.get(task.id)
-            const currentLS = lateStartMap.get(task.id)
+            const newLS = Math.max(0, minAllowedLF - duration)
 
-            const newLF = minAllowedLF
-            const newLS = newLF - duration
-
-            if (currentLF !== newLF || currentLS !== newLS) {
-              lateFinishMap.set(task.id, newLF)
+            if (currentLF !== minAllowedLF) {
+              lateFinishMap.set(task.id, minAllowedLF)
               lateStartMap.set(task.id, newLS)
               changed = true
             }
           }
         }
+      }
+    }
+
+    // Final sweep: normalize any unresolved Infinity tasks
+    for (const task of tasks) {
+      const duration = task.duration && task.duration > 0 ? task.duration : (task.storyPoint > 0 ? task.storyPoint : 1)
+      if (lateFinishMap.get(task.id) === Infinity) {
+        lateFinishMap.set(task.id, criticalPathLength)
+        lateStartMap.set(task.id, Math.max(0, criticalPathLength - duration))
       }
     }
 
@@ -388,11 +427,12 @@ export class ReportService {
       const duration = task.duration && task.duration > 0 ? task.duration : (task.storyPoint > 0 ? task.storyPoint : 1)
       const es = earlyStartMap.get(task.id) || 0
       const ef = earlyFinishMap.get(task.id) || duration
-      const lf = lateFinishMap.get(task.id) ?? ef
-      const ls = lateStartMap.get(task.id) ?? es
+      const lf = lateFinishMap.get(task.id) ?? criticalPathLength
+      const ls = lateStartMap.get(task.id) ?? Math.max(0, lf - duration)
 
       const floatVal = Math.max(0, ls - es)
-      const isCritical = floatVal === 0
+      // A task is critical if float === 0 and it contributes to the project duration
+      const isCritical = floatVal === 0 && criticalPathLength > 0
 
       if (isCritical) {
         criticalTaskIds.push(task.id)
@@ -425,7 +465,26 @@ export class ReportService {
       tasks: taskNodes,
       dependencies: formattedDeps,
       criticalPathLength,
-      criticalTaskIds
+      criticalTaskIds,
+      earlyStartMap,
+      earlyFinishMap,
+      hasCycle
+    }
+  }
+
+  async getSprintNetworkDiagram(sprintId: string): Promise<SprintNetworkDiagramResType> {
+    const [tasks, dependencies] = await Promise.all([
+      this.reportRepo.getTasksWithFullDetailsBySprintId(sprintId),
+      this.reportRepo.getDependenciesBySprintId(sprintId)
+    ])
+
+    const cpm = this.computeCpmSchedule(tasks, dependencies)
+
+    return {
+      tasks: cpm.tasks,
+      dependencies: cpm.dependencies,
+      criticalPathLength: cpm.criticalPathLength,
+      criticalTaskIds: cpm.criticalTaskIds
     }
   }
 
@@ -435,9 +494,16 @@ export class ReportService {
       throw new NotFoundException('Sprint not found')
     }
 
-    const tasks = await this.reportRepo.getTasksWithFullDetailsBySprintId(sprintId)
+    const [tasks, dependencies] = await Promise.all([
+      this.reportRepo.getTasksWithFullDetailsBySprintId(sprintId),
+      this.reportRepo.getDependenciesBySprintId(sprintId)
+    ])
 
-    const sprintStartDateStr = new Date(sprint.startDate).toISOString()
+    // Use CPM earlyStart as schedule fallback when tasks lack explicit dates
+    const cpm = this.computeCpmSchedule(tasks, dependencies)
+
+    const sprintStartDateObj = new Date(sprint.startDate)
+    const sprintStartDateStr = sprintStartDateObj.toISOString()
     const sprintEndDateStr = new Date(sprint.endDate).toISOString()
 
     const doneColumnId = this.getDoneColumnId(sprint)
@@ -455,7 +521,15 @@ export class ReportService {
       }
 
       const duration = task.duration && task.duration > 0 ? task.duration : (task.storyPoint > 0 ? task.storyPoint : 1)
-      const startDateStr = task.startDate ? new Date(task.startDate).toISOString() : sprintStartDateStr
+
+      // Use explicit startDate if provided; otherwise schedule from CPM Early Start
+      let startDateStr = task.startDate ? new Date(task.startDate).toISOString() : ''
+      if (!startDateStr) {
+        const es = cpm.earlyStartMap.get(task.id) || 0
+        const calculatedStart = new Date(sprintStartDateObj)
+        calculatedStart.setDate(calculatedStart.getDate() + es)
+        startDateStr = calculatedStart.toISOString()
+      }
 
       let dueDateStr = task.dueDate ? new Date(task.dueDate).toISOString() : ''
       if (!dueDateStr) {
