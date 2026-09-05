@@ -7,6 +7,7 @@ import { HashingService } from '~/shared/services/hashing.service'
 import { HTTPMethod, RoleName } from '~/shared/constants/role.constants'
 import { ProjectMemberRole, ProjectMemberStatus } from '~/shared/constants/project.constants'
 import { UserStatus, Gender, SprintStatus, TaskPriority, NotificationType } from '~/generated/prisma/enums'
+import { DependencyType } from '~/generated/prisma/client'
 
 const prisma = new PrismaService()
 const hashingService = new HashingService()
@@ -58,6 +59,7 @@ async function main() {
   await prisma.taskLabel.deleteMany()
   await prisma.taskAssignee.deleteMany()
   await prisma.boardColumnTaskOrder.deleteMany()
+  await prisma.taskDependency.deleteMany()
   await prisma.task.deleteMany()
   await prisma.boardColumn.deleteMany()
   await prisma.sprint.deleteMany()
@@ -81,7 +83,7 @@ async function main() {
   const availableRoutesMap = availableRoutes.reduce((map, item) => {
     map[`{${item.method}-${item.path}}`] = item
     return map
-  }, {} as Record<string, typeof availableRoutes[0]>)
+  }, {} as Record<string, (typeof availableRoutes)[0]>)
 
   const permissionsToDelete = permissionInDB.filter((item) => !availableRoutesMap[`{${item.method}-${item.path}}`])
   if (permissionsToDelete.length > 0) {
@@ -91,7 +93,7 @@ async function main() {
   const perssionInDbMap = permissionInDB.reduce((map, item) => {
     map[`{${item.method}-${item.path}}`] = item
     return map
-  }, {} as Record<string, typeof permissionInDB[0]>)
+  }, {} as Record<string, (typeof permissionInDB)[0]>)
 
   const routesToAdd = availableRoutes.filter((item) => !perssionInDbMap[`{${item.method}-${item.path}}`])
   if (routesToAdd.length > 0) {
@@ -124,77 +126,67 @@ async function main() {
   const rolePermissionFilter = {
     [RoleName.Admin]: (perms: typeof updatedPermissionsInDb) => perms,
     [RoleName.User]: (perms: typeof updatedPermissionsInDb) =>
-      perms.filter(
-        (p) => {
-          const cleanPath = p.path.replace(/^\/api/, '')
-          return (
-            cleanPath.startsWith('/auth') ||
-            cleanPath.startsWith('/profile') ||
-            cleanPath.startsWith('/media') ||
-            (cleanPath.startsWith('/users') && p.method === 'GET') ||
-            (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
-            cleanPath === '/projects/owned' ||
-            cleanPath === '/projects/joined' ||
-            cleanPath.startsWith('/reports')
-          )
-        }
-      ),
+      perms.filter((p) => {
+        const cleanPath = p.path.replace(/^\/api/, '')
+        return (
+          cleanPath.startsWith('/auth') ||
+          cleanPath.startsWith('/profile') ||
+          cleanPath.startsWith('/media') ||
+          (cleanPath.startsWith('/users') && p.method === 'GET') ||
+          (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
+          cleanPath === '/projects/owned' ||
+          cleanPath === '/projects/joined' ||
+          cleanPath.startsWith('/reports')
+        )
+      }),
     [ProjectMemberRole.CO_OWNER]: (perms: typeof updatedPermissionsInDb) =>
-      perms.filter(
-        (p) => {
-          const cleanPath = p.path.replace(/^\/api/, '')
-          return (
-            (cleanPath.startsWith('/projects') && p.method === 'GET') ||
-            (cleanPath.startsWith('/project-members') && (p.method === 'GET' || p.method === 'POST' || p.method === 'PATCH')) ||
-            cleanPath.startsWith('/sprints') ||
-            cleanPath.startsWith('/tasks') ||
-            cleanPath.startsWith('/board-columns') ||
-            cleanPath.startsWith('/reports')
-          )
-        }
-      ),
+      perms.filter((p) => {
+        const cleanPath = p.path.replace(/^\/api/, '')
+        return (
+          (cleanPath.startsWith('/projects') && p.method === 'GET') ||
+          (cleanPath.startsWith('/project-members') && (p.method === 'GET' || p.method === 'POST' || p.method === 'PATCH')) ||
+          cleanPath.startsWith('/sprints') ||
+          cleanPath.startsWith('/tasks') ||
+          cleanPath.startsWith('/board-columns') ||
+          cleanPath.startsWith('/reports')
+        )
+      }),
     [ProjectMemberRole.OWNER]: (perms: typeof updatedPermissionsInDb) =>
-      perms.filter(
-        (p) => {
-          const cleanPath = p.path.replace(/^\/api/, '')
-          return (
-            cleanPath.startsWith('/projects') ||
+      perms.filter((p) => {
+        const cleanPath = p.path.replace(/^\/api/, '')
+        return (
+          cleanPath.startsWith('/projects') ||
+          cleanPath.startsWith('/project-members') ||
+          cleanPath.startsWith('/sprints') ||
+          cleanPath.startsWith('/tasks') ||
+          cleanPath.startsWith('/board-columns') ||
+          cleanPath.startsWith('/reports')
+        )
+      }),
+    [ProjectMemberRole.MEMBER]: (perms: typeof updatedPermissionsInDb) =>
+      perms.filter((p) => {
+        const cleanPath = p.path.replace(/^\/api/, '')
+        return (
+          ((cleanPath.startsWith('/projects') || cleanPath.startsWith('/project-members')) && p.method === 'GET') ||
+          cleanPath.startsWith('/sprints') ||
+          cleanPath.startsWith('/tasks') ||
+          cleanPath.startsWith('/board-columns') ||
+          cleanPath.startsWith('/reports')
+        )
+      }),
+    [ProjectMemberRole.VIEWER]: (perms: typeof updatedPermissionsInDb) =>
+      perms.filter((p) => {
+        const cleanPath = p.path.replace(/^\/api/, '')
+        return (
+          p.method === 'GET' &&
+          (cleanPath.startsWith('/projects') ||
             cleanPath.startsWith('/project-members') ||
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
             cleanPath.startsWith('/board-columns') ||
-            cleanPath.startsWith('/reports')
-          )
-        }
-      ),
-    [ProjectMemberRole.MEMBER]: (perms: typeof updatedPermissionsInDb) =>
-      perms.filter(
-        (p) => {
-          const cleanPath = p.path.replace(/^\/api/, '')
-          return (
-            ((cleanPath.startsWith('/projects') || cleanPath.startsWith('/project-members')) && p.method === 'GET') ||
-            cleanPath.startsWith('/sprints') ||
-            cleanPath.startsWith('/tasks') ||
-            cleanPath.startsWith('/board-columns') ||
-            cleanPath.startsWith('/reports')
-          )
-        }
-      ),
-    [ProjectMemberRole.VIEWER]: (perms: typeof updatedPermissionsInDb) =>
-      perms.filter(
-        (p) => {
-          const cleanPath = p.path.replace(/^\/api/, '')
-          return (
-            p.method === 'GET' &&
-            (cleanPath.startsWith('/projects') ||
-              cleanPath.startsWith('/project-members') ||
-              cleanPath.startsWith('/sprints') ||
-              cleanPath.startsWith('/tasks') ||
-              cleanPath.startsWith('/board-columns') ||
-              cleanPath.startsWith('/reports'))
-          )
-        }
-      )
+            cleanPath.startsWith('/reports'))
+        )
+      })
   }
 
   for (const roleKey of Object.values(RoleName)) {
@@ -211,10 +203,13 @@ async function main() {
   }
 
   const allRoles = await prisma.role.findMany()
-  const roleMap = allRoles.reduce((acc, r) => {
-    acc[r.name] = r.id
-    return acc
-  }, {} as Record<string, string>)
+  const roleMap = allRoles.reduce(
+    (acc, r) => {
+      acc[r.name] = r.id
+      return acc
+    },
+    {} as Record<string, string>
+  )
 
   console.log(`✅ Configured ${updatedPermissionsInDb.length} Permissions across 6 Roles.`)
 
@@ -241,8 +236,25 @@ async function main() {
     }
   })
 
-  // 14 Standard Users (System Role: USER)
+  // Test Users (System Role: USER)
+  // Specifically including the 2 dedicated project owners: nguyenthuan05.work@gmail.com and sprintos.01062026@gmail.com
   const userSeedData = [
+    {
+      email: 'nguyenthuan05.work@gmail.com',
+      name: 'Nguyen Thuan',
+      bio: 'Product Owner & Fullstack Solution Architect',
+      gender: Gender.MALE,
+      phone: '0901234567',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+    },
+    {
+      email: 'sprintos.01062026@gmail.com',
+      name: 'Sprintos Lead',
+      bio: 'Agile Product Owner & Scrum Specialist',
+      gender: Gender.MALE,
+      phone: '0907654321',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+    },
     { email: 'alex.dev@sprintos.com', name: 'Alex Rivera', bio: 'Senior Fullstack Lead & Tech Evangelist', gender: Gender.MALE, phone: '0912345671', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150' },
     { email: 'sarah.pm@sprintos.com', name: 'Sarah Chen', bio: 'Agile Product Manager & Scrum Master', gender: Gender.FEMALE, phone: '0912345672', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
     { email: 'michael.tech@sprintos.com', name: 'Michael Vance', bio: 'Backend Architect & System Engineer', gender: Gender.MALE, phone: '0912345673', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
@@ -279,7 +291,11 @@ async function main() {
     users.push(createdUser)
   }
 
-  const userByEmail = (email: string) => users.find((u) => u.email === email)!
+  const userByEmail = (email: string) => {
+    const found = users.find((u) => u.email === email)
+    if (!found) throw new Error(`User with email ${email} not found in seeded users.`)
+    return found
+  }
 
   console.log(`✅ Created 1 Admin User [System Role: ADMIN] & ${users.length} Standard Users [System Role: USER].`)
 
@@ -288,14 +304,18 @@ async function main() {
   // ==========================================
   console.log('\n📁 Step 5: Creating Workspaces & assigning Project Roles (OWNER, CO-OWNER, MEMBER, VIEWER)...')
 
+  // NOTE: nguyenthuan05.work@gmail.com is OWNER of "Sprintos Mobile App"
+  //       sprintos.01062026@gmail.com is OWNER of "E-Commerce Redesign"
+  //       Neither account is a member of the other's project (zero crossover).
   const projectsData = [
     {
       name: 'Sprintos Mobile App',
       description: 'Cross-platform iOS & Android mobile application built with React Native and NestJS API.',
       image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400',
-    owner: userByEmail('sarah.pm@sprintos.com'),
+      owner: userByEmail('nguyenthuan05.work@gmail.com'),
       members: [
-        { user: userByEmail('alex.dev@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('sarah.pm@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('alex.dev@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
         { user: userByEmail('lisa.frontend@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
         { user: userByEmail('james.backend@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
         { user: userByEmail('david.qa@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
@@ -306,7 +326,7 @@ async function main() {
       name: 'E-Commerce Redesign',
       description: 'High-performance storefront rebuild using Next.js 14, TailwindCSS, Microservices & Stripe.',
       image: 'https://images.unsplash.com/photo-1556742049-0a675686001a?w=400',
-      owner: userByEmail('alex.dev@sprintos.com'),
+      owner: userByEmail('sprintos.01062026@gmail.com'),
       members: [
         { user: userByEmail('michael.tech@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
         { user: userByEmail('kevin.fullstack@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
@@ -398,12 +418,13 @@ async function main() {
   console.log(`✅ Created ${createdProjects.length} Projects with explicit Project Roles.`)
 
   // ==========================================
-  // 6. SPRINTS, KANBAN BOARD & TASKS
+  // 6. SPRINTS, KANBAN BOARD & REALISTIC CPM/GANTT TASKS
   // ==========================================
-  console.log('\n🏃 Step 6: Generating Sprints, Board Columns, Tasks, Comments & Chats...')
+  console.log('\n🏃 Step 6: Generating Sprints, Board Columns, Tasks, Dependencies, Comments & Chats...')
   const now = new Date()
   const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000)
   const daysFromNow = (d: number) => new Date(now.getTime() + d * 24 * 60 * 60 * 1000)
+  const addDays = (base: Date, d: number) => new Date(base.getTime() + d * 24 * 60 * 60 * 1000)
 
   let totalTasksCount = 0
   let totalSprintsCount = 0
@@ -415,24 +436,212 @@ async function main() {
         goal: 'Complete core system architecture, setup database schemas, and baseline wireframes.',
         maxStoryPoint: 35,
         startDate: daysAgo(30),
-        endDate: daysAgo(14),
-        status: SprintStatus.COMPLETED
+        endDate: daysAgo(16),
+        status: SprintStatus.COMPLETED,
+        tasks: [
+          {
+            title: `[${proj.name}] Setup Project Environment & Dependencies`,
+            desc: 'Configure repository, ESLint, Prettier, Docker container and environment files.',
+            col: 'Done',
+            priority: TaskPriority.HIGH,
+            sp: 3,
+            duration: 3,
+            offset: 0,
+            labels: ['Setup', 'DevOps']
+          },
+          {
+            title: `[${proj.name}] Implement Database Schema & Migrations`,
+            desc: 'Design tables in Prisma schema, verify relations and execute initial migrations.',
+            col: 'Done',
+            priority: TaskPriority.CRITICAL,
+            sp: 5,
+            duration: 4,
+            offset: 3,
+            labels: ['Database', 'Backend']
+          },
+          {
+            title: `[${proj.name}] Design System Baseline & Design Tokens`,
+            desc: 'Create base typography, color tokens and core reusable component specifications.',
+            col: 'Done',
+            priority: TaskPriority.MEDIUM,
+            sp: 5,
+            duration: 4,
+            offset: 3,
+            labels: ['UI/UX', 'Figma']
+          },
+          {
+            title: `[${proj.name}] Build Core REST Boilerplate & Health Checks`,
+            desc: 'Create base controllers, exception filters, request logging and system health endpoint.',
+            col: 'Done',
+            priority: TaskPriority.HIGH,
+            sp: 5,
+            duration: 4,
+            offset: 7,
+            labels: ['API', 'Backend']
+          },
+          {
+            title: `[${proj.name}] Initial Integration Smoke Tests & Milestone Signoff`,
+            desc: 'Verify containerized build, automated smoke tests and conduct Sprint 1 review signoff.',
+            col: 'Done',
+            priority: TaskPriority.LOW,
+            sp: 3,
+            duration: 3,
+            offset: 11,
+            labels: ['QA', 'Testing']
+          }
+        ],
+        dependencies: [
+          { predIndex: 0, succIndex: 1, type: DependencyType.FS, lag: 0 },
+          { predIndex: 0, succIndex: 2, type: DependencyType.FS, lag: 0 },
+          { predIndex: 1, succIndex: 3, type: DependencyType.FS, lag: 0 },
+          { predIndex: 2, succIndex: 4, type: DependencyType.FS, lag: 0 },
+          { predIndex: 3, succIndex: 4, type: DependencyType.FS, lag: 0 }
+        ]
       },
       {
         name: `${proj.name} - Sprint 2 (Core Features)`,
         goal: 'Implement primary user workflows, authentication, API integrations, and main UI screens.',
         maxStoryPoint: 40,
-        startDate: daysAgo(13),
-        endDate: daysFromNow(7),
-        status: SprintStatus.ACTIVE
+        startDate: daysAgo(5),
+        endDate: daysFromNow(9),
+        status: SprintStatus.ACTIVE,
+        tasks: [
+          {
+            title: `[${proj.name}] Build User Auth & Authorization RBAC Module`,
+            desc: 'Implement JWT authentication, Refresh Token rotation and role-based guards.',
+            col: 'Done',
+            priority: TaskPriority.CRITICAL,
+            sp: 5,
+            duration: 3,
+            offset: 0,
+            labels: ['Auth', 'Security']
+          },
+          {
+            title: `[${proj.name}] Develop Business RESTful API Endpoints`,
+            desc: 'Create Controllers, Services, Repositories and Zod DTO request validation.',
+            col: 'In Review',
+            priority: TaskPriority.HIGH,
+            sp: 8,
+            duration: 4,
+            offset: 3,
+            labels: ['API', 'Backend']
+          },
+          {
+            title: `[${proj.name}] Build Interactive Dashboard UI & State Store`,
+            desc: 'Develop responsive data views, analytics charts and Zustand global state management.',
+            col: 'In Progress',
+            priority: TaskPriority.HIGH,
+            sp: 8,
+            duration: 5,
+            offset: 3,
+            labels: ['Frontend', 'UI/UX']
+          },
+          {
+            title: `[${proj.name}] Third-Party Integrations & Webhook Notification Engine`,
+            desc: 'Integrate external gateways, webhook listeners and asynchronous push alerts.',
+            col: 'To Do',
+            priority: TaskPriority.MEDIUM,
+            sp: 5,
+            duration: 3,
+            offset: 7,
+            labels: ['Integration', 'Notification']
+          },
+          {
+            title: `[${proj.name}] End-to-End API Integration & Acceptance QA Testing`,
+            desc: 'Conduct automated test suites, cross-browser compatibility and regression QA runs.',
+            col: 'To Do',
+            priority: TaskPriority.HIGH,
+            sp: 5,
+            duration: 4,
+            offset: 8,
+            labels: ['Testing', 'QA']
+          },
+          {
+            title: `[${proj.name}] Staging Deployment & Sprint Review Preparation`,
+            desc: 'Deploy release build to staging cluster, verify environment and prepare demo release.',
+            col: 'To Do',
+            priority: TaskPriority.LOW,
+            sp: 2,
+            duration: 2,
+            offset: 12,
+            labels: ['DevOps', 'Release']
+          }
+        ],
+        dependencies: [
+          { predIndex: 0, succIndex: 1, type: DependencyType.FS, lag: 0 },
+          { predIndex: 0, succIndex: 2, type: DependencyType.FS, lag: 0 },
+          { predIndex: 1, succIndex: 3, type: DependencyType.FS, lag: 0 },
+          { predIndex: 1, succIndex: 4, type: DependencyType.FS, lag: 0 },
+          { predIndex: 2, succIndex: 4, type: DependencyType.FS, lag: 0 },
+          { predIndex: 3, succIndex: 5, type: DependencyType.FS, lag: 0 },
+          { predIndex: 4, succIndex: 5, type: DependencyType.FS, lag: 0 }
+        ]
       },
       {
         name: `${proj.name} - Sprint 3 (Polish & Release)`,
         goal: 'Performance optimization, security audit, bug fixes, end-to-end testing, and production deploy.',
         maxStoryPoint: 45,
-        startDate: daysFromNow(8),
-        endDate: daysFromNow(22),
-        status: SprintStatus.PLANNED
+        startDate: daysFromNow(10),
+        endDate: daysFromNow(24),
+        status: SprintStatus.PLANNED,
+        tasks: [
+          {
+            title: `[${proj.name}] Load Testing & Database Query Optimization`,
+            desc: 'Benchmark high traffic scenarios, index query optimization and Redis caching layer.',
+            col: 'To Do',
+            priority: TaskPriority.HIGH,
+            sp: 5,
+            duration: 4,
+            offset: 0,
+            labels: ['Performance', 'Database']
+          },
+          {
+            title: `[${proj.name}] Security Vulnerability Audit & Hardening`,
+            desc: 'Run OWASP vulnerability scan, patch security headers and configure strict rate limiting.',
+            col: 'To Do',
+            priority: TaskPriority.CRITICAL,
+            sp: 5,
+            duration: 4,
+            offset: 0,
+            labels: ['Security', 'Audit']
+          },
+          {
+            title: `[${proj.name}] Production Kubernetes & Cloud Scaling Setup`,
+            desc: 'Configure HPA autoscaling, ingress controllers, SSL certificates and Datadog monitoring.',
+            col: 'To Do',
+            priority: TaskPriority.HIGH,
+            sp: 5,
+            duration: 5,
+            offset: 4,
+            labels: ['Cloud', 'DevOps']
+          },
+          {
+            title: `[${proj.name}] Production Build & Release Artifacts Verification`,
+            desc: 'Verify minified client builds, checksums, CDN asset invalidation and release notes.',
+            col: 'To Do',
+            priority: TaskPriority.CRITICAL,
+            sp: 3,
+            duration: 3,
+            offset: 9,
+            labels: ['Build', 'Release']
+          },
+          {
+            title: `[${proj.name}] Production Go-Live & Post-Launch Monitoring`,
+            desc: 'Switch production DNS traffic, monitor error budgets, latencies and database health.',
+            col: 'To Do',
+            priority: TaskPriority.HIGH,
+            sp: 2,
+            duration: 2,
+            offset: 12,
+            labels: ['Production', 'Monitoring']
+          }
+        ],
+        dependencies: [
+          { predIndex: 0, succIndex: 2, type: DependencyType.FS, lag: 0 },
+          { predIndex: 1, succIndex: 2, type: DependencyType.FS, lag: 0 },
+          { predIndex: 2, succIndex: 3, type: DependencyType.FS, lag: 0 },
+          { predIndex: 3, succIndex: 4, type: DependencyType.FS, lag: 0 }
+        ]
       }
     ]
 
@@ -477,20 +686,16 @@ async function main() {
       })
       const memberUserIds = projMembers.map((m) => m.memberId)
 
-      const taskTemplates = [
-        { title: `[${proj.name}] Setup Project Environment & Dependencies`, desc: 'Configure repo, ESLint, Prettier, Docker & Env.', col: 'Done', priority: TaskPriority.HIGH, sp: 3, labels: ['Setup', 'DevOps'] },
-        { title: `[${proj.name}] Implement Database Schema & Migrations`, desc: 'Design tables in Prisma schema & run migrations.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, labels: ['Database', 'Backend'] },
-        { title: `[${proj.name}] Build User Auth & Authorization Guards`, desc: 'Implement JWT login, Refresh Token & RBAC.', col: sConf.status === SprintStatus.COMPLETED ? 'Done' : 'In Progress', priority: TaskPriority.HIGH, sp: 8, labels: ['Auth', 'Security'] },
-        { title: `[${proj.name}] Design Main Dashboard Wireframes`, desc: 'Create responsive Figma prototypes & design tokens.', col: sConf.status === SprintStatus.COMPLETED ? 'Done' : 'In Review', priority: TaskPriority.MEDIUM, sp: 5, labels: ['UI/UX', 'Figma'] },
-        { title: `[${proj.name}] Develop RESTful API Endpoints`, desc: 'Create Controllers, Services, Repos & Zod DTO schemas.', col: sConf.status === SprintStatus.PLANNED ? 'To Do' : 'In Progress', priority: TaskPriority.HIGH, sp: 8, labels: ['API', 'Backend'] },
-        { title: `[${proj.name}] Cross-Browser Testing & Bug Fixes`, desc: 'Resolve layout shifts on Safari and mobile screens.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, labels: ['Bug', 'Frontend'] }
-      ]
-
       let sortOrder = 1
-      const createdTasksList: any[] = []
-      for (const tTemp of taskTemplates) {
+      const createdMainTasks: any[] = []
+
+      for (let i = 0; i < sConf.tasks.length; i++) {
+        const tTemp = sConf.tasks[i]
         const targetColId = createdCols[tTemp.col]
         const assignedUserId = memberUserIds[totalTasksCount % memberUserIds.length]
+
+        const taskStart = addDays(sConf.startDate, tTemp.offset)
+        const taskDue = addDays(taskStart, tTemp.duration)
 
         const task = await prisma.task.create({
           data: {
@@ -500,7 +705,9 @@ async function main() {
             description: tTemp.desc,
             priority: tTemp.priority,
             storyPoint: tTemp.sp,
-            dueDate: daysFromNow(5),
+            duration: tTemp.duration,
+            startDate: taskStart,
+            dueDate: taskDue,
             createdById: proj.ownerId,
             labels: { create: tTemp.labels.map((lbl) => ({ label: lbl, createdById: proj.ownerId })) },
             assignees: { create: [{ userId: assignedUserId, createdById: proj.ownerId }] },
@@ -508,19 +715,21 @@ async function main() {
           }
         })
         totalTasksCount++
-        createdTasksList.push(task)
+        createdMainTasks.push(task)
 
-        // Subtasks for Environment Setup Task
-        if (tTemp === taskTemplates[0]) {
+        // Subtasks for the first task of each sprint
+        if (i === 0) {
           const subTask1 = await prisma.task.create({
             data: {
               sprintId: sprint.id,
               boardColumnId: targetColId,
-              title: `[Subtask] Initialize Git Repository and setup GitFlow`,
-              description: 'Create main, develop branches and setup branch protection rules.',
+              title: `[Subtask] Initial Configuration & Setup Details`,
+              description: 'Configure initial requirements, branch setup, and repository guidelines.',
               priority: TaskPriority.MEDIUM,
               storyPoint: 1,
-              dueDate: daysFromNow(2),
+              duration: 1,
+              startDate: taskStart,
+              dueDate: addDays(taskStart, 1),
               createdById: proj.ownerId,
               parentId: task.id,
               assignees: { create: [{ userId: assignedUserId, createdById: proj.ownerId }] },
@@ -528,17 +737,18 @@ async function main() {
             }
           })
           totalTasksCount++
-          createdTasksList.push(subTask1)
 
           const subTask2 = await prisma.task.create({
             data: {
               sprintId: sprint.id,
               boardColumnId: targetColId,
-              title: `[Subtask] Install Linters and Formatting Rules`,
-              description: 'Install and configure ESLint, Prettier, and husky git hooks.',
+              title: `[Subtask] Verification & Team Peer Review`,
+              description: 'Run automated checks, ensure linter passes and submit PR for review.',
               priority: TaskPriority.LOW,
               storyPoint: 1,
-              dueDate: daysFromNow(3),
+              duration: 2,
+              startDate: addDays(taskStart, 1),
+              dueDate: taskDue,
               createdById: proj.ownerId,
               parentId: task.id,
               assignees: { create: [{ userId: assignedUserId, createdById: proj.ownerId }] },
@@ -546,9 +756,9 @@ async function main() {
             }
           })
           totalTasksCount++
-          createdTasksList.push(subTask2)
         }
 
+        // Add Realistic Comments and Attachments for active tasks
         if (tTemp.col === 'In Progress' || tTemp.col === 'In Review') {
           const commentator = users.find((u) => u.id === assignedUserId) || users[0]
           await prisma.taskComment.create({
@@ -557,14 +767,14 @@ async function main() {
               memberId: commentator.id,
               memberDisplayName: commentator.displayName,
               memberAvatar: commentator.avatar,
-              content: `Currently working on this task. PR is ready for code review.`,
+              content: `Currently actively working on this task. Implementation adheres to sprint goals.`,
               createdById: commentator.id
             }
           })
           await prisma.taskAttachment.create({
             data: {
               taskId: task.id,
-              fileName: 'architecture_diagram.png',
+              fileName: 'architecture_specification.png',
               fileType: 'image/png',
               fileUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600',
               createdById: commentator.id
@@ -573,31 +783,25 @@ async function main() {
         }
       }
 
-      // Link Task Dependencies: Task 2 depends on Task 1, Task 3 depends on Task 2
-      if (createdTasksList.length >= 3) {
-        await prisma.taskDependency.create({
-          data: {
-            predecessorId: createdTasksList[0].id,
-            successorId: createdTasksList[1].id,
-            type: 'FS',
-            lag: 0
-          }
-        })
-        await prisma.taskDependency.create({
-          data: {
-            predecessorId: createdTasksList[1].id,
-            successorId: createdTasksList[2].id,
-            type: 'FS',
-            lag: 1
-          }
-        })
+      // Link Task Dependencies from sprint configuration
+      for (const dep of sConf.dependencies) {
+        if (createdMainTasks[dep.predIndex] && createdMainTasks[dep.succIndex]) {
+          await prisma.taskDependency.create({
+            data: {
+              predecessorId: createdMainTasks[dep.predIndex].id,
+              successorId: createdMainTasks[dep.succIndex].id,
+              type: dep.type,
+              lag: dep.lag
+            }
+          })
+        }
       }
     }
 
     const pChat = await prisma.projectChat.create({
       data: {
         projectId: proj.id,
-        lastMessage: 'Let us sync on today sprint goals and blockers.',
+        lastMessage: 'Let us sync on today sprint goals, deliverables, and blockers.',
         lastMessageTime: daysAgo(1),
         createdById: proj.ownerId
       }
@@ -611,26 +815,35 @@ async function main() {
         senderName: chatSender.displayName,
         senderRole: 'Project Owner',
         senderAvatarUrl: chatSender.avatar,
-        message: `Welcome team to ${proj.name}! Check out the active sprint board.`,
+        message: `Welcome team to ${proj.name}! Check out the active sprint board and task dependencies.`,
         createdById: chatSender.id
       }
     })
   }
 
-  // Generate Notifications
-  for (const user of users.slice(0, 5)) {
-    await prisma.notification.create({
-      data: {
-        userId: user.id,
-        type: NotificationType.project_invitation,
-        title: 'Project Invitation',
-        message: 'You have been added as an active member to Sprintos Mobile App project.',
-        isRead: false
+  // Generate Notifications tailored to each project's actual members
+  for (const proj of createdProjects) {
+    const projMembers = await prisma.projectMember.findMany({
+      where: {
+        projectId: proj.id,
+        roleId: { not: roleMap[RoleName.Owner] },
+        status: ProjectMemberStatus.ACTIVE
       }
     })
+    for (const m of projMembers.slice(0, 2)) {
+      await prisma.notification.create({
+        data: {
+          userId: m.memberId,
+          type: NotificationType.project_invitation,
+          title: 'Project Invitation',
+          message: `You have been added as an active member to ${proj.name} project.`,
+          isRead: false
+        }
+      })
+    }
   }
 
-  console.log(`✅ Generated ${totalSprintsCount} Sprints, ${totalTasksCount} Tasks, Comments & Notifications.`)
+  console.log(`✅ Generated ${totalSprintsCount} Sprints, ${totalTasksCount} Tasks, Dependencies, Comments & Notifications.`)
 
   await app.close()
 
@@ -647,7 +860,25 @@ async function main() {
     { SystemRole: 'ADMIN', Name: adminUser.displayName, Email: adminUser.email, Password: defaultPassword }
   ])
 
-  console.log('\n👥 TEST USER ACCOUNTS [System Role: USER]:')
+  console.log('\n👥 DEDICATED PROJECT OWNER ACCOUNTS [Requested by User]:')
+  console.table([
+    {
+      Email: 'nguyenthuan05.work@gmail.com',
+      Name: userByEmail('nguyenthuan05.work@gmail.com').displayName,
+      OwnedProject: 'Sprintos Mobile App',
+      Password: defaultPassword,
+      CrossoverStatus: 'EXCLUSIVE (No shared projects with sprintos.01062026@gmail.com)'
+    },
+    {
+      Email: 'sprintos.01062026@gmail.com',
+      Name: userByEmail('sprintos.01062026@gmail.com').displayName,
+      OwnedProject: 'E-Commerce Redesign',
+      Password: defaultPassword,
+      CrossoverStatus: 'EXCLUSIVE (No shared projects with nguyenthuan05.work@gmail.com)'
+    }
+  ])
+
+  console.log('\n👥 ALL TEST USER ACCOUNTS [System Role: USER]:')
   console.table(
     users.map((u) => ({
       ID: u.id,
@@ -664,7 +895,7 @@ async function main() {
       ProjectID: createdProjects[index].id,
       ProjectName: p.name,
       Owner: `${p.owner.displayName} (${p.owner.email})`,
-      ProjectRolesAssigned: `OWNER: 1, CO-OWNER: 1, MEMBER: ${p.members.filter((m) => m.role === RoleName.Member).length}, VIEWER: ${p.members.filter((m) => m.role === RoleName.Viewer).length}`
+      ProjectRolesAssigned: `OWNER: 1, CO-OWNER: ${p.members.filter((m) => m.role === RoleName.CoOwner).length}, MEMBER: ${p.members.filter((m) => m.role === RoleName.Member).length}, VIEWER: ${p.members.filter((m) => m.role === RoleName.Viewer).length}`
     }))
   )
 
