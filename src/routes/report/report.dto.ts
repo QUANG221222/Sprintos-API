@@ -6,7 +6,9 @@ import {
   ProjectVelocityResSchema,
   SprintGanttChartResSchema,
   SprintNetworkDiagramResSchema,
-  SprintProgressResSchema
+  SprintProgressResSchema,
+  SprintWorkTypeDistributionResSchema,
+  SprintCfdResSchema
 } from './report.model'
 
 export class GetSprintReportParamDTO extends createZodDto(GetSprintReportParamSchema) {}
@@ -17,3 +19,5 @@ export class ProjectVelocityResDTO extends createZodDto(ProjectVelocityResSchema
 export class MemberDistributionResDTO extends createZodDto(MemberDistributionResSchema) {}
 export class SprintNetworkDiagramResDTO extends createZodDto(SprintNetworkDiagramResSchema) {}
 export class SprintGanttChartResDTO extends createZodDto(SprintGanttChartResSchema) {}
+export class SprintWorkTypeDistributionResDTO extends createZodDto(SprintWorkTypeDistributionResSchema) {}
+export class SprintCfdResDTO extends createZodDto(SprintCfdResSchema) {}

@@ -5,6 +5,11 @@ export const BoardColumnSchema = z
     id: z.string(),
     sprintId: z.string(),
     title: z.string().min(1).max(50),
+    isDone: z.boolean().default(false),
+    isWip: z.boolean().default(true),
+    isBlocked: z.boolean().default(false),
+    isCancelled: z.boolean().default(false),
+    color: z.string().nullable().optional(),
     createdAt: z.date(),
     updatedAt: z.date().nullable(),
     deletedAt: z.date().nullable(),
@@ -39,6 +44,11 @@ export const CreateBoardColumnBodySchema = z
   .object({
     sprintId: z.string(),
     title: z.string().min(1).max(50),
+    isDone: z.boolean().optional(),
+    isWip: z.boolean().optional(),
+    isBlocked: z.boolean().optional(),
+    isCancelled: z.boolean().optional(),
+    color: z.string().max(50).optional(),
     order: z.number().optional(),
     position: z.number().optional()
   })
@@ -46,7 +56,12 @@ export const CreateBoardColumnBodySchema = z
 
 export const UpdateBoardColumnBodySchema = z
   .object({
-    title: z.string().min(1).max(50).optional()
+    title: z.string().min(1).max(50).optional(),
+    isDone: z.boolean().optional(),
+    isWip: z.boolean().optional(),
+    isBlocked: z.boolean().optional(),
+    isCancelled: z.boolean().optional(),
+    color: z.string().max(50).nullable().optional()
   })
   .strict()
 

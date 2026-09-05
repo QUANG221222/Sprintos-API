@@ -5,30 +5,47 @@ import {
   ProjectVelocityResType,
   SprintGanttChartResType,
   SprintNetworkDiagramResType,
-  SprintProgressResType
+  SprintProgressResType,
+  SprintWorkTypeDistributionResType,
+  SprintCfdResType
 } from './report.model'
 
 @Injectable()
 export class ReportService {
   constructor(private readonly reportRepo: ReportRepo) {}
 
-  private getDoneColumnId(sprint: { boardColumnIds?: string[]; boardColumns?: any[] }): string | null {
-    if (!sprint || !sprint.boardColumns || sprint.boardColumns.length === 0) return null
-
+  private getSortedColumns(sprint: { boardColumnIds?: string[]; boardColumns?: any[] }) {
+    if (!sprint || !sprint.boardColumns || sprint.boardColumns.length === 0) return []
     const orderIds = sprint.boardColumnIds || []
-    const sortedCols = [...sprint.boardColumns].sort((a, b) => {
+    return [...sprint.boardColumns].sort((a, b) => {
       const idxA = orderIds.indexOf(a.id)
       const idxB = orderIds.indexOf(b.id)
       if (idxA !== -1 && idxB !== -1) return idxA - idxB
       return 0
     })
+  }
 
-    // 1. Mandatory exact "Done" column match
-    const doneCol = sortedCols.find((col) => col.title && col.title.trim().toLowerCase() === 'done')
-    if (doneCol) return doneCol.id
+  private getDoneColumnIds(sprint: { boardColumnIds?: string[]; boardColumns?: any[] }): Set<string> {
+    const doneIds = new Set<string>()
+    if (!sprint || !sprint.boardColumns || sprint.boardColumns.length === 0) return doneIds
 
-    // 2. Fallback for legacy board data: rightmost column
-    return sortedCols[sortedCols.length - 1].id
+    for (const col of sprint.boardColumns) {
+      if (col.isDone === true) {
+        doneIds.add(col.id)
+      }
+    }
+
+    if (doneIds.size === 0) {
+      const sortedCols = this.getSortedColumns(sprint)
+      const doneCol = sortedCols.find((col) => col.title && col.title.trim().toLowerCase() === 'done')
+      if (doneCol) {
+        doneIds.add(doneCol.id)
+      } else if (sortedCols.length > 0) {
+        doneIds.add(sortedCols[sortedCols.length - 1].id)
+      }
+    }
+
+    return doneIds
   }
 
   async getSprintProgress(sprintId: string): Promise<SprintProgressResType> {
@@ -37,15 +54,8 @@ export class ReportService {
       throw new NotFoundException('Sprint not found')
     }
 
-    const orderIds = sprint.boardColumnIds || []
-    const sortedCols = [...(sprint.boardColumns || [])].sort((a, b) => {
-      const idxA = orderIds.indexOf(a.id)
-      const idxB = orderIds.indexOf(b.id)
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB
-      return 0
-    })
-
-    const doneColumnId = this.getDoneColumnId(sprint)
+    const sortedCols = this.getSortedColumns(sprint)
+    const doneColumnIds = this.getDoneColumnIds(sprint)
     const colors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#10b981', '#06b6d4', '#ec4899', '#64748b']
 
     const columnCountMap = new Map<string, number>()
@@ -66,45 +76,84 @@ export class ReportService {
         columnCountMap.set(colId, columnCountMap.get(colId)! + 1)
       }
 
-      if (colId && colId === doneColumnId) {
+      if (colId && doneColumnIds.has(colId)) {
         completedStoryPoints += sp
       }
     }
 
     const progressData = sortedCols.map((col, index) => {
-      const isDone = col.id === doneColumnId
+      const isDone = doneColumnIds.has(col.id)
       return {
         id: col.id,
         name: col.title,
         value: columnCountMap.get(col.id) || 0,
         isDone,
-        color: isDone ? '#10b981' : colors[index % colors.length]
+        isWip: col.isWip ?? !isDone,
+        isBlocked: col.isBlocked ?? false,
+        isCancelled: col.isCancelled ?? false,
+        color: col.color || (isDone ? '#10b981' : colors[index % colors.length])
       }
     })
 
-    // Calculate Burndown
+    // Calculate Real-time Burndown
     const startDate = new Date(sprint.startDate)
     const endDate = new Date(sprint.endDate)
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime())
-    const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
-    const totalSteps = Math.min(Math.max(diffDays, 5), 14)
+    const now = new Date()
+    const diffTime = Math.max(1, Math.abs(endDate.getTime() - startDate.getTime()))
+    const totalDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
+    const steps = Math.min(Math.max(totalDays, 5), 30)
 
+    const pointsPerStep = totalStoryPoints / steps
     const burndown: { day: string; ideal: number; actual: number }[] = []
-    const pointsPerStep = totalStoryPoints / totalSteps
 
-    for (let i = 0; i <= totalSteps; i++) {
-      const ideal = Math.max(0, Math.round((totalStoryPoints - i * pointsPerStep) * 10) / 10)
-      const progressFactor = i / totalSteps
-      const remainingActual = Math.max(
-        0,
-        Math.round((totalStoryPoints - completedStoryPoints * Math.min(1, progressFactor * 1.1)) * 10) / 10
-      )
+    // 1. Kiểm tra xem có Daily Snapshots trong database chưa
+    const snapshots = await this.reportRepo.findSprintSnapshots(sprintId)
 
-      burndown.push({
-        day: `Day ${i + 1}`,
-        ideal,
-        actual: remainingActual
+    if (snapshots.length > 0) {
+      // Dùng dữ liệu snapshot thực tế
+      snapshots.forEach((snap, idx) => {
+        const ideal = Math.max(0, Math.round((totalStoryPoints - idx * pointsPerStep) * 10) / 10)
+        burndown.push({
+          day: `Day ${idx + 1}`,
+          ideal,
+          actual: snap.remainingStoryPoints
+        })
       })
+    } else {
+      // 2. Tính toán lịch sử thực tế dựa trên ngày hoàn thành của các task
+      const completedTasks = tasks.filter((t) => {
+        const colId = t.boardColumnId || t.boardColumn?.id
+        return colId && doneColumnIds.has(colId)
+      })
+
+      const elapsedMs = Math.max(0, now.getTime() - startDate.getTime())
+      const currentDayIndex = Math.min(steps, Math.ceil(elapsedMs / (1000 * 60 * 60 * 24)))
+
+      for (let i = 0; i <= steps; i++) {
+        const ideal = Math.max(0, Math.round((totalStoryPoints - i * pointsPerStep) * 10) / 10)
+        const stepDate = new Date(startDate.getTime() + i * (diffTime / steps))
+
+        // Điểm thực tế hoàn thành tính đến thời điểm stepDate
+        if (i <= currentDayIndex) {
+          const pointsDoneToDate = completedTasks
+            .filter((t) => new Date(t.updatedAt || t.createdAt).getTime() <= stepDate.getTime())
+            .reduce((sum, t) => sum + (t.storyPoint > 0 ? t.storyPoint : 1), 0)
+
+          const remainingActual = Math.max(0, totalStoryPoints - pointsDoneToDate)
+          burndown.push({
+            day: `Day ${i + 1}`,
+            ideal,
+            actual: remainingActual
+          })
+        } else {
+          // Các ngày tương lai: Giữ nguyên mức remaining hiện tại (không vẽ giả lập giảm xuống)
+          burndown.push({
+            day: `Day ${i + 1}`,
+            ideal,
+            actual: Math.max(0, totalStoryPoints - completedStoryPoints)
+          })
+        }
+      }
     }
 
     return {
@@ -120,8 +169,7 @@ export class ReportService {
       let planned = sprint.maxStoryPoint || 0
       let completed = 0
 
-      const doneColumnId = this.getDoneColumnId(sprint)
-
+      const doneColumnIds = this.getDoneColumnIds(sprint)
       const tasks = sprint.tasks || []
       let totalTaskPoints = 0
 
@@ -130,7 +178,7 @@ export class ReportService {
         totalTaskPoints += sp
 
         const colId = task.boardColumnId || task.boardColumn?.id
-        if (colId && colId === doneColumnId) {
+        if (colId && doneColumnIds.has(colId)) {
           completed += sp
         }
       }
@@ -152,11 +200,15 @@ export class ReportService {
   async getMemberDistribution(sprintId: string): Promise<MemberDistributionResType> {
     const { members, tasks } = await this.reportRepo.findSprintProjectMembers(sprintId)
     const sprint = await this.reportRepo.findSprintWithTasks(sprintId)
-    const doneColumnId = sprint ? this.getDoneColumnId(sprint) : null
+    const sortedCols = sprint ? this.getSortedColumns(sprint) : []
+    const doneColumnIds = sprint ? this.getDoneColumnIds(sprint) : new Set<string>()
+
+    const colMap = new Map<string, any>()
+    sortedCols.forEach((c) => colMap.set(c.id, c))
 
     const memberStatsMap = new Map<
       string,
-      { name: string; done: number; inProgress: number; todo: number; totalPoints: number }
+      { name: string; done: number; inProgress: number; todo: number; blocked: number; totalPoints: number }
     >()
 
     for (const pm of members) {
@@ -167,6 +219,7 @@ export class ReportService {
           done: 0,
           inProgress: 0,
           todo: 0,
+          blocked: 0,
           totalPoints: 0
         })
       }
@@ -176,6 +229,7 @@ export class ReportService {
       const colId = task.boardColumnId || task.boardColumn?.id
       const sp = task.storyPoint > 0 ? task.storyPoint : 1
       const assignees = task.assignees || []
+      const col = colId ? colMap.get(colId) : null
 
       for (const assignee of assignees) {
         const user = assignee.user
@@ -187,6 +241,7 @@ export class ReportService {
             done: 0,
             inProgress: 0,
             todo: 0,
+            blocked: 0,
             totalPoints: 0
           })
         }
@@ -194,10 +249,15 @@ export class ReportService {
         const stats = memberStatsMap.get(user.id)!
         stats.totalPoints += sp
 
-        if (colId && colId === doneColumnId) {
+        if (colId && doneColumnIds.has(colId)) {
           stats.done++
-        } else {
+        } else if (col?.isBlocked === true) {
+          stats.blocked++
+        } else if (col?.isWip === true) {
           stats.inProgress++
+        } else {
+          // Các cột To Do / Chưa bắt đầu (isWip = false, isDone = false, isBlocked = false)
+          stats.todo++
         }
       }
     }
@@ -506,13 +566,13 @@ export class ReportService {
     const sprintStartDateStr = sprintStartDateObj.toISOString()
     const sprintEndDateStr = new Date(sprint.endDate).toISOString()
 
-    const doneColumnId = this.getDoneColumnId(sprint)
+    const doneColumnIds = this.getDoneColumnIds(sprint)
 
     const ganttTasks = tasks.map((task) => {
       const colId = task.boardColumnId || task.boardColumn?.id
       const colTitle = task.boardColumn?.title || ''
       let progress = 0
-      if (colId && colId === doneColumnId) {
+      if (colId && doneColumnIds.has(colId)) {
         progress = 100
       } else if (colTitle.toLowerCase().includes('review') || colTitle.toLowerCase().includes('test')) {
         progress = 75
@@ -570,6 +630,145 @@ export class ReportService {
         endDate: sprintEndDateStr
       },
       tasks: ganttTasks
+    }
+  }
+
+  async getSprintWorkTypeDistribution(sprintId: string): Promise<SprintWorkTypeDistributionResType> {
+    const sprint = await this.reportRepo.findSprintWithTasks(sprintId)
+    if (!sprint) {
+      throw new NotFoundException('Sprint not found')
+    }
+
+    const tasks = sprint.tasks || []
+    const typeCountMap: Record<string, { count: number; sp: number }> = {
+      STORY: { count: 0, sp: 0 },
+      TASK: { count: 0, sp: 0 },
+      BUG: { count: 0, sp: 0 },
+      TECH_DEBT: { count: 0, sp: 0 },
+      EPIC: { count: 0, sp: 0 }
+    }
+
+    let totalTasks = 0
+    let totalStoryPoints = 0
+    let bugCount = 0
+
+    for (const task of tasks) {
+      totalTasks++
+      const sp = task.storyPoint > 0 ? task.storyPoint : 1
+      totalStoryPoints += sp
+
+      const t = (task.type as string) || 'TASK'
+      if (!typeCountMap[t]) {
+        typeCountMap[t] = { count: 0, sp: 0 }
+      }
+      typeCountMap[t].count++
+      typeCountMap[t].sp += sp
+
+      if (t === 'BUG') {
+        bugCount++
+      }
+    }
+
+    const WORK_TYPE_META: Record<string, { name: string; color: string }> = {
+      STORY: { name: 'Feature Stories', color: '#0d9488' },
+      BUG: { name: 'Bug Fixes', color: '#f43f5e' },
+      TECH_DEBT: { name: 'Tech Debt & Refactor', color: '#6366f1' },
+      TASK: { name: 'Standard Tasks', color: '#3b82f6' },
+      EPIC: { name: 'Epic Initiatives', color: '#8b5cf6' }
+    }
+
+    const workTypes = Object.entries(typeCountMap)
+      .filter(([_, data]) => data.count > 0 || ['STORY', 'BUG', 'TASK', 'TECH_DEBT'].includes(_))
+      .map(([type, data]) => ({
+        type,
+        name: WORK_TYPE_META[type]?.name || type,
+        count: data.count,
+        storyPoints: data.sp,
+        color: WORK_TYPE_META[type]?.color || '#64748b'
+      }))
+
+    const defectDensity = totalTasks > 0 ? Number(((bugCount / totalTasks) * 100).toFixed(1)) : 0
+
+    return {
+      workTypes,
+      totalTasks,
+      totalStoryPoints,
+      defectDensity
+    }
+  }
+
+  async getSprintCfd(sprintId: string): Promise<SprintCfdResType> {
+    const sprint = await this.reportRepo.findSprintWithTasks(sprintId)
+    if (!sprint) {
+      throw new NotFoundException('Sprint not found')
+    }
+
+    const sortedCols = this.getSortedColumns(sprint)
+    const columns = sortedCols.map((c, idx) => ({
+      id: c.id,
+      title: c.title,
+      name: c.title,
+      color: c.color || (c.isDone ? '#10b981' : ['#94a3b8', '#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b'][idx % 5])
+    }))
+
+    const startDate = sprint.startDate ? new Date(sprint.startDate) : new Date(sprint.createdAt || Date.now())
+    const endDate = sprint.endDate ? new Date(sprint.endDate) : new Date(startDate.getTime() + 14 * 24 * 60 * 60 * 1000)
+    const now = new Date()
+    const diffTime = Math.max(86400000, Math.abs(endDate.getTime() - startDate.getTime()))
+    const totalDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
+    const steps = Math.min(Math.max(totalDays, 5), 30)
+
+    const tasks = sprint.tasks || []
+    const cfdData: Record<string, any>[] = []
+
+    const elapsedMs = Math.max(0, now.getTime() - startDate.getTime())
+    const currentDayIndex = Math.min(steps, Math.ceil(elapsedMs / (1000 * 60 * 60 * 24)))
+
+    for (let i = 0; i <= steps; i++) {
+      const stepDate = new Date(startDate.getTime() + i * (diffTime / steps))
+      const dayStr = stepDate.getDate().toString().padStart(2, '0')
+      const monthStr = (stepDate.getMonth() + 1).toString().padStart(2, '0')
+      const row: Record<string, any> = {
+        date: `${dayStr}/${monthStr}`,
+        isoDate: stepDate.toISOString().split('T')[0],
+        day: `Day ${i + 1}`
+      }
+
+      for (const col of sortedCols) {
+        row[col.title] = 0
+        row[col.id] = 0
+      }
+
+      for (const task of tasks) {
+        const col = sortedCols.find((c) => c.id === (task.boardColumnId || task.boardColumn?.id))
+        const colTitle = col ? col.title : (sortedCols[0]?.title || 'To Do')
+        const colId = col ? col.id : (sortedCols[0]?.id || '')
+
+        if (i >= currentDayIndex) {
+          row[colTitle] = (row[colTitle] || 0) + 1
+          if (colId) row[colId] = (row[colId] || 0) + 1
+        } else {
+          const isTaskUpdatedLater = new Date(task.updatedAt || task.createdAt).getTime() > stepDate.getTime()
+          if (isTaskUpdatedLater) {
+            const initialCol = sortedCols[0]
+            const initialColTitle = initialCol?.title || 'To Do'
+            const initialColId = initialCol?.id || ''
+            row[initialColTitle] = (row[initialColTitle] || 0) + 1
+            if (initialColId) row[initialColId] = (row[initialColId] || 0) + 1
+          } else {
+            row[colTitle] = (row[colTitle] || 0) + 1
+            if (colId) row[colId] = (row[colId] || 0) + 1
+          }
+        }
+      }
+
+      cfdData.push(row)
+    }
+
+    return {
+      columns,
+      cfdData,
+      timeline: cfdData
     }
   }
 }
