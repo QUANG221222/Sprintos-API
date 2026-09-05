@@ -10,6 +10,8 @@ import {
 import { Server, Socket } from 'socket.io'
 import { Logger } from '@nestjs/common'
 import { TokenService } from '~/shared/services/token.service'
+import { PrismaService } from '~/shared/services/prisma.service'
+import { RoleName } from '~/shared/constants/role.constants'
 import { authenticateSocket } from '~/shared/helpers/ws-auth.helper'
 import { ChatService } from './chat.service'
 import envConfig from '~/shared/config'
@@ -28,7 +30,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly tokenService: TokenService,
-    private readonly chatService: ChatService
+    private readonly chatService: ChatService,
+    private readonly prismaService: PrismaService
   ) {}
 
   async handleConnection(client: Socket) {
@@ -45,11 +48,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('chat:join_project')
-  handleJoinProject(@ConnectedSocket() client: Socket, @MessageBody() data: { projectId: string }) {
+  async handleJoinProject(@ConnectedSocket() client: Socket, @MessageBody() data: { projectId: string }) {
     if (!data.projectId) return
+    let user = client.data.user
+    if (!user) {
+      user = await authenticateSocket(client, this.tokenService)
+    }
+    if (!user) {
+      this.logger.warn(`Unauthenticated socket ${client.id} attempted to join project ${data.projectId}`)
+      return { error: 'Unauthorized' }
+    }
+
+    const hasAccess = await this.checkUserProjectAccess(user.userId, data.projectId, user.roleName)
+    if (!hasAccess) {
+      this.logger.warn(`User ${user.userId} forbidden from joining chat for project ${data.projectId}`)
+      return { error: 'Forbidden' }
+    }
+
     const room = `project:${data.projectId}`
     client.join(room)
-    this.logger.log(`Client ${client.id} joined chat room: ${room}`)
+    this.logger.log(`Client ${client.id} (user: ${user.userId}) joined chat room: ${room}`)
     return { status: 'joined', room }
   }
 
@@ -92,6 +110,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return
     }
 
+    const hasAccess = await this.checkUserProjectAccess(senderId, data.projectId, user?.roleName)
+    if (!hasAccess) {
+      this.logger.warn(`User ${senderId} forbidden from sending chat message in project ${data.projectId}`)
+      return { error: 'Forbidden' }
+    }
+
     const chat = await this.chatService.findOrCreateChat(data.projectId)
 
     const savedMessage = await this.chatService.saveMessage({
@@ -113,6 +137,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(room).emit('chat:new_message', savedMessage)
     this.logger.log(`Broadcasted chat:new_message to room ${room}`)
     return savedMessage
+  }
+
+  private async checkUserProjectAccess(userId: string, projectId: string, roleName?: string): Promise<boolean> {
+    if (roleName === RoleName.Admin) return true
+    const project = await this.prismaService.project.findFirst({
+      where: {
+        id: projectId,
+        deletedAt: null,
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: {
+                memberId: userId,
+                status: 'ACTIVE',
+                deletedAt: null
+              }
+            }
+          }
+        ]
+      }
+    })
+    return !!project
   }
 
   @SubscribeMessage('chat:typing')
