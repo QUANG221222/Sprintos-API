@@ -130,12 +130,13 @@ async function main() {
         const cleanPath = p.path.replace(/^\/api/, '')
         return (
           cleanPath.startsWith('/auth') ||
-          cleanPath.startsWith('/profile') ||
           cleanPath.startsWith('/media') ||
+          cleanPath === '/users/me' ||
           (cleanPath.startsWith('/users') && p.method === 'GET') ||
           (cleanPath === '/projects' && (p.method === 'GET' || p.method === 'POST')) ||
           cleanPath === '/projects/owned' ||
           cleanPath === '/projects/joined' ||
+          cleanPath.startsWith('/notifications') ||
           cleanPath.startsWith('/reports')
         )
       }),
@@ -148,7 +149,9 @@ async function main() {
           cleanPath.startsWith('/sprints') ||
           cleanPath.startsWith('/tasks') ||
           cleanPath.startsWith('/board-columns') ||
-          cleanPath.startsWith('/reports')
+          cleanPath.startsWith('/reports') ||
+          cleanPath.startsWith('/notifications') ||
+          cleanPath.startsWith('/project-chats')
         )
       }),
     [ProjectMemberRole.OWNER]: (perms: typeof updatedPermissionsInDb) =>
@@ -160,7 +163,9 @@ async function main() {
           cleanPath.startsWith('/sprints') ||
           cleanPath.startsWith('/tasks') ||
           cleanPath.startsWith('/board-columns') ||
-          cleanPath.startsWith('/reports')
+          cleanPath.startsWith('/reports') ||
+          cleanPath.startsWith('/notifications') ||
+          cleanPath.startsWith('/project-chats')
         )
       }),
     [ProjectMemberRole.MEMBER]: (perms: typeof updatedPermissionsInDb) =>
@@ -168,10 +173,12 @@ async function main() {
         const cleanPath = p.path.replace(/^\/api/, '')
         return (
           ((cleanPath.startsWith('/projects') || cleanPath.startsWith('/project-members')) && p.method === 'GET') ||
-          cleanPath.startsWith('/sprints') ||
-          cleanPath.startsWith('/tasks') ||
-          cleanPath.startsWith('/board-columns') ||
-          cleanPath.startsWith('/reports')
+          (cleanPath.startsWith('/sprints') && p.method === 'GET') ||
+          (cleanPath.startsWith('/board-columns') && p.method === 'GET') ||
+          (cleanPath.startsWith('/tasks') && p.method !== 'DELETE') ||
+          cleanPath.startsWith('/reports') ||
+          cleanPath.startsWith('/notifications') ||
+          cleanPath.startsWith('/project-chats')
         )
       }),
     [ProjectMemberRole.VIEWER]: (perms: typeof updatedPermissionsInDb) =>
@@ -184,7 +191,9 @@ async function main() {
             cleanPath.startsWith('/sprints') ||
             cleanPath.startsWith('/tasks') ||
             cleanPath.startsWith('/board-columns') ||
-            cleanPath.startsWith('/reports'))
+            cleanPath.startsWith('/reports') ||
+            cleanPath.startsWith('/notifications') ||
+            cleanPath.startsWith('/project-chats'))
         )
       })
   }
