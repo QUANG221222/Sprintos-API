@@ -5,6 +5,8 @@ export const TaskPrioritySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
 
 export const DependencyTypeSchema = z.enum(['FS', 'SS', 'FF', 'SF'])
 
+export const TaskTypeEnumSchema = z.enum(['STORY', 'TASK', 'BUG', 'TECH_DEBT', 'EPIC'])
+
 export const TaskSchema = z
   .object({
     id: z.string(),
@@ -12,6 +14,7 @@ export const TaskSchema = z
     boardColumnId: z.string(),
     title: z.string(),
     description: z.string().nullable(),
+    type: TaskTypeEnumSchema.default('TASK'),
     priority: TaskPrioritySchema.nullable(),
     storyPoint: z.number().int(),
     dueDate: z.date().nullable(),
@@ -128,6 +131,7 @@ export const CreateTaskBodySchema = z
     boardColumnId: z.string().optional(),
     title: z.string(),
     description: z.string().nullable().optional(),
+    type: TaskTypeEnumSchema.optional(),
     priority: TaskPrioritySchema.nullable().optional(),
     storyPoint: z.number().int().nonnegative().optional(),
     dueDate: z.coerce.date().nullable().optional(),

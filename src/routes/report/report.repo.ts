@@ -126,4 +126,57 @@ export class ReportRepo {
       }
     })
   }
+
+  async findSprintSnapshots(sprintId: string) {
+    return this.prismaService.sprintDailySnapshot.findMany({
+      where: { sprintId },
+      orderBy: { date: 'asc' }
+    })
+  }
+
+  async upsertSprintDailySnapshot(data: {
+    sprintId: string
+    date: Date
+    remainingStoryPoints: number
+    completedStoryPoints: number
+    totalStoryPoints: number
+  }) {
+    return this.prismaService.sprintDailySnapshot.upsert({
+      where: {
+        sprintId_date: {
+          sprintId: data.sprintId,
+          date: data.date
+        }
+      },
+      update: {
+        remainingStoryPoints: data.remainingStoryPoints,
+        completedStoryPoints: data.completedStoryPoints,
+        totalStoryPoints: data.totalStoryPoints
+      },
+      create: data
+    })
+  }
+
+  async findTasksForWorkTypeReport(sprintId: string) {
+    return this.prismaService.task.findMany({
+      where: {
+        sprintId,
+        deletedAt: null
+      },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        storyPoint: true,
+        priority: true,
+        boardColumn: {
+          select: {
+            id: true,
+            title: true,
+            isDone: true
+          }
+        }
+      }
+    })
+  }
 }

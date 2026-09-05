@@ -59,7 +59,12 @@ export class BoardColumnRepo {
     const createdColumn = (await this.prismaService.boardColumn.create({
       data: {
         sprintId: body.sprintId,
-        title: body.title
+        title: body.title,
+        isDone: body.isDone ?? false,
+        isWip: body.isWip ?? true,
+        isBlocked: body.isBlocked ?? false,
+        isCancelled: body.isCancelled ?? false,
+        color: body.color ?? null
       }
     })) as BoardColumnType
 

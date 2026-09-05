@@ -6,7 +6,7 @@ import { PrismaService } from '~/shared/services/prisma.service'
 import { HashingService } from '~/shared/services/hashing.service'
 import { HTTPMethod, RoleName } from '~/shared/constants/role.constants'
 import { ProjectMemberRole, ProjectMemberStatus } from '~/shared/constants/project.constants'
-import { UserStatus, Gender, SprintStatus, TaskPriority, NotificationType } from '~/generated/prisma/enums'
+import { UserStatus, Gender, SprintStatus, TaskPriority, NotificationType, TaskType } from '~/generated/prisma/enums'
 import { DependencyType } from '~/generated/prisma/client'
 
 const prisma = new PrismaService()
@@ -669,19 +669,29 @@ async function main() {
       })
       totalSprintsCount++
 
-      const colNames = ['To Do', 'In Progress', 'In Review', 'Done']
+      const colDefinitions = [
+        { title: 'To Do', isDone: false, isWip: false, isBlocked: false, isCancelled: false, color: '#94a3b8' },
+        { title: 'In Progress', isDone: false, isWip: true, isBlocked: false, isCancelled: false, color: '#3b82f6' },
+        { title: 'In Review', isDone: false, isWip: true, isBlocked: false, isCancelled: false, color: '#8b5cf6' },
+        { title: 'Done', isDone: true, isWip: false, isBlocked: false, isCancelled: false, color: '#10b981' }
+      ]
       const createdCols: Record<string, string> = {}
       const colIds: string[] = []
 
-      for (const colTitle of colNames) {
+      for (const colDef of colDefinitions) {
         const col = await prisma.boardColumn.create({
           data: {
             sprintId: sprint.id,
-            title: colTitle,
+            title: colDef.title,
+            isDone: colDef.isDone,
+            isWip: colDef.isWip,
+            isBlocked: colDef.isBlocked,
+            isCancelled: colDef.isCancelled,
+            color: colDef.color,
             createdById: proj.ownerId
           }
         })
-        createdCols[colTitle] = col.id
+        createdCols[colDef.title] = col.id
         colIds.push(col.id)
       }
 
@@ -706,12 +716,23 @@ async function main() {
         const taskStart = addDays(sConf.startDate, tTemp.offset)
         const taskDue = addDays(taskStart, tTemp.duration)
 
+        let taskType: TaskType = TaskType.TASK
+        const titleLower = tTemp.title.toLowerCase()
+        if (tTemp.labels.some((l: string) => l.includes('bug')) || titleLower.includes('fix') || titleLower.includes('bug')) {
+          taskType = TaskType.BUG
+        } else if (tTemp.labels.some((l: string) => l.includes('refactor') || l.includes('tech')) || titleLower.includes('setup')) {
+          taskType = TaskType.TECH_DEBT
+        } else if (tTemp.labels.some((l: string) => l.includes('feature')) || titleLower.includes('create') || titleLower.includes('build')) {
+          taskType = TaskType.STORY
+        }
+
         const task = await prisma.task.create({
           data: {
             sprintId: sprint.id,
             boardColumnId: targetColId,
             title: tTemp.title,
             description: tTemp.desc,
+            type: taskType,
             priority: tTemp.priority,
             storyPoint: tTemp.sp,
             duration: tTemp.duration,

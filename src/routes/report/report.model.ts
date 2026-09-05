@@ -5,7 +5,10 @@ export const ProgressItemSchema = z.object({
   name: z.string(),
   value: z.number(),
   color: z.string(),
-  isDone: z.boolean().optional()
+  isDone: z.boolean().optional(),
+  isWip: z.boolean().optional(),
+  isBlocked: z.boolean().optional(),
+  isCancelled: z.boolean().optional()
 })
 
 export const BurndownItemSchema = z.object({
@@ -34,6 +37,7 @@ export const MemberWorkloadSchema = z.object({
   done: z.number(),
   inProgress: z.number(),
   todo: z.number(),
+  blocked: z.number().default(0),
   totalPoints: z.number()
 })
 
@@ -106,6 +110,36 @@ export const SprintGanttChartResSchema = z.object({
   tasks: z.array(GanttTaskSchema)
 })
 
+// Work Type Distribution Schemas
+export const WorkTypeItemSchema = z.object({
+  type: z.string(),
+  name: z.string(),
+  count: z.number(),
+  storyPoints: z.number(),
+  color: z.string()
+})
+
+export const SprintWorkTypeDistributionResSchema = z.object({
+  workTypes: z.array(WorkTypeItemSchema),
+  totalTasks: z.number(),
+  totalStoryPoints: z.number(),
+  defectDensity: z.number()
+})
+
+// Cumulative Flow Diagram (CFD) Schemas
+export const CfdColumnInfoSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  name: z.string().optional(),
+  color: z.string()
+})
+
+export const SprintCfdResSchema = z.object({
+  columns: z.array(CfdColumnInfoSchema),
+  cfdData: z.array(z.record(z.string(), z.any())),
+  timeline: z.array(z.record(z.string(), z.any())).optional()
+})
+
 export type SprintProgressResType = z.infer<typeof SprintProgressResSchema>
 export type ProjectVelocityResType = z.infer<typeof ProjectVelocityResSchema>
 export type MemberDistributionResType = z.infer<typeof MemberDistributionResSchema>
@@ -113,3 +147,5 @@ export type GetSprintReportParamType = z.infer<typeof GetSprintReportParamSchema
 export type GetProjectReportParamType = z.infer<typeof GetProjectReportParamSchema>
 export type SprintNetworkDiagramResType = z.infer<typeof SprintNetworkDiagramResSchema>
 export type SprintGanttChartResType = z.infer<typeof SprintGanttChartResSchema>
+export type SprintWorkTypeDistributionResType = z.infer<typeof SprintWorkTypeDistributionResSchema>
+export type SprintCfdResType = z.infer<typeof SprintCfdResSchema>

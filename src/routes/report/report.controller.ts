@@ -8,7 +8,9 @@ import {
   ProjectVelocityResDTO,
   SprintGanttChartResDTO,
   SprintNetworkDiagramResDTO,
-  SprintProgressResDTO
+  SprintProgressResDTO,
+  SprintWorkTypeDistributionResDTO,
+  SprintCfdResDTO
 } from './report.dto'
 
 @Controller('reports')
@@ -31,6 +33,18 @@ export class ReportController {
   @ZodSerializerDto(MemberDistributionResDTO)
   getMemberDistribution(@Param() params: GetSprintReportParamDTO) {
     return this.reportService.getMemberDistribution(params.sprintId)
+  }
+
+  @Get('sprint/:sprintId/work-types')
+  @ZodSerializerDto(SprintWorkTypeDistributionResDTO)
+  getSprintWorkTypeDistribution(@Param() params: GetSprintReportParamDTO) {
+    return this.reportService.getSprintWorkTypeDistribution(params.sprintId)
+  }
+
+  @Get('sprint/:sprintId/cfd')
+  @ZodSerializerDto(SprintCfdResDTO)
+  getSprintCfd(@Param() params: GetSprintReportParamDTO) {
+    return this.reportService.getSprintCfd(params.sprintId)
   }
 
   @Get('sprint/:sprintId/network-diagram')

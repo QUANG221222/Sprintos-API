@@ -33,7 +33,50 @@ export class BoardColumnService {
     return boardColumn
   }
 
+  private resolveAutoFlags(title: string) {
+    const titleLower = (title || '').toLowerCase().trim()
+    const DONE_KW = ['done', 'hoàn thành', 'đã xong', 'closed', 'resolved', 'hoàn tất', 'deploy', 'released', 'finish']
+    const TODO_KW = ['todo', 'to do', 'to-do', 'cần làm', 'chờ làm', 'backlog', 'mới', 'open', 'new', 'chưa làm', 'ready']
+    const BLOCKED_KW = ['block', 'blocked', 'tắc', 'nghẽn', 'chờ api', 'tạm dừng', 'on hold', 'pause']
+    const CANCELLED_KW = ['cancel', 'cancelled', 'hủy', 'discard', 'rejected', 'bỏ']
+
+    if (CANCELLED_KW.some((kw) => titleLower.includes(kw))) {
+      return { isDone: false, isWip: false, isBlocked: false, isCancelled: true, color: '#ef4444' }
+    }
+    if (DONE_KW.some((kw) => titleLower.includes(kw))) {
+      return { isDone: true, isWip: false, isBlocked: false, isCancelled: false, color: '#10b981' }
+    }
+    if (BLOCKED_KW.some((kw) => titleLower.includes(kw))) {
+      return { isDone: false, isWip: false, isBlocked: true, isCancelled: false, color: '#f59e0b' }
+    }
+    if (TODO_KW.some((kw) => titleLower.includes(kw))) {
+      return { isDone: false, isWip: false, isBlocked: false, isCancelled: false, color: '#94a3b8' }
+    }
+    return {
+      isDone: false,
+      isWip: true,
+      isBlocked: false,
+      isCancelled: false,
+      color: titleLower.includes('review') || titleLower.includes('test') ? '#8b5cf6' : '#3b82f6'
+    }
+  }
+
   async create(body: CreateBoardColumnBodyType) {
+    const hasExplicitFlags =
+      body.isDone !== undefined ||
+      body.isWip !== undefined ||
+      body.isBlocked !== undefined ||
+      body.isCancelled !== undefined
+
+    if (!hasExplicitFlags) {
+      const autoFlags = this.resolveAutoFlags(body.title)
+      return await this.boardColumnRepo.create({
+        ...body,
+        ...autoFlags,
+        color: body.color || autoFlags.color
+      })
+    }
+
     return await this.boardColumnRepo.create(body)
   }
 
