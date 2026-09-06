@@ -111,7 +111,8 @@ async function bootstrap() {
           cleanPath === '/projects/owned' ||
           cleanPath === '/projects/joined' ||
           cleanPath.startsWith('/notifications') ||
-          cleanPath.startsWith('/reports')
+          cleanPath.startsWith('/reports') ||
+          cleanPath.startsWith('/ai')
         )
       }),
     [ProjectMemberRole.CO_OWNER]: (permissions: typeof updatedPermissionsInDb) =>
@@ -125,7 +126,8 @@ async function bootstrap() {
           cleanPath.startsWith('/board-columns') ||
           cleanPath.startsWith('/reports') ||
           cleanPath.startsWith('/notifications') ||
-          cleanPath.startsWith('/project-chats')
+          cleanPath.startsWith('/project-chats') ||
+          cleanPath.startsWith('/ai')
         )
       }),
     [ProjectMemberRole.OWNER]: (permissions: typeof updatedPermissionsInDb) =>
@@ -139,7 +141,8 @@ async function bootstrap() {
           cleanPath.startsWith('/board-columns') ||
           cleanPath.startsWith('/reports') ||
           cleanPath.startsWith('/notifications') ||
-          cleanPath.startsWith('/project-chats')
+          cleanPath.startsWith('/project-chats') ||
+          cleanPath.startsWith('/ai')
         )
       }),
     [ProjectMemberRole.MEMBER]: (permissions: typeof updatedPermissionsInDb) =>
@@ -152,7 +155,8 @@ async function bootstrap() {
           (cleanPath.startsWith('/tasks') && p.method !== 'DELETE') ||
           cleanPath.startsWith('/reports') ||
           cleanPath.startsWith('/notifications') ||
-          cleanPath.startsWith('/project-chats')
+          cleanPath.startsWith('/project-chats') ||
+          cleanPath.startsWith('/ai')
         )
       }),
     [ProjectMemberRole.VIEWER]: (permissions: typeof updatedPermissionsInDb) =>
@@ -167,7 +171,8 @@ async function bootstrap() {
             cleanPath.startsWith('/board-columns') ||
             cleanPath.startsWith('/reports') ||
             cleanPath.startsWith('/notifications') ||
-            cleanPath.startsWith('/project-chats'))
+            cleanPath.startsWith('/project-chats') ||
+            cleanPath.startsWith('/ai'))
         )
       })
   }
