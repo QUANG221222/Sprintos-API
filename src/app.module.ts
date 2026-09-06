@@ -21,6 +21,7 @@ import { ReportModule } from './routes/report/report.module'
 import { QueueModule } from './routes/queue/queue.module'
 import { NotificationModule } from './routes/notification/notification.module'
 import { ChatModule } from './routes/chat/chat.module'
+import { AiModule } from './routes/ai/ai.module'
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { ChatModule } from './routes/chat/chat.module'
     UserModule,
     ReportModule,
     NotificationModule,
-    ChatModule
+    ChatModule,
+    AiModule
   ],
   controllers: [AppController],
   providers: [
