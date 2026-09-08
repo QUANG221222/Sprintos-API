@@ -149,4 +149,75 @@ export class OpenRouterService {
       };
     }
   }
+
+  /**
+   * 4. Sinh Vector Embedding (1536 chiều bằng text-embedding-3-small)
+   */
+  async createEmbedding(text: string): Promise<number[]> {
+    try {
+      const cleanText = (text || '').replace(/\n+/g, ' ').trim().slice(0, 8000) || 'empty';
+      const response = await this.openai.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: cleanText,
+      });
+      return response.data[0].embedding;
+    } catch (err: any) {
+      this.logger.error('Lỗi khi sinh embedding:', err?.message || err);
+      throw err;
+    }
+  }
+
+  /**
+   * 4b. Sinh hàng loạt Vector Embeddings theo Batch (tối ưu hóa hiệu năng RAG sync)
+   */
+  async createEmbeddings(texts: string[]): Promise<number[][]> {
+    try {
+      if (!texts || texts.length === 0) return [];
+      const cleanTexts = texts.map(
+        (t) => (t || '').replace(/\n+/g, ' ').trim().slice(0, 8000) || 'empty'
+      );
+      const response = await this.openai.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: cleanTexts,
+      });
+      return response.data.map((item) => item.embedding);
+    } catch (err: any) {
+      this.logger.error('Lỗi khi sinh batch embeddings:', err?.message || err);
+      throw err;
+    }
+  }
+
+  /**
+   * 5. Chat với Function / Tool Calling (Agent Dispatcher)
+   */
+  async chatWithTools(
+    messages: OpenAI.Chat.ChatCompletionMessageParam[],
+    tools: OpenAI.Chat.ChatCompletionTool[],
+    systemInstruction?: string
+  ): Promise<{
+    message: OpenAI.Chat.ChatCompletionMessage;
+    toolCalls?: OpenAI.Chat.ChatCompletionMessageToolCall[];
+  }> {
+    const fullMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+    if (systemInstruction) {
+      fullMessages.push({ role: 'system', content: systemInstruction });
+    }
+    fullMessages.push(...messages);
+
+    const { result } = await this.executeWithFallback(async (model) => {
+      const response = await this.openai.chat.completions.create({
+        model,
+        messages: fullMessages,
+        tools: tools.length > 0 ? tools : undefined,
+        tool_choice: tools.length > 0 ? 'auto' : undefined,
+        temperature: 0.5,
+      });
+      return response.choices[0]?.message;
+    }, 'ChatWithTools');
+
+    return {
+      message: result,
+      toolCalls: result?.tool_calls,
+    };
+  }
 }

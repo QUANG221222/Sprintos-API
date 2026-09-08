@@ -20,12 +20,24 @@ import {
   CommitExcelImportResDTO,
   EnrichTaskBodyDTO,
   EnrichTaskResDTO,
-  ParseExcelResDTO
+  ParseExcelResDTO,
+  RagSearchBodyDTO,
+  AgentChatBodyDTO,
+  ScheduleDiagnosisBodyDTO,
+  SyncProjectEmbeddingsBodyDTO
 } from './ai.model'
+import { EmbeddingService } from './embedding/embedding.service'
+import { AgentService } from './agent/agent.service'
+import { ScheduleAdvisorService } from './schedule-advisor.service'
 
 @Controller('ai')
 export class AiController {
-  constructor(private readonly aiService: AiService) {}
+  constructor(
+    private readonly aiService: AiService,
+    private readonly embeddingService: EmbeddingService,
+    private readonly agentService: AgentService,
+    private readonly scheduleAdvisorService: ScheduleAdvisorService
+  ) {}
 
   /**
    * 1. Health check kết nối OpenRouter
@@ -52,7 +64,7 @@ export class AiController {
   }
 
   /**
-   * 2. Upload và Parse file Excel/CSV bằng AI
+   * 3. Upload và Parse file Excel/CSV bằng AI
    */
   @Post('excel/parse')
   @ZodSerializerDto(ParseExcelResDTO)
@@ -69,7 +81,7 @@ export class AiController {
   }
 
   /**
-   * 3. Lưu các tasks đã duyệt từ Preview vào Database
+   * 4. Lưu các tasks đã duyệt từ Preview vào Database
    */
   @Post('excel/commit')
   @ZodSerializerDto(CommitExcelImportResDTO)
@@ -81,11 +93,43 @@ export class AiController {
   }
 
   /**
-   * 4. Làm giàu nội dung task (User Story, Acceptance Criteria, Subtasks)
+   * 5. Làm giàu nội dung task (User Story, Acceptance Criteria, Subtasks)
    */
   @Post('task/enrich')
   @ZodSerializerDto(EnrichTaskResDTO)
   enrichTask(@Body() body: EnrichTaskBodyDTO) {
     return this.aiService.enrichTask(body)
+  }
+
+  /**
+   * 6. RAG: Tìm kiếm ngữ nghĩa (Cosine similarity trên pgvector)
+   */
+  @Post('rag/search')
+  semanticSearch(@Body() body: RagSearchBodyDTO) {
+    return this.embeddingService.semanticSearch(body.projectId, body.query, body.limit)
+  }
+
+  /**
+   * 7. RAG: Đồng bộ toàn bộ tasks của dự án vào pgvector
+   */
+  @Post('rag/sync')
+  syncProjectEmbeddings(@Body() body: SyncProjectEmbeddingsBodyDTO) {
+    return this.embeddingService.syncProjectTasks(body.projectId)
+  }
+
+  /**
+   * 8. AI Copilot Agent: Chat thông minh với Tool Calling & RAG
+   */
+  @Post('agent/chat')
+  agentChat(@Body() body: AgentChatBodyDTO) {
+    return this.agentService.chat(body.messages, body.projectId, body.sprintId)
+  }
+
+  /**
+   * 9. AI Schedule Risk & Delay Advisor: Chẩn đoán rủi ro tiến độ theo CPM + SPI
+   */
+  @Post('schedule-diagnosis')
+  diagnoseSchedule(@Body() body: ScheduleDiagnosisBodyDTO) {
+    return this.scheduleAdvisorService.diagnoseSprint(body.sprintId)
   }
 }
