@@ -104,6 +104,9 @@ export class TaskService {
       }
     }
 
+    // Đẩy job sinh vector embedding ngầm trong background
+    this.queueService.generateTaskEmbedding(newTask.id).catch(() => {})
+
     return newTask
   }
 
@@ -226,6 +229,9 @@ export class TaskService {
           }
         }
       }
+
+      // Đẩy job cập nhật vector embedding ngầm trong background
+      this.queueService.generateTaskEmbedding(updatedTask.id).catch(() => {})
 
       return updatedTask
     } catch (error) {

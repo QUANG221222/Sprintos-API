@@ -1,6 +1,6 @@
 import { Module, Global } from '@nestjs/common'
 import { BullModule } from '@nestjs/bullmq'
-import { MAIL_QUEUE, NOTIFICATION_QUEUE } from './queue.constant'
+import { MAIL_QUEUE, NOTIFICATION_QUEUE, AI_EMBEDDING_QUEUE } from './queue.constant'
 import { QueueService } from './queue.service'
 import { MailProcessor } from './mail.processor'
 import { NotificationProcessor } from './notification.processor'
@@ -23,6 +23,9 @@ import envConfig from '~/shared/config'
       },
       {
         name: NOTIFICATION_QUEUE
+      },
+      {
+        name: AI_EMBEDDING_QUEUE
       }
     )
   ],

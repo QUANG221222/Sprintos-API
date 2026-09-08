@@ -65,6 +65,34 @@ export const AiHealthResSchema = z.object({
   message: z.string()
 })
 
+// Input cho RAG Semantic Search
+export const RagSearchBodySchema = z.object({
+  projectId: z.string().min(1, 'projectId là bắt buộc'),
+  query: z.string().min(1, 'Nội dung tìm kiếm không được để trống'),
+  limit: z.number().int().min(1).max(20).optional().default(5)
+})
+
+// Input cho AI Agent Copilot
+export const AgentChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string()
+})
+
+export const AgentChatBodySchema = z.object({
+  messages: z.array(AgentChatMessageSchema).min(1, 'Cần ít nhất 1 tin nhắn'),
+  projectId: z.string().min(1, 'projectId là bắt buộc'),
+  sprintId: z.string().optional()
+})
+
+// Input cho AI Schedule Diagnosis
+export const ScheduleDiagnosisBodySchema = z.object({
+  sprintId: z.string().min(1, 'sprintId là bắt buộc')
+})
+
+export const SyncProjectEmbeddingsBodySchema = z.object({
+  projectId: z.string().min(1, 'projectId là bắt buộc')
+})
+
 // DTOs cho Controller
 export class ParseExcelResDTO extends createZodDto(ParseExcelResSchema) {}
 export class CommitExcelImportBodyDTO extends createZodDto(CommitExcelImportBodySchema) {}
@@ -72,3 +100,8 @@ export class CommitExcelImportResDTO extends createZodDto(CommitExcelImportResSc
 export class EnrichTaskBodyDTO extends createZodDto(EnrichTaskBodySchema) {}
 export class EnrichTaskResDTO extends createZodDto(EnrichTaskResSchema) {}
 export class AiHealthResDTO extends createZodDto(AiHealthResSchema) {}
+export class RagSearchBodyDTO extends createZodDto(RagSearchBodySchema) {}
+export class AgentChatBodyDTO extends createZodDto(AgentChatBodySchema) {}
+export class ScheduleDiagnosisBodyDTO extends createZodDto(ScheduleDiagnosisBodySchema) {}
+export class SyncProjectEmbeddingsBodyDTO extends createZodDto(SyncProjectEmbeddingsBodySchema) {}
+

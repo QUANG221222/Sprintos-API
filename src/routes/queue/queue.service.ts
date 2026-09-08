@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
-import { MAIL_QUEUE, NOTIFICATION_QUEUE, QUEUE_JOBS } from './queue.constant'
+import { MAIL_QUEUE, NOTIFICATION_QUEUE, AI_EMBEDDING_QUEUE, QUEUE_JOBS } from './queue.constant'
 import { NotificationType } from '~/generated/prisma/client'
 
 @Injectable()
@@ -10,7 +10,8 @@ export class QueueService {
 
   constructor(
     @InjectQueue(MAIL_QUEUE) private readonly mailQueue: Queue,
-    @InjectQueue(NOTIFICATION_QUEUE) private readonly notificationQueue: Queue
+    @InjectQueue(NOTIFICATION_QUEUE) private readonly notificationQueue: Queue,
+    @InjectQueue(AI_EMBEDDING_QUEUE) private readonly embeddingQueue: Queue
   ) {}
 
   /**
@@ -74,5 +75,21 @@ export class QueueService {
       attempts: 2,
       removeOnComplete: true
     })
+  }
+
+  /**
+   * Đẩy job sinh vector embedding cho Task vào hàng đợi
+   */
+  async generateTaskEmbedding(taskId: string) {
+    await this.embeddingQueue.add(
+      QUEUE_JOBS.GENERATE_TASK_EMBEDDING,
+      { taskId },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 3000 },
+        removeOnComplete: true,
+        jobId: `task-embed-${taskId}`
+      }
+    )
   }
 }
