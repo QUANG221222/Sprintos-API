@@ -13,7 +13,12 @@ export async function authenticateSocket(
     // 1. Trích xuất từ HttpOnly Cookie trong Handshake Headers
     const rawCookie = socket.handshake.headers.cookie
     if (rawCookie) {
-      const parsedCookies = cookie.parse(rawCookie)
+      const parsedCookies =
+        typeof (cookie as any).parseCookie === 'function'
+          ? (cookie as any).parseCookie(rawCookie)
+          : typeof (cookie as any).parse === 'function'
+            ? (cookie as any).parse(rawCookie)
+            : {}
       accessToken = parsedCookies.accessToken
     }
 
