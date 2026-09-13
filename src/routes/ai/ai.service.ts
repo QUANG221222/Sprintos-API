@@ -121,32 +121,32 @@ export class AiService {
       const rawTableText = JSON.stringify(sampledRows)
 
       const systemPrompt = `
-Bạn là chuyên gia Agile/Scrum Master trong nền tảng Sprintos.
-Nhiệm vụ của bạn là nhận diện các cột trong bảng dữ liệu Excel thô và trích xuất thành danh sách task chuẩn Agile.
-Các quy tắc:
-1. "title": Tiêu đề công việc ngắn gọn (Bắt buộc phải có).
-2. "description": Mô tả chi tiết nếu có trong bảng.
-3. "type": Bắt buộc là một trong các giá trị: "STORY", "TASK", "BUG", "TECH_DEBT", "EPIC". Mặc định "TASK".
-4. "priority": Bắt buộc là một trong các giá trị: "LOW", "MEDIUM", "HIGH", "CRITICAL". Mặc định "MEDIUM".
-5. "storyPoint": Số nguyên (1, 2, 3, 5, 8). Nếu bảng không có, hãy ước lượng dựa vào độ phức tạp của task.
-6. "duration": Số ngày làm việc vật lý (1, 2, 3...). Mặc định 1.
-7. "subtasks": Danh sách mảng các subtasks con nếu có thông tin (title, priority, storyPoint).
+          Bạn là chuyên gia Agile/Scrum Master trong nền tảng Sprintos.
+          Nhiệm vụ của bạn là nhận diện các cột trong bảng dữ liệu Excel thô và trích xuất thành danh sách task chuẩn Agile.
+          Các quy tắc:
+          1. "title": Tiêu đề công việc ngắn gọn (Bắt buộc phải có).
+          2. "description": Mô tả chi tiết nếu có trong bảng.
+          3. "type": Bắt buộc là một trong các giá trị: "STORY", "TASK", "BUG", "TECH_DEBT", "EPIC". Mặc định "TASK".
+          4. "priority": Bắt buộc là một trong các giá trị: "LOW", "MEDIUM", "HIGH", "CRITICAL". Mặc định "MEDIUM".
+          5. "storyPoint": Số nguyên (1, 2, 3, 5, 8). Nếu bảng không có, hãy ước lượng dựa vào độ phức tạp của task.
+          6. "duration": Số ngày làm việc vật lý (1, 2, 3...). Mặc định 1.
+          7. "subtasks": Danh sách mảng các subtasks con nếu có thông tin (title, priority, storyPoint).
 
-BẮT BUỘC TRẢ VỀ JSON theo format:
-{
-  "tasks": [
-    {
-      "tempId": "task-1",
-      "title": "Tên công việc",
-      "description": "Mô tả công việc",
-      "type": "TASK",
-      "priority": "MEDIUM",
-      "storyPoint": 2,
-      "duration": 1,
-      "subtasks": []
-    }
-  ]
-}`
+          BẮT BUỘC TRẢ VỀ JSON theo format:
+          {
+            "tasks": [
+              {
+                "tempId": "task-1",
+                "title": "Tên công việc",
+                "description": "Mô tả công việc",
+                "type": "TASK",
+                "priority": "MEDIUM",
+                "storyPoint": 2,
+                "duration": 1,
+                "subtasks": []
+              }
+            ]
+          }`
 
       const userPrompt = `Dưới đây là bảng dữ liệu thô từ file Excel:\n${rawTableText}\nHãy bóc tách và trả về JSON danh sách tasks:`
 

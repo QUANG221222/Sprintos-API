@@ -46,6 +46,9 @@ services:
     environment:
       # Ghi đè DATABASE_URL để kết nối tới database container (db:5432) thay vì localhost
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public
+      # Ghi đè Redis để kết nối tới redis container (redis:6379) thay vì localhost trong container
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       NODE_ENV: development
       NODE_OPTIONS: '--max-old-space-size=4096'
     volumes:

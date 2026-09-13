@@ -5,21 +5,32 @@ import OpenAI from 'openai';
 export class OpenRouterService {
   private readonly logger = new Logger(OpenRouterService.name);
   private openai: OpenAI;
+  private chatClient: OpenAI;
   private readonly fallbackModels: string[];
 
   constructor() {
     const apiKey = process.env.OPENROUTER_API_KEY;
     const baseURL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
-    const primaryModel = process.env.DEFAULT_AI_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
+    const primaryModel = process.env.DEFAULT_AI_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
 
-    this.fallbackModels = [
-      primaryModel,
-      'nvidia/nemotron-3.5-lightning:free',
-      'google/gemma-4-26b-a4b-it:free',
-      'minimax/minimax-m3:free',
-    ].filter((v, i, a) => a.indexOf(v) === i); // Unique models
+    const localBaseURL = process.env.LOCAL_AI_BASE_URL;
+    const localApiKey = process.env.LOCAL_AI_API_KEY || 'ollama';
 
-    if (!apiKey) {
+    if (localBaseURL) {
+      this.logger.log(`🚀 AI Chat & Tool Calling được định tuyến tới Local Server: ${localBaseURL}`);
+      this.fallbackModels = [primaryModel];
+    } else {
+      this.fallbackModels = [
+        primaryModel,
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'nvidia/nemotron-3-super-120b-a12b:free',
+        'nvidia/nemotron-3.5-lightning:free',
+        'google/gemma-4-26b-a4b-it:free',
+        'minimax/minimax-m3:free',
+      ].filter((v, i, a) => a.indexOf(v) === i); // Unique models
+    }
+
+    if (!apiKey && !localBaseURL) {
       this.logger.warn('⚠️ OPENROUTER_API_KEY chưa được cấu hình trong .env!');
     }
 
@@ -31,6 +42,17 @@ export class OpenRouterService {
         'X-Title': 'Sprintos Agile PM',
       },
     });
+
+    this.chatClient = localBaseURL
+      ? new OpenAI({
+          apiKey: localApiKey,
+          baseURL: localBaseURL,
+          defaultHeaders: {
+            'HTTP-Referer': 'http://localhost:3000',
+            'X-Title': 'Sprintos Agile PM',
+          },
+        })
+      : this.openai;
   }
 
   /**
@@ -70,7 +92,7 @@ export class OpenRouterService {
     messages.push({ role: 'user', content: prompt });
 
     const { result } = await this.executeWithFallback(async (model) => {
-      const response = await this.openai.chat.completions.create({
+      const response = await this.chatClient.chat.completions.create({
         model,
         messages,
         temperature: 0.7,
@@ -94,7 +116,7 @@ export class OpenRouterService {
     ];
 
     const { result } = await this.executeWithFallback(async (model) => {
-      const response = await this.openai.chat.completions.create({
+      const response = await this.chatClient.chat.completions.create({
         model,
         messages,
         response_format: { type: 'json_object' },
@@ -128,7 +150,7 @@ export class OpenRouterService {
   async healthCheck(): Promise<{ ok: boolean; model: string; message: string }> {
     try {
       const { result, modelUsed } = await this.executeWithFallback(async (model) => {
-        const res = await this.openai.chat.completions.create({
+        const res = await this.chatClient.chat.completions.create({
           model,
           messages: [{ role: 'user', content: 'Say "OK" and nothing else.' }],
           max_tokens: 10,
@@ -205,7 +227,7 @@ export class OpenRouterService {
     fullMessages.push(...messages);
 
     const { result } = await this.executeWithFallback(async (model) => {
-      const response = await this.openai.chat.completions.create({
+      const response = await this.chatClient.chat.completions.create({
         model,
         messages: fullMessages,
         tools: tools.length > 0 ? tools : undefined,

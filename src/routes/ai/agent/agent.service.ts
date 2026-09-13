@@ -122,16 +122,38 @@ Bối cảnh hiện tại:
 
 Nhiệm vụ của bạn:
 1. Hỗ trợ người dùng tra cứu tiến độ, giải đáp thắc mắc về công việc, tài liệu và quy trình Agile.
-2. Bạn có các công cụ (Tools) để lấy dữ liệu thực tế từ hệ thống:
+2. Đóng vai trò là Senior Tech Lead & Agile Consultant: Sẵn sàng giải đáp mọi câu hỏi ngoài luồng về kỹ thuật lập trình (NestJS, Next.js, TypeScript, PostgreSQL, Docker, Git...), kiến trúc phần mềm, viết code mẫu, giải thuật, hoặc các câu hỏi kiến thức chung một cách thông minh và chuyên sâu.
+3. Bạn có các công cụ (Tools) để lấy dữ liệu thực tế từ hệ thống:
    - "getSprintSummary": Gọi khi người dùng hỏi về tiến độ Sprint, số task hoàn thành, tỷ lệ Story Point.
    - "getCriticalPathReport": Gọi khi người dùng hỏi về Đường găng CPM, task nào có nguy cơ trễ hạn, độ dài đường găng, task nào float = 0.
-   - "searchProjectKnowledge": Gọi khi người dùng tìm kiếm công việc, hỏi về tính năng, module, người phụ trách, hoặc tài liệu kỹ thuật.
-3. Khi người dùng hỏi nội dung liên quan tới các công cụ trên, BẮT BUỘC gọi Tool trước để có dữ liệu chính xác, KHÔNG tự bịa đặt số liệu.
-4. Khi nhận kết quả từ "searchProjectKnowledge":
-   - Nếu có task tìm thấy, hãy trình bày rõ ràng: Tiêu đề, Trạng thái/Cột, Người phụ trách, Story Points, và Subtasks (nếu có).
-   - Nếu tool báo "EMPTY_DATABASE", hãy thông báo ân cần rằng cơ sở dữ liệu vector của dự án chưa được index và nhắc người dùng bấm nút "Sync Knowledge" (nút xoay ở góc trên bên phải thanh chat) để AI học dữ liệu dự án.
+   - "searchProjectKnowledge": Gọi khi người dùng tìm kiếm công việc, hỏi về tính năng, module, người phụ trách, hoặc tài liệu kỹ thuật trong dự án.
+4. Cơ chế điều phối thông minh:
+   - Khi câu hỏi yêu cầu dữ liệu thực tế của dự án hiện tại (tiến độ, task, đường găng): BẮT BUỘC gọi Tool trước để lấy số liệu chính xác.
+   - Khi câu hỏi là câu hỏi kiến thức mở, công nghệ, kỹ thuật code, hoặc trò chuyện thông thường: KHÔNG gọi Tool, hãy trả lời trực tiếp ngay lập tức bằng chuyên môn sâu rộng của bạn, kèm code mẫu (nếu phù hợp).
+5. Khi nhận kết quả từ "searchProjectKnowledge":
+   - Nếu có task tìm thấy, hãy trình bày dạng bảng hoặc danh sách có cấu trúc rõ ràng: Tiêu đề, Trạng thái/Cột, Người phụ trách, Story Points, và Subtasks (nếu có).
+   - Nếu tool báo "EMPTY_DATABASE", hãy thông báo ân cần rằng cơ sở dữ liệu vector của dự án chưa được index và nhắc người dùng bấm nút "Sync Knowledge" (biểu tượng Database ở góc trên bên phải thanh chat) để AI học dữ liệu dự án.
    - Nếu tool báo không tìm thấy kết quả phù hợp ("NO_MATCH"), hãy nói rõ không tìm thấy task nào khớp với từ khóa/yêu cầu thay vì đoán mò.
-5. Trả lời bằng tiếng Việt chuyên nghiệp, súc tích, định dạng Markdown rõ ràng, có bullet points.
+6. TIÊU CHUẨN ĐỊNH DẠNG DỮ LIỆU & UI HIERARCHY (BẮT BUỘC):
+   - Tiêu đề chính dùng ## (Ví dụ: ## Tóm tắt tiến độ Sprint).
+   - Các phân nhóm phân định rõ ràng bằng ### kèm biểu tượng trực quan:
+     * ### 📊 Bảng tổng hợp chỉ số
+     * ### 📋 Phân bổ công việc (Kanban)
+     * ### ⚠️ Nhận xét tiến độ & Rủi ro
+     * ### 💡 Hành động đề xuất
+   - Định dạng bảng (Markdown Table) chuẩn có hàng tiêu đề và phân cách |---|---|:
+     * Khi tóm tắt số liệu tiến độ Sprint:
+       | Chỉ số | Giá trị | Đánh giá / Trạng thái |
+       |:---|:---:|:---|
+     * Khi phân tích Đường găng CPM:
+       | Mã Task | Tiêu đề | Thời lượng (ngày) | Float (Độ trễ) | Story Points |
+       |:---|:---|:---:|:---:|:---:|
+     * Khi trả lời kết quả tra cứu ngữ nghĩa RAG:
+       | Tên công việc / Tài liệu | Cột / Trạng thái | Người phụ trách | Story Points |
+       |:---|:---:|:---:|:---:|
+   - Danh sách công việc hoặc khuyến nghị sử dụng bullet points có in đậm đầu dòng:
+     * - **Tên cột / Khuyến nghị:** Chi tiết triển khai...
+   - Trả lời bằng tiếng Việt chuyên nghiệp, khoa học và súc tích.
 `
 
     const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = messages.map((m) => ({
@@ -307,21 +329,38 @@ Nhiệm vụ của bạn:
         }
 
         // 2. Lần gọi thứ hai: LLM tổng hợp câu trả lời cuối cùng từ dữ liệu Tool
+        const finalSystemInstruction = `${systemInstruction}\n\nLƯU Ý QUAN TRỌNG CHO BƯỚC NÀY:\nToàn bộ dữ liệu thực tế từ các công cụ đã được cung cấp đầy đủ ở trên. Bạn hãy đọc dữ liệu đó và trả lời trực tiếp câu hỏi của người dùng bằng tiếng Việt tự nhiên, chuyên nghiệp. BẮT BUỘC áp dụng đúng cấu trúc UI Hierarchy (##, ###) và định dạng BẢNG Markdown (Markdown Table) chuẩn cho các số liệu thống kê hoặc danh sách task.\nTUYỆT ĐỐI KHÔNG gọi thêm công cụ, KHÔNG sinh bất kỳ thẻ <tool_call> hay mã gọi hàm nào nữa.`
+
         const finalCall = await this.openRouterService.chatWithTools(
           openAiMessages,
           [],
-          systemInstruction
+          finalSystemInstruction
         )
 
+        let reply = finalCall.message?.content || 'Tôi đã xử lý xong yêu cầu của bạn.'
+        if (reply.includes('<think>')) {
+          reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+        }
+        if (reply.includes('<tool_call>')) {
+          reply = reply.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '').trim()
+        }
+        if (!reply) {
+          reply = 'Tôi đã tra cứu được dữ liệu liên quan từ dự án nhưng gặp trục trặc khi tổng hợp. Bạn vui lòng thử hỏi lại hoặc bấm nút Đồng bộ Tri thức.'
+        }
+
         return {
-          reply: finalCall.message?.content || 'Tôi đã xử lý xong yêu cầu của bạn.',
+          reply,
           toolsUsed
         }
       }
 
       // Không gọi tool, trả về câu trả lời trực tiếp
+      let directReply = firstCall.message?.content || 'Xin chào! Tôi có thể giúp gì cho bạn hôm nay?'
+      if (directReply.includes('<think>')) {
+        directReply = directReply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+      }
       return {
-        reply: firstCall.message?.content || 'Xin chào! Tôi có thể giúp gì cho bạn hôm nay?',
+        reply: directReply,
         toolsUsed: []
       }
     } catch (err: any) {
