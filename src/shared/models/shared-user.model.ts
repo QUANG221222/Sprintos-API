@@ -5,7 +5,7 @@ export const UserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   password: z.string().min(6).max(100),
-  displayName: z.string().min(2).max(100),
+  displayName: z.string().max(100),
   roleId: z.string(),
   totpSecret: z.string().nullable(),
   status: z.nativeEnum(UserStatus),
