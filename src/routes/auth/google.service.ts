@@ -90,7 +90,7 @@ export class GoogleService {
         const hashedPassword = await this.hashingService.hash(randomPassword)
         user = await this.authRepo.createUserIncludeRole({
           email: data.email,
-          displayName: data.name ?? '',
+          displayName: data.name || data.email.split('@')[0] || 'User',
           password: hashedPassword,
           roleId: clientRoleId,
           phoneNumber: '',

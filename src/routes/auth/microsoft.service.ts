@@ -116,7 +116,7 @@ export class MicrosoftService {
 
         user = await this.authRepo.createUserIncludeRole({
           email: email,
-          displayName: profileData.displayName ?? '',
+          displayName: profileData.displayName || email.split('@')[0] || 'User',
           password: hashedPassword,
           roleId: clientRoleId,
           phoneNumber: '',
