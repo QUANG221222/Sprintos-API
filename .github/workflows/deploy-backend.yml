@@ -64,7 +64,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            cd ${{ secrets.VPS_PROJECT_PATH || '/home/deploy/apps/spritos' }}/deploy
+            cd ${{ secrets.VPS_PROJECT_PATH || '/home/deploy/apps/sprintos-app/Sprintos-Deployment' }}
             docker compose -f docker-compose.prod.yml --env-file .env.production pull backend
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d backend
             docker image prune -f
