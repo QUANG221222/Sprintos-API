@@ -1,58 +1,66 @@
-import { Injectable, Logger } from '@nestjs/common';
-import OpenAI from 'openai';
+import { Injectable, Logger } from '@nestjs/common'
+import OpenAI from 'openai'
+import envConfig from '../config'
 
 @Injectable()
 export class OpenRouterService {
-  private readonly logger = new Logger(OpenRouterService.name);
-  private openai: OpenAI;
-  private chatClient: OpenAI;
-  private readonly fallbackModels: string[];
+  private readonly logger = new Logger(OpenRouterService.name)
+  private openai: OpenAI
+  private chatClient: OpenAI
+  private readonly fallbackModels: string[]
+  private apiKey: string
+  private baseURL: string
+  private primaryModel: string
+  private localBaseURL: string
+  private localApiKey: string
 
   constructor() {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    const baseURL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
-    const primaryModel = process.env.DEFAULT_AI_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
+    this.apiKey = envConfig.OPENROUTER_API_KEY
+    this.baseURL = envConfig.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'
+    this.primaryModel = envConfig.DEFAULT_AI_MODEL || 'meta-llama/llama-3.3-70b-instruct:free'
 
-    const localBaseURL = process.env.LOCAL_AI_BASE_URL;
-    const localApiKey = process.env.LOCAL_AI_API_KEY || 'ollama';
+    this.localBaseURL = envConfig.LOCAL_AI_BASE_URL
+    this.localApiKey = envConfig.LOCAL_AI_API_KEY || 'ollama'
 
-    if (localBaseURL) {
-      this.logger.log(`🚀 AI Chat & Tool Calling được định tuyến tới Local Server: ${localBaseURL}`);
-      this.fallbackModels = [primaryModel];
+    if (this.localBaseURL) {
+      this.logger.log(`AI Chat & Tool Calling is being routed to Local Server: ${this.localBaseURL}`)
+      this.fallbackModels = [this.primaryModel]
     } else {
       this.fallbackModels = [
-        primaryModel,
+        this.primaryModel,
         'meta-llama/llama-3.3-70b-instruct:free',
         'nvidia/nemotron-3-super-120b-a12b:free',
         'nvidia/nemotron-3.5-lightning:free',
         'google/gemma-4-26b-a4b-it:free',
-        'minimax/minimax-m3:free',
-      ].filter((v, i, a) => a.indexOf(v) === i); // Unique models
+        'minimax/minimax-m3:free'
+      ].filter((v, i, a) => a.indexOf(v) === i) // Unique models
     }
 
-    if (!apiKey && !localBaseURL) {
-      this.logger.warn('⚠️ OPENROUTER_API_KEY chưa được cấu hình trong .env!');
+    const defaultHeaders: Record<string, string> = {
+      'HTTP-Referer': 'http://localhost:3000',
+      'X-Title': 'Sprintos Agile PM'
+    }
+
+    if (envConfig.CF_ACCESS_CLIENT_ID) {
+      defaultHeaders['CF-Access-Client-Id'] = envConfig.CF_ACCESS_CLIENT_ID
+    }
+    if (envConfig.CF_ACCESS_CLIENT_SECRET) {
+      defaultHeaders['CF-Access-Client-Secret'] = envConfig.CF_ACCESS_CLIENT_SECRET
     }
 
     this.openai = new OpenAI({
-      apiKey: apiKey || '',
-      baseURL: baseURL,
-      defaultHeaders: {
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'Sprintos Agile PM',
-      },
-    });
+      apiKey: this.apiKey,
+      baseURL: this.baseURL,
+      defaultHeaders
+    })
 
-    this.chatClient = localBaseURL
+    this.chatClient = this.localBaseURL
       ? new OpenAI({
-          apiKey: localApiKey,
-          baseURL: localBaseURL,
-          defaultHeaders: {
-            'HTTP-Referer': 'http://localhost:3000',
-            'X-Title': 'Sprintos Agile PM',
-          },
+          apiKey: this.localApiKey,
+          baseURL: this.localBaseURL,
+          defaultHeaders
         })
-      : this.openai;
+      : this.openai
   }
 
   /**
@@ -62,45 +70,43 @@ export class OpenRouterService {
     operation: (model: string) => Promise<T>,
     operationName = 'AI Completion'
   ): Promise<{ result: T; modelUsed: string }> {
-    let lastError: any = null;
+    let lastError: any = null
 
     for (const model of this.fallbackModels) {
       try {
-        this.logger.log(`🤖 Đang thực hiện ${operationName} với model: ${model}`);
-        const result = await operation(model);
-        return { result, modelUsed: model };
+        this.logger.log(`🤖 Processing ${operationName} with model: ${model}`)
+        const result = await operation(model)
+        return { result, modelUsed: model }
       } catch (err: any) {
-        lastError = err;
-        this.logger.warn(
-          `⚠️ Model ${model} gặp lỗi: ${err?.message || err}. Đang thử model tiếp theo...`
-        );
+        lastError = err
+        this.logger.warn(`⚠️ Model ${model} failed: ${err?.message || err}. Trying next model...`)
       }
     }
 
-    this.logger.error(`❌ Toàn bộ các models trong fallback list đều thất bại:`, lastError);
-    throw lastError;
+    this.logger.error(`❌ All models failed:`, lastError)
+    throw lastError
   }
 
   /**
    * 1. Chat / Text Generation
    */
   async chat(prompt: string, systemInstruction?: string): Promise<string> {
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = []
     if (systemInstruction) {
-      messages.push({ role: 'system', content: systemInstruction });
+      messages.push({ role: 'system', content: systemInstruction })
     }
-    messages.push({ role: 'user', content: prompt });
+    messages.push({ role: 'user', content: prompt })
 
     const { result } = await this.executeWithFallback(async (model) => {
       const response = await this.chatClient.chat.completions.create({
         model,
         messages,
-        temperature: 0.7,
-      });
-      return response.choices[0]?.message?.content || '';
-    }, 'Chat');
+        temperature: 0.7
+      })
+      return response.choices[0]?.message?.content || ''
+    }, 'Chat')
 
-    return result;
+    return result
   }
 
   /**
@@ -110,37 +116,40 @@ export class OpenRouterService {
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       {
         role: 'system',
-        content: `${systemInstruction}\nBẮT BUỘC trả về định dạng JSON thuần túy (valid JSON), tuyệt đối không bao bọc bằng markdown code block \`\`\`json.`,
+        content: `${systemInstruction}\nRequired to return pure JSON format (valid JSON), absolutely do not wrap it in a markdown code block \`\`\`json.`
       },
-      { role: 'user', content: prompt },
-    ];
+      { role: 'user', content: prompt }
+    ]
 
     const { result } = await this.executeWithFallback(async (model) => {
-      const response = await this.chatClient.chat.completions.create({
+      const response = await this.chatClient?.chat.completions.create({
         model,
         messages,
         response_format: { type: 'json_object' },
-        temperature: 0.2,
-      });
-      return response.choices[0]?.message?.content || '{}';
-    }, 'GenerateJson');
+        temperature: 0.2
+      })
+      return response?.choices[0]?.message?.content || '{}'
+    }, 'GenerateJson')
 
     // Làm sạch chuỗi trước khi JSON.parse
-    let clean = result.trim();
+    let clean = result.trim()
     if (clean.startsWith('```')) {
-      clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      clean = clean
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim()
     }
-    const firstBrace = clean.indexOf('{');
-    const lastBrace = clean.lastIndexOf('}');
+    const firstBrace = clean.indexOf('{')
+    const lastBrace = clean.lastIndexOf('}')
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      clean = clean.substring(firstBrace, lastBrace + 1);
+      clean = clean.substring(firstBrace, lastBrace + 1)
     }
 
     try {
-      return JSON.parse(clean) as T;
+      return JSON.parse(clean) as T
     } catch (parseErr) {
-      this.logger.error('Lỗi khi JSON.parse nội dung từ AI:', clean);
-      throw parseErr;
+      this.logger.error('Lỗi khi JSON.parse nội dung từ AI:', clean)
+      throw parseErr
     }
   }
 
@@ -153,22 +162,22 @@ export class OpenRouterService {
         const res = await this.chatClient.chat.completions.create({
           model,
           messages: [{ role: 'user', content: 'Say "OK" and nothing else.' }],
-          max_tokens: 10,
-        });
-        return res.choices[0]?.message?.content?.trim() || 'No response';
-      }, 'HealthCheck');
+          max_tokens: 10
+        })
+        return res.choices[0]?.message?.content?.trim() || 'No response'
+      }, 'HealthCheck')
 
       return {
         ok: true,
         model: modelUsed,
-        message: result,
-      };
+        message: result
+      }
     } catch (err: any) {
       return {
         ok: false,
         model: this.fallbackModels[0],
-        message: err?.message || 'Connection failed',
-      };
+        message: err?.message || 'Connection failed'
+      }
     }
   }
 
@@ -177,15 +186,15 @@ export class OpenRouterService {
    */
   async createEmbedding(text: string): Promise<number[]> {
     try {
-      const cleanText = (text || '').replace(/\n+/g, ' ').trim().slice(0, 8000) || 'empty';
+      const cleanText = (text || '').replace(/\n+/g, ' ').trim().slice(0, 8000) || 'empty'
       const response = await this.openai.embeddings.create({
         model: 'text-embedding-3-small',
-        input: cleanText,
-      });
-      return response.data[0].embedding;
+        input: cleanText
+      })
+      return response.data[0].embedding
     } catch (err: any) {
-      this.logger.error('Lỗi khi sinh embedding:', err?.message || err);
-      throw err;
+      this.logger.error('Lỗi khi sinh embedding:', err?.message || err)
+      throw err
     }
   }
 
@@ -194,18 +203,16 @@ export class OpenRouterService {
    */
   async createEmbeddings(texts: string[]): Promise<number[][]> {
     try {
-      if (!texts || texts.length === 0) return [];
-      const cleanTexts = texts.map(
-        (t) => (t || '').replace(/\n+/g, ' ').trim().slice(0, 8000) || 'empty'
-      );
+      if (!texts || texts.length === 0) return []
+      const cleanTexts = texts.map((t) => (t || '').replace(/\n+/g, ' ').trim().slice(0, 8000) || 'empty')
       const response = await this.openai.embeddings.create({
         model: 'text-embedding-3-small',
-        input: cleanTexts,
-      });
-      return response.data.map((item) => item.embedding);
+        input: cleanTexts
+      })
+      return response.data.map((item) => item.embedding)
     } catch (err: any) {
-      this.logger.error('Lỗi khi sinh batch embeddings:', err?.message || err);
-      throw err;
+      this.logger.error('Lỗi khi sinh batch embeddings:', err?.message || err)
+      throw err
     }
   }
 
@@ -217,14 +224,14 @@ export class OpenRouterService {
     tools: OpenAI.Chat.ChatCompletionTool[],
     systemInstruction?: string
   ): Promise<{
-    message: OpenAI.Chat.ChatCompletionMessage;
-    toolCalls?: OpenAI.Chat.ChatCompletionMessageToolCall[];
+    message: OpenAI.Chat.ChatCompletionMessage
+    toolCalls?: OpenAI.Chat.ChatCompletionMessageToolCall[]
   }> {
-    const fullMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+    const fullMessages: OpenAI.Chat.ChatCompletionMessageParam[] = []
     if (systemInstruction) {
-      fullMessages.push({ role: 'system', content: systemInstruction });
+      fullMessages.push({ role: 'system', content: systemInstruction })
     }
-    fullMessages.push(...messages);
+    fullMessages.push(...messages)
 
     const { result } = await this.executeWithFallback(async (model) => {
       const response = await this.chatClient.chat.completions.create({
@@ -232,14 +239,14 @@ export class OpenRouterService {
         messages: fullMessages,
         tools: tools.length > 0 ? tools : undefined,
         tool_choice: tools.length > 0 ? 'auto' : undefined,
-        temperature: 0.5,
-      });
-      return response.choices[0]?.message;
-    }, 'ChatWithTools');
+        temperature: 0.5
+      })
+      return response.choices[0]?.message
+    }, 'ChatWithTools')
 
     return {
       message: result,
-      toolCalls: result?.tool_calls,
-    };
+      toolCalls: result?.tool_calls
+    }
   }
 }
