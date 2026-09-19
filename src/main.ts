@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import envConfig from './shared/config'
 import cookieParser from 'cookie-parser'
+import { json, urlencoded } from 'express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { cleanupOpenApiDoc } from 'nestjs-zod'
 
@@ -26,6 +27,10 @@ async function bootstrap() {
 
   app.set('trust proxy', 1)
   app.setGlobalPrefix('api')
+
+  // Support large Base64 image payloads for AI Multimodal Vision (25MB limit)
+  app.use(json({ limit: '25mb' }))
+  app.use(urlencoded({ limit: '25mb', extended: true }))
 
   app.enableCors({
     origin: [envConfig.WEBSITE_DOMAIN_PRODUCTION, envConfig.WEBSITE_DOMAIN_DEVELOPMENT],

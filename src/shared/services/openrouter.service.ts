@@ -249,4 +249,184 @@ export class OpenRouterService {
       toolCalls: result?.tool_calls
     }
   }
+
+  /**
+   * 6. Chat Stream Token-by-Token (Server-Sent Events)
+   */
+  async *chatStream(
+    messages: OpenAI.Chat.ChatCompletionMessageParam[],
+    systemInstruction?: string,
+    signal?: AbortSignal
+  ): AsyncIterable<{ content?: string; reasoning?: string }> {
+    const fullMessages: OpenAI.Chat.ChatCompletionMessageParam[] = []
+    if (systemInstruction) {
+      fullMessages.push({ role: 'system', content: systemInstruction })
+    }
+    fullMessages.push(...messages)
+
+    let streamStarted = false
+
+    for (const model of this.fallbackModels) {
+      if (signal?.aborted) return
+      try {
+        this.logger.log(`🤖 Đang stream với model: ${model}`)
+        const stream = await this.chatClient.chat.completions.create(
+          {
+            model,
+            messages: fullMessages,
+            stream: true,
+            temperature: 0.7
+          },
+          { signal }
+        )
+
+        streamStarted = true
+
+        for await (const chunk of stream) {
+          if (signal?.aborted) return
+          const delta = chunk.choices[0]?.delta
+          const content = delta?.content || ''
+          const reasoning =
+            (delta as any)?.reasoning || (delta as any)?.reasoning_content || ''
+
+          if (content || reasoning) {
+            yield { content, reasoning }
+          }
+        }
+        return
+      } catch (err: any) {
+        if (signal?.aborted || err?.name === 'AbortError' || err?.message?.includes('aborted')) {
+          this.logger.log(`🛑 Client đã ngắt kết nối stream (${model}).`)
+          return
+        }
+        if (streamStarted) {
+          this.logger.error(`❌ Stream bị đứt gãy giữa chừng từ model ${model}:`, err)
+          throw err
+        }
+        this.logger.warn(
+          `⚠️ Model ${model} không thể khởi tạo stream: ${err?.message || err}. Đang thử model tiếp theo...`
+        )
+      }
+    }
+
+    if (!signal?.aborted) {
+      throw new Error('Toàn bộ models stream đều thất bại.')
+    }
+  }
+
+  /**
+   * 7. Chat Stream kèm Tool Calling (Single-pass Streaming with Function Inspection)
+   */
+  async *chatStreamWithTools(
+    messages: OpenAI.Chat.ChatCompletionMessageParam[],
+    tools: OpenAI.Chat.ChatCompletionTool[] = [],
+    systemInstruction?: string,
+    signal?: AbortSignal
+  ): AsyncIterable<{
+    content?: string
+    reasoning?: string
+    toolCalls?: OpenAI.Chat.ChatCompletionMessageToolCall[]
+    rawMessage?: OpenAI.Chat.ChatCompletionMessage
+  }> {
+    const fullMessages: OpenAI.Chat.ChatCompletionMessageParam[] = []
+    if (systemInstruction) {
+      fullMessages.push({ role: 'system', content: systemInstruction })
+    }
+    fullMessages.push(...messages)
+
+    let streamStarted = false
+
+    for (const model of this.fallbackModels) {
+      if (signal?.aborted) return
+      try {
+        this.logger.log(`🤖 Đang stream with tools bằng model: ${model}`)
+        const stream = await this.chatClient.chat.completions.create(
+          {
+            model,
+            messages: fullMessages,
+            tools: tools.length > 0 ? tools : undefined,
+            tool_choice: tools.length > 0 ? 'auto' : undefined,
+            stream: true,
+            temperature: 0.5
+          },
+          { signal }
+        )
+
+        streamStarted = true
+
+        const accumulatedTools: Record<
+          number,
+          { id: string; type: 'function'; function: { name: string; arguments: string } }
+        > = {}
+        let accumulatedContent = ''
+
+        for await (const chunk of stream) {
+          if (signal?.aborted) return
+          const delta = chunk.choices[0]?.delta
+          if (!delta) continue
+
+          const content = delta.content || ''
+          const reasoning = (delta as any)?.reasoning || (delta as any)?.reasoning_content || ''
+
+          if (content) {
+            accumulatedContent += content
+          }
+
+          if (delta.tool_calls && Array.isArray(delta.tool_calls)) {
+            for (const tc of delta.tool_calls) {
+              const idx = tc.index ?? 0
+              if (!accumulatedTools[idx]) {
+                accumulatedTools[idx] = {
+                  id: tc.id || `call_${Date.now()}_${idx}`,
+                  type: 'function',
+                  function: {
+                    name: tc.function?.name || '',
+                    arguments: tc.function?.arguments || ''
+                  }
+                }
+              } else {
+                if (tc.id) accumulatedTools[idx].id = tc.id
+                if (tc.function?.name) accumulatedTools[idx].function.name += tc.function.name
+                if (tc.function?.arguments) accumulatedTools[idx].function.arguments += tc.function.arguments
+              }
+            }
+          }
+
+          if (content || reasoning) {
+            yield { content, reasoning }
+          }
+        }
+
+        const finalToolCalls = Object.values(accumulatedTools)
+        const rawMessage: OpenAI.Chat.ChatCompletionMessage = {
+          role: 'assistant',
+          content: accumulatedContent || null,
+          tool_calls: finalToolCalls.length > 0 ? finalToolCalls : undefined
+        } as any
+
+        if (finalToolCalls.length > 0) {
+          yield { toolCalls: finalToolCalls, rawMessage }
+        }
+
+        return
+      } catch (err: any) {
+        if (signal?.aborted || err?.name === 'AbortError' || err?.message?.includes('aborted')) {
+          this.logger.log(`🛑 Client đã ngắt kết nối stream with tools (${model}).`)
+          return
+        }
+        if (streamStarted) {
+          this.logger.error(`❌ Stream with tools bị đứt gãy giữa chừng từ model ${model}:`, err)
+          throw err
+        }
+        this.logger.warn(
+          `⚠️ Model ${model} không thể khởi tạo stream with tools: ${err?.message || err}. Đang thử model tiếp theo...`
+        )
+      }
+    }
+
+    if (!signal?.aborted) {
+      throw new Error('Toàn bộ models stream with tools đều thất bại.')
+    }
+  }
 }
+

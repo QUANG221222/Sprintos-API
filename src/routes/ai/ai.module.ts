@@ -6,6 +6,11 @@ import { EmbeddingProcessor } from './embedding/embedding.processor'
 import { AgentService } from './agent/agent.service'
 import { ScheduleAdvisorService } from './schedule-advisor.service'
 import { ReportModule } from '../report/report.module'
+import { SprintSummaryTool } from './agent/tools/sprint/sprint-summary.tool'
+import { CpmReportTool } from './agent/tools/cpm/cpm-report.tool'
+import { RagKnowledgeTool } from './agent/tools/knowledge/rag-knowledge.tool'
+import { ToolRegistry } from './agent/tools/tool.registry'
+import { ContextBuilder } from './agent/context/context.builder'
 
 @Module({
   imports: [ReportModule],
@@ -14,14 +19,20 @@ import { ReportModule } from '../report/report.module'
     AiService,
     EmbeddingService,
     EmbeddingProcessor,
-    AgentService,
-    ScheduleAdvisorService
+    ScheduleAdvisorService,
+    SprintSummaryTool,
+    CpmReportTool,
+    RagKnowledgeTool,
+    ToolRegistry,
+    ContextBuilder,
+    AgentService
   ],
   exports: [
     AiService,
     EmbeddingService,
     AgentService,
-    ScheduleAdvisorService
+    ScheduleAdvisorService,
+    ToolRegistry
   ]
 })
 export class AiModule {}

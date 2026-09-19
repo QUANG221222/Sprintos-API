@@ -6,9 +6,10 @@ import {
   UploadedFile,
   UseInterceptors,
   BadRequestException,
-  Res
+  Res,
+  Req
 } from '@nestjs/common'
-import { Response } from 'express'
+import { Response, Request } from 'express'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { ActiveUser } from '~/shared/decorators/active-user.decorator'
@@ -89,7 +90,7 @@ export class AiController {
     @Body() body: CommitExcelImportBodyDTO,
     @ActiveUser('userId') userId: string
   ) {
-    return this.aiService.commitExcelImport(body, userId)
+    return this.aiService.commitExcelImport(body, userId)   
   }
 
   /**
@@ -124,6 +125,51 @@ export class AiController {
   agentChat(@Body() body: AgentChatBodyDTO) {
     return this.agentService.chat(body.messages, body.projectId, body.sprintId)
   }
+
+  /**
+   * 8b. AI Copilot Agent: Chat Streaming qua Server-Sent Events (SSE)
+   */
+  @Post('agent/chat/stream')
+  async agentChatStream(
+    @Body() body: AgentChatBodyDTO,
+    @Res() res: Response,
+    @Req() req: Request
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
+    res.flushHeaders()
+
+    const abortController = new AbortController()
+
+    req.on('close', () => {
+      abortController.abort()
+    })
+
+    const sendEvent = (event: any) => {
+      if (res.writableEnded || abortController.signal.aborted) return
+      res.write(`event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`)
+      if (typeof (res as any).flush === 'function') {
+        ;(res as any).flush()
+      }
+    }
+
+    try {
+      await this.agentService.chatStream(
+        body.messages,
+        body.projectId,
+        body.sprintId,
+        sendEvent,
+        abortController.signal
+      )
+    } finally {
+      if (!res.writableEnded) {
+        res.end()
+      }
+    }
+  }
+
 
   /**
    * 9. AI Schedule Risk & Delay Advisor: Chẩn đoán rủi ro tiến độ theo CPM + SPI

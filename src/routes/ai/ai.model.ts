@@ -75,7 +75,8 @@ export const RagSearchBodySchema = z.object({
 // Input cho AI Agent Copilot
 export const AgentChatMessageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
-  content: z.string()
+  content: z.string(),
+  images: z.array(z.string()).optional()
 })
 
 export const AgentChatBodySchema = z.object({
