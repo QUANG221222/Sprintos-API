@@ -18,4 +18,28 @@ export class ToolInputValidator {
       return {}
     }
   }
+
+  /**
+   * Validate arguments dựa trên Zod Schema nếu tool có khai báo
+   */
+  static validateArgs<T = any>(
+    schema: any,
+    args: any
+  ): { success: boolean; data?: T; error?: string } {
+    if (!schema || typeof schema.safeParse !== 'function') {
+      return { success: true, data: args }
+    }
+
+    const result = schema.safeParse(args)
+    if (!result.success) {
+      const errorMsg = result.error.errors
+        .map((e: any) => `${e.path.join('.') || 'root'}: ${e.message}`)
+        .join('; ')
+      this.logger.warn(`Tham số tool không hợp lệ: ${errorMsg}`)
+      return { success: false, error: errorMsg }
+    }
+
+    return { success: true, data: result.data }
+  }
 }
+

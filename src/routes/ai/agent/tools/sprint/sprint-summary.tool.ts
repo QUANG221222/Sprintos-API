@@ -9,6 +9,8 @@ export class SprintSummaryTool implements IAgentTool {
   readonly name = 'getSprintSummary'
   readonly description =
     'Lấy thông tin tổng quan tiến độ của Sprint: số lượng task hoàn thành, tổng Story Points, tỷ lệ % hoàn thành và phân bổ theo các cột Kanban.'
+  readonly category: ToolCategory = 'SPRINT'
+  readonly riskLevel: ToolRiskLevel = 'READ'
   readonly level: ToolActionLevel = 'READ'
   readonly parameters = {
     type: 'object',

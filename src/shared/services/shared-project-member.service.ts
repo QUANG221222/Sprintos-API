@@ -37,7 +37,7 @@ export class SharedProjectMemberService {
 
       // Check project, members{email, role} is exist
       for (const member of members) {
-        const { email, role } = member
+        const { email, role, technicalRole } = member
         if (!email) {
           throw ProjectMemberInvalidReferenceError
         }
@@ -58,7 +58,7 @@ export class SharedProjectMemberService {
           // If invitation is pending, regenerate the token and resend the email
           const inviteToken = uuidv4()
           const [updatedMember] = await Promise.all([
-            this.sharedProjectMemberRepo.updateInviteToken(existingMember.id, inviteToken, role, invitedById),
+            this.sharedProjectMemberRepo.updateInviteToken(existingMember.id, inviteToken, role, invitedById, technicalRole),
             this.queueService.sendInvitationEmail({
               email,
               token: inviteToken,
@@ -78,6 +78,7 @@ export class SharedProjectMemberService {
               memberId: user.id,
               email,
               role,
+              technicalRole,
               inviteToken,
               invitedById
             }),

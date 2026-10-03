@@ -7,7 +7,8 @@ import {
   UseInterceptors,
   BadRequestException,
   Res,
-  Req
+  Req,
+  Param
 } from '@nestjs/common'
 import { Response, Request } from 'express'
 import { FileInterceptor } from '@nestjs/platform-express'
@@ -24,6 +25,8 @@ import {
   ParseExcelResDTO,
   RagSearchBodyDTO,
   AgentChatBodyDTO,
+  AgentUndoBodyDTO,
+  ExecuteProposalBodyDTO,
   ScheduleDiagnosisBodyDTO,
   SyncProjectEmbeddingsBodyDTO
 } from './ai.model'
@@ -122,8 +125,19 @@ export class AiController {
    * 8. AI Copilot Agent: Chat thông minh với Tool Calling & RAG
    */
   @Post('agent/chat')
-  agentChat(@Body() body: AgentChatBodyDTO) {
-    return this.agentService.chat(body.messages, body.projectId, body.sprintId)
+  agentChat(
+    @Body() body: AgentChatBodyDTO,
+    @ActiveUser('userId') userId: string
+  ) {
+    return this.agentService.chat(
+      body.messages,
+      body.projectId,
+      body.sprintId,
+      body.webSearchMode,
+      userId,
+      body.currentScreen,
+      body.dryRun
+    )
   }
 
   /**
@@ -132,6 +146,7 @@ export class AiController {
   @Post('agent/chat/stream')
   async agentChatStream(
     @Body() body: AgentChatBodyDTO,
+    @ActiveUser('userId') userId: string,
     @Res() res: Response,
     @Req() req: Request
   ) {
@@ -161,7 +176,11 @@ export class AiController {
         body.projectId,
         body.sprintId,
         sendEvent,
-        abortController.signal
+        abortController.signal,
+        body.webSearchMode,
+        userId,
+        body.currentScreen,
+        body.dryRun
       )
     } finally {
       if (!res.writableEnded) {
@@ -169,6 +188,37 @@ export class AiController {
       }
     }
   }
+
+  /**
+   * 8c. AI Copilot Agent: Lịch sử kiểm toán Tool Telemetry
+   */
+  @Get('agent/audit/:projectId')
+  getAgentAuditLogs(@Param('projectId') projectId: string) {
+    return this.agentService.getAuditLogs(projectId)
+  }
+
+  /**
+   * 8d. AI Copilot Agent: Hoàn tác hành động gần nhất (10-Minute Undo)
+   */
+  @Post('agent/undo')
+  undoLastAction(
+    @Body() body: AgentUndoBodyDTO,
+    @ActiveUser('userId') userId: string
+  ) {
+    return this.agentService.executeUndo('', userId, body.undoId)
+  }
+
+  /**
+   * 8e. AI Copilot Agent: Thực thi đề xuất hành động đã được người dùng phê duyệt (Human-in-the-loop)
+   */
+  @Post('agent/execute-proposal')
+  executeProposal(
+    @Body() body: ExecuteProposalBodyDTO,
+    @ActiveUser('userId') userId: string
+  ) {
+    return this.agentService.executeProposal(body, userId)
+  }
+
 
 
   /**

@@ -9,6 +9,8 @@ export class CpmReportTool implements IAgentTool {
   readonly name = 'getCriticalPathReport'
   readonly description =
     'Lấy báo cáo Đường găng CPM (Critical Path Method) của Sprint: độ dài đường găng, các task găng có float = 0 có nguy cơ làm trễ dự án, và các quan hệ phụ thuộc.'
+  readonly category: ToolCategory = 'CPM'
+  readonly riskLevel: ToolRiskLevel = 'READ'
   readonly level: ToolActionLevel = 'READ'
   readonly parameters = {
     type: 'object',

@@ -6,7 +6,7 @@ import { PrismaService } from '~/shared/services/prisma.service'
 import { HashingService } from '~/shared/services/hashing.service'
 import { HTTPMethod, RoleName } from '~/shared/constants/role.constants'
 import { ProjectMemberRole, ProjectMemberStatus } from '~/shared/constants/project.constants'
-import { UserStatus, Gender, SprintStatus, TaskPriority, NotificationType, TaskType } from '~/generated/prisma/enums'
+import { UserStatus, Gender, SprintStatus, TaskPriority, NotificationType, TaskType, TechnicalRole } from '~/generated/prisma/enums'
 import { DependencyType } from '~/generated/prisma/client'
 
 const prisma = new PrismaService()
@@ -51,6 +51,11 @@ async function main() {
   // 2. CLEAN SLATE - DELETE EXISTING DATA
   // ==========================================
   console.log('\n🧹 Step 2: Cleaning existing business data & user records...')
+  try {
+    await prisma.$executeRawUnsafe('TRUNCATE TABLE task_document_embeddings CASCADE;')
+  } catch (e) {
+    // Ignore if table does not exist
+  }
   await prisma.notification.deleteMany()
   await prisma.projectChatMessage.deleteMany()
   await prisma.projectChat.deleteMany()
@@ -62,6 +67,7 @@ async function main() {
   await prisma.taskDependency.deleteMany()
   await prisma.task.deleteMany()
   await prisma.boardColumn.deleteMany()
+  await prisma.sprintDailySnapshot.deleteMany().catch(() => {})
   await prisma.sprint.deleteMany()
   await prisma.projectMember.deleteMany()
   await prisma.project.deleteMany()
@@ -277,7 +283,8 @@ async function main() {
     { email: 'kevin.fullstack@sprintos.com', name: 'Kevin Thomas', bio: 'Software Engineer', gender: Gender.MALE, phone: '0912345681', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150' },
     { email: 'rachel.designer@sprintos.com', name: 'Rachel White', bio: 'UI & Graphic Designer', gender: Gender.FEMALE, phone: '0912345682', avatar: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=150' },
     { email: 'daniel.sec@sprintos.com', name: 'Daniel Lee', bio: 'Cybersecurity Analyst', gender: Gender.MALE, phone: '0912345683', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150' },
-    { email: 'olivia.intern@sprintos.com', name: 'Olivia Harris', bio: 'Junior Developer', gender: Gender.FEMALE, phone: '0912345684', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' }
+    { email: 'olivia.intern@sprintos.com', name: 'Olivia Harris', bio: 'Junior Developer', gender: Gender.FEMALE, phone: '0912345684', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' },
+    { email: 'tom.qa@sprintos.com', name: 'Tom Jenkins', bio: 'QA Automation Engineer & Cypress / Playwright Specialist', gender: Gender.MALE, phone: '0912345685', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' }
   ]
 
   const users: Array<Awaited<ReturnType<typeof prisma.user.create>>> = []
@@ -300,8 +307,9 @@ async function main() {
     users.push(createdUser)
   }
 
+  const allUsers = [adminUser, ...users]
   const userByEmail = (email: string) => {
-    const found = users.find((u) => u.email === email)
+    const found = allUsers.find((u) => u.email === email)
     if (!found) throw new Error(`User with email ${email} not found in seeded users.`)
     return found
   }
@@ -315,44 +323,125 @@ async function main() {
 
   // NOTE: nguyenthuan05.work@gmail.com is OWNER of "Sprintos Mobile App"
   //       sprintos.01062026@gmail.com is OWNER of "E-Commerce Redesign"
+  // NOTE: nguyenthuan05.work@gmail.com is OWNER of 3 Projects:
+  //         1. "Sprintos Mobile App"
+  //         2. "Sprintos AI Intelligence Core"
+  //         3. "Sprintos Cloud Infrastructure"
+  //       sprintos.01062026@gmail.com is OWNER of 3 Projects:
+  //         1. "E-Commerce Redesign"
+  //         2. "Fintech Payment Gateway & Wallet"
+  //         3. "Realtime Logistics & Order Dispatch"
   //       Neither account is a member of the other's project (zero crossover).
   const projectsData = [
+    // ----------------------------------------------------
+    // OWNER 1: Nguyen Thuan (nguyenthuan05.work@gmail.com) - 3 Projects
+    // ----------------------------------------------------
     {
       name: 'Sprintos Mobile App',
       description: 'Cross-platform iOS & Android mobile application built with React Native and NestJS API.',
       image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400',
       owner: userByEmail('nguyenthuan05.work@gmail.com'),
+      ownerTechnicalRole: TechnicalRole.PRODUCT_OWNER,
       members: [
-        { user: userByEmail('sarah.pm@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('alex.dev@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('lisa.frontend@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('james.backend@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('david.qa@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('olivia.intern@sprintos.com'), role: RoleName.Viewer, status: ProjectMemberStatus.ACTIVE }
+        { user: userByEmail('sarah.pm@sprintos.com'), role: RoleName.CoOwner, technicalRole: TechnicalRole.PRODUCT_OWNER, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('alex.dev@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FULLSTACK, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('lisa.frontend@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('james.backend@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.BACKEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('david.qa@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.QA_TEST, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('robert.devops@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.DEVOPS, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('olivia.intern@sprintos.com'), role: RoleName.Viewer, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE }
       ]
     },
     {
-      name: 'E-Commerce Redesign',
-      description: 'High-performance storefront rebuild using Next.js 14, TailwindCSS, Microservices & Stripe.',
-      image: 'https://images.unsplash.com/photo-1556742049-0a675686001a?w=400',
-      owner: userByEmail('sprintos.01062026@gmail.com'),
+      name: 'Sprintos AI Intelligence Core',
+      description: 'Autonomous Agent Harness, RAG pgvector embeddings, hybrid LLM orchestration & schedule advisor microservices.',
+      image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400',
+      owner: userByEmail('nguyenthuan05.work@gmail.com'),
+      ownerTechnicalRole: TechnicalRole.BACKEND,
       members: [
-        { user: userByEmail('michael.tech@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('kevin.fullstack@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('emily.ux@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('rachel.designer@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('daniel.sec@sprintos.com'), role: RoleName.Viewer, status: ProjectMemberStatus.PENDING }
+        { user: userByEmail('sarah.pm@sprintos.com'), role: RoleName.CoOwner, technicalRole: TechnicalRole.PRODUCT_OWNER, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('james.backend@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.BACKEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('lisa.frontend@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('alex.dev@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FULLSTACK, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('david.qa@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.QA_TEST, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('robert.devops@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.DEVOPS, status: ProjectMemberStatus.ACTIVE }
       ]
     },
+    {
+      name: 'Sprintos Cloud Infrastructure',
+      description: 'AWS EKS Kubernetes cluster orchestration, Terraform IaC, Redis sentinel, automated CI/CD & cloud security.',
+      image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400',
+      owner: userByEmail('nguyenthuan05.work@gmail.com'),
+      ownerTechnicalRole: TechnicalRole.DEVOPS,
+      members: [
+        { user: userByEmail('robert.devops@sprintos.com'), role: RoleName.CoOwner, technicalRole: TechnicalRole.DEVOPS, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('james.backend@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.BACKEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('lisa.frontend@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('david.qa@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.QA_TEST, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('alex.dev@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FULLSTACK, status: ProjectMemberStatus.ACTIVE }
+      ]
+    },
+
+    // ----------------------------------------------------
+    // OWNER 2: Sprintos Lead (sprintos.01062026@gmail.com) - 3 Projects
+    // ----------------------------------------------------
+    {
+      name: 'E-Commerce Redesign',
+      description: 'High-performance storefront rebuild using Next.js 15, TailwindCSS, Microservices & Stripe checkout.',
+      image: 'https://images.unsplash.com/photo-1556742049-0a675686001a?w=400',
+      owner: userByEmail('sprintos.01062026@gmail.com'),
+      ownerTechnicalRole: TechnicalRole.PRODUCT_OWNER,
+      members: [
+        { user: userByEmail('michael.tech@sprintos.com'), role: RoleName.CoOwner, technicalRole: TechnicalRole.BACKEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('kevin.fullstack@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FULLSTACK, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('rachel.designer@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('emily.ux@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.DESIGN, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('tom.qa@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.QA_TEST, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('daniel.sec@sprintos.com'), role: RoleName.Viewer, technicalRole: TechnicalRole.DEVOPS, status: ProjectMemberStatus.PENDING }
+      ]
+    },
+    {
+      name: 'Fintech Payment Gateway & Wallet',
+      description: 'High-security banking API integration, e-wallet, payment idempotency, QR checkout & PCI-DSS compliance.',
+      image: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=400',
+      owner: userByEmail('sprintos.01062026@gmail.com'),
+      ownerTechnicalRole: TechnicalRole.FULLSTACK,
+      members: [
+        { user: userByEmail('michael.tech@sprintos.com'), role: RoleName.CoOwner, technicalRole: TechnicalRole.BACKEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('daniel.sec@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.DEVOPS, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('kevin.fullstack@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FULLSTACK, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('rachel.designer@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('tom.qa@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.QA_TEST, status: ProjectMemberStatus.ACTIVE }
+      ]
+    },
+    {
+      name: 'Realtime Logistics & Order Dispatch',
+      description: 'Live courier GPS tracking, Socket.io fleet communication, automated order dispatching & routing engine.',
+      image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400',
+      owner: userByEmail('sprintos.01062026@gmail.com'),
+      ownerTechnicalRole: TechnicalRole.PRODUCT_OWNER,
+      members: [
+        { user: userByEmail('kevin.fullstack@sprintos.com'), role: RoleName.CoOwner, technicalRole: TechnicalRole.FULLSTACK, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('michael.tech@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.BACKEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('rachel.designer@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('tom.qa@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.QA_TEST, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('emily.ux@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.DESIGN, status: ProjectMemberStatus.ACTIVE }
+      ]
+    },
+
+    // ----------------------------------------------------
+    // OTHER PROJECTS
+    // ----------------------------------------------------
     {
       name: 'Sprintos Design System',
       description: 'Unified React component library, accessibility guidelines, Figma tokens & brand guidelines.',
       image: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=400',
       owner: userByEmail('emily.ux@sprintos.com'),
+      ownerTechnicalRole: TechnicalRole.DESIGN,
       members: [
-        { user: userByEmail('rachel.designer@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('lisa.frontend@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('sarah.pm@sprintos.com'), role: RoleName.Viewer, status: ProjectMemberStatus.ACTIVE }
+        { user: userByEmail('rachel.designer@sprintos.com'), role: RoleName.CoOwner, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('lisa.frontend@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('sarah.pm@sprintos.com'), role: RoleName.Viewer, technicalRole: TechnicalRole.PRODUCT_OWNER, status: ProjectMemberStatus.ACTIVE }
       ]
     },
     {
@@ -360,31 +449,11 @@ async function main() {
       description: 'Integrated digital marketing, landing pages, SEO optimization & lead generation funnel.',
       image: 'https://images.unsplash.com/photo-1533750349088-cd871a92f312?w=400',
       owner: userByEmail('jessica.mkt@sprintos.com'),
+      ownerTechnicalRole: TechnicalRole.OTHER,
       members: [
-        { user: userByEmail('amanda.content@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('rachel.designer@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('sarah.pm@sprintos.com'), role: RoleName.Viewer, status: ProjectMemberStatus.ACTIVE }
-      ]
-    },
-    {
-      name: 'Cloud Infrastructure Migration',
-      description: 'Migrating legacy monolith to AWS EKS Kubernetes, Terraform IaC, & Automated CI/CD pipelines.',
-      image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400',
-      owner: userByEmail('robert.devops@sprintos.com'),
-      members: [
-        { user: userByEmail('michael.tech@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('daniel.sec@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('james.backend@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE }
-      ]
-    },
-    {
-      name: 'Internal ERP Automation',
-      description: 'Automating internal HR workflows, timesheets, payroll integration & resource planning.',
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400',
-      owner: userByEmail('michael.tech@sprintos.com'),
-      members: [
-        { user: userByEmail('kevin.fullstack@sprintos.com'), role: RoleName.CoOwner, status: ProjectMemberStatus.ACTIVE },
-        { user: userByEmail('david.qa@sprintos.com'), role: RoleName.Member, status: ProjectMemberStatus.ACTIVE }
+        { user: userByEmail('amanda.content@sprintos.com'), role: RoleName.CoOwner, technicalRole: TechnicalRole.OTHER, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('rachel.designer@sprintos.com'), role: RoleName.Member, technicalRole: TechnicalRole.FRONTEND, status: ProjectMemberStatus.ACTIVE },
+        { user: userByEmail('sarah.pm@sprintos.com'), role: RoleName.Viewer, technicalRole: TechnicalRole.PRODUCT_OWNER, status: ProjectMemberStatus.ACTIVE }
       ]
     }
   ]
@@ -405,6 +474,7 @@ async function main() {
               memberId: p.owner.id,
               email: p.owner.email,
               roleId: roleMap[RoleName.Owner],
+              technicalRole: p.ownerTechnicalRole || TechnicalRole.PRODUCT_OWNER,
               status: ProjectMemberStatus.ACTIVE,
               invitedById: p.owner.id,
               joinAt: new Date()
@@ -413,6 +483,7 @@ async function main() {
               memberId: m.user.id,
               email: m.user.email,
               roleId: roleMap[m.role],
+              technicalRole: m.technicalRole,
               status: m.status,
               invitedById: p.owner.id,
               joinAt: m.status === ProjectMemberStatus.ACTIVE ? new Date() : null
@@ -424,7 +495,7 @@ async function main() {
     createdProjects.push(proj)
   }
 
-  console.log(`✅ Created ${createdProjects.length} Projects with explicit Project Roles.`)
+  console.log(`✅ Created ${createdProjects.length} Projects with explicit Technical Roles and Project RBAC Roles.`)
 
   // ==========================================
   // 6. SPRINTS, KANBAN BOARD & REALISTIC CPM/GANTT TASKS
@@ -439,220 +510,475 @@ async function main() {
   let totalSprintsCount = 0
 
   for (const proj of createdProjects) {
-    const sprintConfigs = [
-      {
-        name: `${proj.name} - Sprint 1 (Foundation)`,
-        goal: 'Complete core system architecture, setup database schemas, and baseline wireframes.',
-        maxStoryPoint: 35,
-        startDate: daysAgo(30),
-        endDate: daysAgo(16),
-        status: SprintStatus.COMPLETED,
-        tasks: [
+    const commonSprint1Deps = [
+      { predIndex: 0, succIndex: 1, type: DependencyType.FS, lag: 0 },
+      { predIndex: 0, succIndex: 2, type: DependencyType.FS, lag: 0 },
+      { predIndex: 1, succIndex: 3, type: DependencyType.FS, lag: 0 },
+      { predIndex: 2, succIndex: 4, type: DependencyType.FS, lag: 0 },
+      { predIndex: 3, succIndex: 4, type: DependencyType.FS, lag: 0 }
+    ]
+
+    const commonSprint2Deps = [
+      { predIndex: 0, succIndex: 1, type: DependencyType.FS, lag: 0 },
+      { predIndex: 0, succIndex: 2, type: DependencyType.FS, lag: 0 },
+      { predIndex: 1, succIndex: 3, type: DependencyType.FS, lag: 0 },
+      { predIndex: 1, succIndex: 5, type: DependencyType.FS, lag: 0 },
+      { predIndex: 2, succIndex: 4, type: DependencyType.FS, lag: 0 },
+      { predIndex: 4, succIndex: 5, type: DependencyType.FS, lag: 0 },
+      { predIndex: 5, succIndex: 6, type: DependencyType.FS, lag: 0 }
+    ]
+
+    const commonSprint3Deps = [
+      { predIndex: 0, succIndex: 1, type: DependencyType.FS, lag: 0 },
+      { predIndex: 1, succIndex: 2, type: DependencyType.FS, lag: 0 },
+      { predIndex: 2, succIndex: 3, type: DependencyType.FS, lag: 0 },
+      { predIndex: 4, succIndex: 5, type: DependencyType.FS, lag: 0 },
+      { predIndex: 5, succIndex: 6, type: DependencyType.FS, lag: 0 },
+      { predIndex: 7, succIndex: 8, type: DependencyType.FS, lag: 0 },
+      { predIndex: 8, succIndex: 9, type: DependencyType.FS, lag: 0 }
+    ]
+
+    const getSprintConfigsForProject = (name: string): any[] => {
+      if (name === 'Sprintos Mobile App') {
+        return [
           {
-            title: `[${proj.name}] Setup Project Environment & Dependencies`,
-            desc: 'Configure repository, ESLint, Prettier, Docker container and environment files.',
-            col: 'Done',
-            priority: TaskPriority.HIGH,
-            sp: 3,
-            duration: 3,
-            offset: 0,
-            labels: ['Setup', 'DevOps']
+            name: `${name} - Sprint 1 (Foundation)`,
+            goal: 'Setup mobile environment, build core database schemas, design tokens, and baseline API controller.',
+            maxStoryPoint: 35,
+            startDate: daysAgo(30),
+            endDate: daysAgo(16),
+            status: SprintStatus.COMPLETED,
+            tasks: [
+              { title: `[${name}] Setup React Native & NestJS Monorepo Environment`, desc: 'Configure ESLint, Prettier, Fastlane, Docker, and environment files.', col: 'Done', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 0, labels: ['Setup', 'DevOps'] },
+              { title: `[${name}] Database Schema & Prisma ORM Migrations`, desc: 'Model User, Workspace, Sprint and Task entities with PostgreSQL relations.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 3, labels: ['Database', 'Backend'] },
+              { title: `[${name}] Mobile UI Design Tokens & Theme System`, desc: 'Define typography, color palette, dark mode tokens and atom components in Figma.', col: 'Done', priority: TaskPriority.MEDIUM, sp: 5, duration: 4, offset: 3, labels: ['UI/UX', 'Figma'] },
+              { title: `[${name}] Core Authentication & Session REST Controller`, desc: 'Build JWT auth controllers, refresh token rotation, and guard middlewares.', col: 'Done', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 7, labels: ['API', 'Backend'] },
+              { title: `[${name}] Initial Mobile Smoke Test & Sprint 1 Milestone Review`, desc: 'Execute containerized build tests, Appium smoke verification, and sprint review.', col: 'Done', priority: TaskPriority.LOW, sp: 3, duration: 3, offset: 11, labels: ['QA', 'Testing'] }
+            ],
+            dependencies: commonSprint1Deps
           },
           {
-            title: `[${proj.name}] Implement Database Schema & Migrations`,
-            desc: 'Design tables in Prisma schema, verify relations and execute initial migrations.',
-            col: 'Done',
-            priority: TaskPriority.CRITICAL,
-            sp: 5,
-            duration: 4,
-            offset: 3,
-            labels: ['Database', 'Backend']
+            name: `${name} - Sprint 2 (Core Mobile Features)`,
+            goal: 'Implement mobile biometric login, navigation shell, and prepare unassigned tasks for technical role auto-assignment.',
+            maxStoryPoint: 40,
+            startDate: daysAgo(5),
+            endDate: daysFromNow(9),
+            status: SprintStatus.ACTIVE,
+            tasks: [
+              { title: `[${name}] Biometric FaceID & Secure Keychain Storage`, desc: 'Implement biometric prompt, encrypted keychain credentials and fallback PIN.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 3, offset: 0, labels: ['Auth', 'Security'] },
+              { title: `[${name}] RESTful API Endpoints & Push Gateway Service`, desc: 'Build task CRUD endpoints, member lookup, and FCM push notification gateway.', col: 'In Review', priority: TaskPriority.HIGH, sp: 8, duration: 4, offset: 3, labels: ['API', 'Backend'] },
+              { title: `[${name}] Navigation Tab Bar & Mobile Dashboard Screen`, desc: 'Build animated bottom tabs, project cards, and Zustand state synchronization.', col: 'In Progress', priority: TaskPriority.HIGH, sp: 8, duration: 5, offset: 3, labels: ['Frontend', 'UI/UX'] },
+              { title: `[${name}] [BE] Offline Cache Synchronization & Conflict Resolution Engine`, desc: 'Implement SQLite local sync engine, change log replay and versioned merge resolution.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 7, labels: ['Backend', 'API', 'Sync'], unassigned: true },
+              { title: `[${name}] [FE] Task Detail Modal & Interactive Swipe Gestures`, desc: 'Build modal sheet with draggable gestures, rich markdown task descriptions, and subtasks.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 8, labels: ['Frontend', 'UI/UX', 'Mobile'], unassigned: true },
+              { title: `[${name}] [QA] Automated Mobile Smoke Test Suite with Appium & Jest`, desc: 'Write end-to-end integration tests for login, task status changes, and offline sync.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Testing'], unassigned: true },
+              { title: `[${name}] [DevOps] Fastlane iOS TestFlight & Android App Bundle CI/CD`, desc: 'Automate build artifact generation, code signing, and nightly staging distribution.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 12, labels: ['DevOps', 'CI/CD'], unassigned: true }
+            ],
+            dependencies: commonSprint2Deps
           },
           {
-            title: `[${proj.name}] Design System Baseline & Design Tokens`,
-            desc: 'Create base typography, color tokens and core reusable component specifications.',
-            col: 'Done',
-            priority: TaskPriority.MEDIUM,
-            sp: 5,
-            duration: 4,
-            offset: 3,
-            labels: ['UI/UX', 'Figma']
-          },
-          {
-            title: `[${proj.name}] Build Core REST Boilerplate & Health Checks`,
-            desc: 'Create base controllers, exception filters, request logging and system health endpoint.',
-            col: 'Done',
-            priority: TaskPriority.HIGH,
-            sp: 5,
-            duration: 4,
-            offset: 7,
-            labels: ['API', 'Backend']
-          },
-          {
-            title: `[${proj.name}] Initial Integration Smoke Tests & Milestone Signoff`,
-            desc: 'Verify containerized build, automated smoke tests and conduct Sprint 1 review signoff.',
-            col: 'Done',
-            priority: TaskPriority.LOW,
-            sp: 3,
-            duration: 3,
-            offset: 11,
-            labels: ['QA', 'Testing']
+            name: `${name} - Product Backlog`,
+            goal: 'Comprehensive Product Backlog pool ready for AI Backlog grooming, DAG scheduling and role assignment.',
+            maxStoryPoint: 50,
+            startDate: daysFromNow(10),
+            endDate: daysFromNow(24),
+            status: SprintStatus.PLANNED,
+            tasks: [
+              { title: `[${name}] [BE] Database Schema & Migration for In-App Purchase`, desc: 'Create Subscription, InAppReceipt, and Transaction tables in Prisma.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 2, offset: 0, labels: ['Database', 'Backend'], unassigned: true },
+              { title: `[${name}] [BE] Stripe & Apple StoreKit Webhook Validation API`, desc: 'Build webhook listener, idempotency checks, and subscription renewal hooks.', col: 'To Do', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 2, labels: ['API', 'Backend'], unassigned: true },
+              { title: `[${name}] [FE] Subscription Upgrade Screen & Plan Comparison UI`, desc: 'Design pricing cards, features comparison list, and native checkout sheet trigger.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 6, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] End-to-End Payment Flow QA & Receipt Simulation Tests`, desc: 'Validate sandbox purchases, receipt verification, and network retry edge cases.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 10, labels: ['QA', 'Testing'], unassigned: true },
+              { title: `[${name}] [BE] Redis Distributed Caching for Frequent Mobile API Feeds`, desc: 'Setup Redis cluster caching with TTL invalidation on task mutations.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 3, offset: 0, labels: ['Backend', 'Performance'], unassigned: true },
+              { title: `[${name}] [BE] Realtime Socket.io Gateway for Live Collaboration`, desc: 'Implement WebSocket rooms per project board and deliver instantaneous updates.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 1, labels: ['Backend', 'Socket'], unassigned: true },
+              { title: `[${name}] [FE] Realtime Board Presence Indicators & Member Avatars`, desc: 'Render online co-workers viewing the same task card in real time.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 3, offset: 5, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Multi-Client WebSocket Stress Testing & Reconnect QA`, desc: 'Simulate flaky cellular connections and verify message delivery guarantees.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 8, labels: ['QA', 'Testing'], unassigned: true },
+              { title: `[${name}] [DevOps] Kubernetes Cluster Deployment Helm Charts`, desc: 'Package microservices into Helm charts with autoscaling and ingress configs.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 0, labels: ['DevOps', 'Cloud'], unassigned: true },
+              { title: `[${name}] [DevOps] Automated GitHub Actions Security Vulnerability Audit`, desc: 'Run Trivy and npm audit in CI to catch CVE vulnerabilities in dependencies.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 3, offset: 4, labels: ['DevOps', 'Security'], unassigned: true },
+              { title: `[${name}] [FE] Dark Mode Theme Support & Contrast Verification`, desc: 'Fine-tune dark theme palette for OLED screens and WCAG 2.1 contrast.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 5, labels: ['Frontend', 'Design'], unassigned: true },
+              { title: `[${name}] [FE] Multi-Language i18n Localization (Vietnamese & English)`, desc: 'Implement dynamic translation provider and language selection in settings.', col: 'To Do', priority: TaskPriority.LOW, sp: 3, duration: 2, offset: 8, labels: ['Frontend', 'Localization'], unassigned: true },
+              { title: `[${name}] [BE] Server-Side PDF & Excel Sprint Report Generation`, desc: 'Build background worker generating formatted reports using PDFKit and ExcelJS.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 5, duration: 3, offset: 9, labels: ['Backend', 'Report'], unassigned: true },
+              { title: `[${name}] [QA] Mobile App Startup Time Profiling & Memory Leak Audit`, desc: 'Profile JS bundle size, Hermes engine boot latency, and component unmount leaks.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 11, labels: ['QA', 'Performance'], unassigned: true }
+            ],
+            dependencies: commonSprint3Deps
           }
-        ],
-        dependencies: [
-          { predIndex: 0, succIndex: 1, type: DependencyType.FS, lag: 0 },
-          { predIndex: 0, succIndex: 2, type: DependencyType.FS, lag: 0 },
-          { predIndex: 1, succIndex: 3, type: DependencyType.FS, lag: 0 },
-          { predIndex: 2, succIndex: 4, type: DependencyType.FS, lag: 0 },
-          { predIndex: 3, succIndex: 4, type: DependencyType.FS, lag: 0 }
-        ]
-      },
-      {
-        name: `${proj.name} - Sprint 2 (Core Features)`,
-        goal: 'Implement primary user workflows, authentication, API integrations, and main UI screens.',
-        maxStoryPoint: 40,
-        startDate: daysAgo(5),
-        endDate: daysFromNow(9),
-        status: SprintStatus.ACTIVE,
-        tasks: [
-          {
-            title: `[${proj.name}] Build User Auth & Authorization RBAC Module`,
-            desc: 'Implement JWT authentication, Refresh Token rotation and role-based guards.',
-            col: 'Done',
-            priority: TaskPriority.CRITICAL,
-            sp: 5,
-            duration: 3,
-            offset: 0,
-            labels: ['Auth', 'Security']
-          },
-          {
-            title: `[${proj.name}] Develop Business RESTful API Endpoints`,
-            desc: 'Create Controllers, Services, Repositories and Zod DTO request validation.',
-            col: 'In Review',
-            priority: TaskPriority.HIGH,
-            sp: 8,
-            duration: 4,
-            offset: 3,
-            labels: ['API', 'Backend']
-          },
-          {
-            title: `[${proj.name}] Build Interactive Dashboard UI & State Store`,
-            desc: 'Develop responsive data views, analytics charts and Zustand global state management.',
-            col: 'In Progress',
-            priority: TaskPriority.HIGH,
-            sp: 8,
-            duration: 5,
-            offset: 3,
-            labels: ['Frontend', 'UI/UX']
-          },
-          {
-            title: `[${proj.name}] Third-Party Integrations & Webhook Notification Engine`,
-            desc: 'Integrate external gateways, webhook listeners and asynchronous push alerts.',
-            col: 'To Do',
-            priority: TaskPriority.MEDIUM,
-            sp: 5,
-            duration: 3,
-            offset: 7,
-            labels: ['Integration', 'Notification']
-          },
-          {
-            title: `[${proj.name}] End-to-End API Integration & Acceptance QA Testing`,
-            desc: 'Conduct automated test suites, cross-browser compatibility and regression QA runs.',
-            col: 'To Do',
-            priority: TaskPriority.HIGH,
-            sp: 5,
-            duration: 4,
-            offset: 8,
-            labels: ['Testing', 'QA']
-          },
-          {
-            title: `[${proj.name}] Staging Deployment & Sprint Review Preparation`,
-            desc: 'Deploy release build to staging cluster, verify environment and prepare demo release.',
-            col: 'To Do',
-            priority: TaskPriority.LOW,
-            sp: 2,
-            duration: 2,
-            offset: 12,
-            labels: ['DevOps', 'Release']
-          }
-        ],
-        dependencies: [
-          { predIndex: 0, succIndex: 1, type: DependencyType.FS, lag: 0 },
-          { predIndex: 0, succIndex: 2, type: DependencyType.FS, lag: 0 },
-          { predIndex: 1, succIndex: 3, type: DependencyType.FS, lag: 0 },
-          { predIndex: 1, succIndex: 4, type: DependencyType.FS, lag: 0 },
-          { predIndex: 2, succIndex: 4, type: DependencyType.FS, lag: 0 },
-          { predIndex: 3, succIndex: 5, type: DependencyType.FS, lag: 0 },
-          { predIndex: 4, succIndex: 5, type: DependencyType.FS, lag: 0 }
-        ]
-      },
-      {
-        name: `${proj.name} - Sprint 3 (Polish & Release)`,
-        goal: 'Performance optimization, security audit, bug fixes, end-to-end testing, and production deploy.',
-        maxStoryPoint: 45,
-        startDate: daysFromNow(10),
-        endDate: daysFromNow(24),
-        status: SprintStatus.PLANNED,
-        tasks: [
-          {
-            title: `[${proj.name}] Load Testing & Database Query Optimization`,
-            desc: 'Benchmark high traffic scenarios, index query optimization and Redis caching layer.',
-            col: 'To Do',
-            priority: TaskPriority.HIGH,
-            sp: 5,
-            duration: 4,
-            offset: 0,
-            labels: ['Performance', 'Database']
-          },
-          {
-            title: `[${proj.name}] Security Vulnerability Audit & Hardening`,
-            desc: 'Run OWASP vulnerability scan, patch security headers and configure strict rate limiting.',
-            col: 'To Do',
-            priority: TaskPriority.CRITICAL,
-            sp: 5,
-            duration: 4,
-            offset: 0,
-            labels: ['Security', 'Audit']
-          },
-          {
-            title: `[${proj.name}] Production Kubernetes & Cloud Scaling Setup`,
-            desc: 'Configure HPA autoscaling, ingress controllers, SSL certificates and Datadog monitoring.',
-            col: 'To Do',
-            priority: TaskPriority.HIGH,
-            sp: 5,
-            duration: 5,
-            offset: 4,
-            labels: ['Cloud', 'DevOps']
-          },
-          {
-            title: `[${proj.name}] Production Build & Release Artifacts Verification`,
-            desc: 'Verify minified client builds, checksums, CDN asset invalidation and release notes.',
-            col: 'To Do',
-            priority: TaskPriority.CRITICAL,
-            sp: 3,
-            duration: 3,
-            offset: 9,
-            labels: ['Build', 'Release']
-          },
-          {
-            title: `[${proj.name}] Production Go-Live & Post-Launch Monitoring`,
-            desc: 'Switch production DNS traffic, monitor error budgets, latencies and database health.',
-            col: 'To Do',
-            priority: TaskPriority.HIGH,
-            sp: 2,
-            duration: 2,
-            offset: 12,
-            labels: ['Production', 'Monitoring']
-          }
-        ],
-        dependencies: [
-          { predIndex: 0, succIndex: 2, type: DependencyType.FS, lag: 0 },
-          { predIndex: 1, succIndex: 2, type: DependencyType.FS, lag: 0 },
-          { predIndex: 2, succIndex: 3, type: DependencyType.FS, lag: 0 },
-          { predIndex: 3, succIndex: 4, type: DependencyType.FS, lag: 0 }
         ]
       }
-    ]
+
+      if (name === 'Sprintos AI Intelligence Core') {
+        return [
+          {
+            name: `${name} - Sprint 1 (Architecture & Vector Store)`,
+            goal: 'Setup PostgreSQL pgvector extension, embedding pipeline, base ReAct loop, and AI design tokens.',
+            maxStoryPoint: 35,
+            startDate: daysAgo(30),
+            endDate: daysAgo(16),
+            status: SprintStatus.COMPLETED,
+            tasks: [
+              { title: `[${name}] pgvector Extension & Prisma Vector Field Migration`, desc: 'Configure pgvector extension in PostgreSQL and setup 1536-dim vector schema.', col: 'Done', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 0, labels: ['Setup', 'Database'] },
+              { title: `[${name}] Text Embedding Ingestion Pipeline & Model Bridges`, desc: 'Implement embedding service supporting OpenAI text-embedding-3-small and Ollama.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 3, labels: ['Database', 'Backend', 'AI'] },
+              { title: `[${name}] AI Assistant Design Language & Chat Wireframes`, desc: 'Design streaming cursor, thinking disclosure drawer, and tool call pill UI.', col: 'Done', priority: TaskPriority.MEDIUM, sp: 5, duration: 4, offset: 3, labels: ['UI/UX', 'Figma'] },
+              { title: `[${name}] Document Chunking & Hybrid Semantic Search Engine`, desc: 'Create chunking strategy with cosine distance indexing for task RAG context.', col: 'Done', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 7, labels: ['API', 'Backend', 'RAG'] },
+              { title: `[${name}] Vector Similarity Accuracy & Search Benchmark Suite`, desc: 'Verify retrieval recall and latency under 10,000 vector records in Postgres.', col: 'Done', priority: TaskPriority.LOW, sp: 3, duration: 3, offset: 11, labels: ['QA', 'Testing'] }
+            ],
+            dependencies: commonSprint1Deps
+          },
+          {
+            name: `${name} - Sprint 2 (Agent Harness & Tool Registry)`,
+            goal: 'Deliver autonomous ReAct agent loop, tool execution sandbox, and unassigned AI tasks for role testing.',
+            maxStoryPoint: 40,
+            startDate: daysAgo(5),
+            endDate: daysFromNow(9),
+            status: SprintStatus.ACTIVE,
+            tasks: [
+              { title: `[${name}] Autonomous ReAct Loop Architecture & Context Memory`, desc: 'Implement multi-turn reasoning loop, system prompts, and sliding window memory.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 3, offset: 0, labels: ['Backend', 'AI'] },
+              { title: `[${name}] pgvector Task Embeddings & Semantic Search Endpoint`, desc: 'Provide hybrid vector + full-text search API for project knowledge retrieval.', col: 'In Review', priority: TaskPriority.HIGH, sp: 8, duration: 4, offset: 3, labels: ['Backend', 'Database'] },
+              { title: `[${name}] AI Streaming Chat Drawer & Thought Disclosure UI`, desc: 'Build responsive SSE streaming drawer with collapsible chain-of-thought accordion.', col: 'In Progress', priority: TaskPriority.HIGH, sp: 8, duration: 5, offset: 3, labels: ['Frontend', 'UI/UX'] },
+              { title: `[${name}] [BE] Hybrid LLM Fallback Controller & Token Usage Tracker`, desc: 'Implement automatic failover from Local Ollama to OpenRouter cloud resilience.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 7, labels: ['Backend', 'AI', 'Architecture'], unassigned: true },
+              { title: `[${name}] [FE] Markdown Renderer with Mermaid Diagrams & Syntax Highlighting`, desc: 'Render complex AI responses with dynamic Mermaid Gantt/AON diagrams and code blocks.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 8, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Benchmark AI Response Latency & Accuracy Evaluator`, desc: 'Automate test cases checking tool calling precision and hallucination prevention.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Testing', 'Benchmark'], unassigned: true },
+              { title: `[${name}] [DevOps] Ollama Local GPU Cluster & Cloudflare Tunnel Proxy`, desc: 'Setup high-throughput Ollama inference node with secure TLS Cloudflare tunnel.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 12, labels: ['DevOps', 'Infrastructure'], unassigned: true }
+            ],
+            dependencies: commonSprint2Deps
+          },
+          {
+            name: `${name} - Product Backlog`,
+            goal: 'Advanced AI intelligence features ready for DAG backlog scheduling and technical role delegation.',
+            maxStoryPoint: 50,
+            startDate: daysFromNow(10),
+            endDate: daysFromNow(24),
+            status: SprintStatus.PLANNED,
+            tasks: [
+              { title: `[${name}] [BE] Tool Registry Dynamic Schema Generator & Validator`, desc: 'Extract Zod schemas into JSON Schema for OpenAI function calling compatibility.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 2, offset: 0, labels: ['Backend', 'Architecture'], unassigned: true },
+              { title: `[${name}] [BE] Smart Excel Project Importer with Auto-Mapping Heuristics`, desc: 'Parse diverse Excel formats, extract WBS, duration, and dependencies automatically.', col: 'To Do', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 2, labels: ['Backend', 'Excel', 'AI'], unassigned: true },
+              { title: `[${name}] [FE] Excel Import Wizard & Column Mapping Preview UI`, desc: 'Build multi-step modal with drag-drop Excel upload and interactive field mapper.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 6, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Excel File Upload Edge Cases & Format Fuzzing Tests`, desc: 'Test damaged sheets, merged cells, missing headers and formula cells.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 10, labels: ['QA', 'Testing'], unassigned: true },
+              { title: `[${name}] [BE] Schedule Advisor & Critical Path Prediction Engine`, desc: 'Algorithmic early-warning engine identifying schedule risks and float compression.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 0, labels: ['Backend', 'Algorithm', 'CPM'], unassigned: true },
+              { title: `[${name}] [FE] Critical Path Gantt Risk Overlay & Bottleneck Alerts`, desc: 'Highlight delayed path activities with pulsing red outlines on Gantt chart.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 3, labels: ['Frontend', 'Gantt', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Critical Path Algorithm Correctness & Cycle Detection QA`, desc: 'Verify topological sorting and Tarjan SCC cycle detection on complex DAGs.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 7, labels: ['QA', 'Algorithm'], unassigned: true },
+              { title: `[${name}] [DevOps] Distributed Redis Pub/Sub for SSE Multi-Node Fanout`, desc: 'Configure Redis streams to broadcast streaming AI tokens across backend clusters.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 0, labels: ['DevOps', 'Redis'], unassigned: true },
+              { title: `[${name}] [DevOps] OpenTelemetry Distributed Tracing & AI Latency Metrics`, desc: 'Export trace spans for LLM inference duration, database queries and tool runtimes.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 3, offset: 4, labels: ['DevOps', 'Monitoring'], unassigned: true },
+              { title: `[${name}] [BE] Multi-Modal Vision Analysis Tool for Screenshot Diagnostics`, desc: 'Accept UI screenshot images and invoke vision models for automated UI bug diagnosis.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 5, labels: ['Backend', 'AI', 'Vision'], unassigned: true },
+              { title: `[${name}] [FE] Drag-and-Drop Image Uploader for AI Screenshot Analysis`, desc: 'Allow pasting screenshots directly into AI chat prompt with instant thumbnail preview.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 8, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Vision Multimodal Tool Robustness & Resolution Tests`, desc: 'Validate oversized PNG/JPEG images up to 25MB without server memory exhaustion.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 10, labels: ['QA', 'Testing'], unassigned: true },
+              { title: `[${name}] [BE] Context Window Truncation & Token Pruning Heuristics`, desc: 'Intelligently prune old message history to respect 32k context token limits.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 8, labels: ['Backend', 'Performance'], unassigned: true },
+              { title: `[${name}] [FE] Global Command Palette (Cmd+K) & Quick AI Prompts`, desc: 'Quick launcher for AI sprint planning and task assignment shortcuts.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 10, labels: ['Frontend', 'Accessibility'], unassigned: true }
+            ],
+            dependencies: commonSprint3Deps
+          }
+        ]
+      }
+
+      if (name === 'Sprintos Cloud Infrastructure') {
+        return [
+          {
+            name: `${name} - Sprint 1 (Cloud Foundation & VPC)`,
+            goal: 'Setup Terraform AWS multi-AZ VPC, subnets, bastion host, and security groups.',
+            maxStoryPoint: 35,
+            startDate: daysAgo(30),
+            endDate: daysAgo(16),
+            status: SprintStatus.COMPLETED,
+            tasks: [
+              { title: `[${name}] Terraform AWS Multi-AZ VPC & Subnet Architecture`, desc: 'Write IaC modules for public/private subnets, internet gateways and route tables.', col: 'Done', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 0, labels: ['Setup', 'DevOps'] },
+              { title: `[${name}] Bastion Host & Security Groups Configuration`, desc: 'Deploy SSH bastion with keypair authentication and strict ingress security rules.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 3, labels: ['Security', 'DevOps'] },
+              { title: `[${name}] Cloud Architecture Diagram & Infrastructure Specification`, desc: 'Document VPC CIDR blocks, peering links, and high-availability design.', col: 'Done', priority: TaskPriority.MEDIUM, sp: 5, duration: 4, offset: 3, labels: ['Documentation', 'Architecture'] },
+              { title: `[${name}] NAT Gateway & Route 53 Private Hosted Zone Setup`, desc: 'Configure outbound internet access for private subnets and internal service DNS.', col: 'Done', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 7, labels: ['Cloud', 'DevOps'] },
+              { title: `[${name}] Network Connectivity & Latency Verification Tests`, desc: 'Verify inter-subnet reachability and benchmark NAT gateway throughput.', col: 'Done', priority: TaskPriority.LOW, sp: 3, duration: 3, offset: 11, labels: ['QA', 'Testing'] }
+            ],
+            dependencies: commonSprint1Deps
+          },
+          {
+            name: `${name} - Sprint 2 (EKS Kubernetes & GitOps Orchestration)`,
+            goal: 'Provision production Kubernetes cluster with ArgoCD GitOps, monitoring dashboards and unassigned tasks.',
+            maxStoryPoint: 40,
+            startDate: daysAgo(5),
+            endDate: daysFromNow(9),
+            status: SprintStatus.ACTIVE,
+            tasks: [
+              { title: `[${name}] Multi-AZ AWS VPC & Private Bastion Host Verification`, desc: 'Verify VPC peering, IAM roles, and SSH bastion host access control.', col: 'Done', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 0, labels: ['DevOps', 'Cloud'] },
+              { title: `[${name}] EKS Cluster Provisioning with ArgoCD GitOps Sync`, desc: 'Setup managed node groups, Cluster Autoscaler, and ArgoCD application sync.', col: 'In Review', priority: TaskPriority.HIGH, sp: 8, duration: 4, offset: 3, labels: ['DevOps', 'Kubernetes'] },
+              { title: `[${name}] Cloud Monitoring Dashboard & Grafana Embeds`, desc: 'Build frontend monitoring portal displaying CPU, Memory, and Pod restart rates.', col: 'In Progress', priority: TaskPriority.HIGH, sp: 8, duration: 5, offset: 3, labels: ['Frontend', 'UI/UX'] },
+              { title: `[${name}] [BE] Telemetry Ingestion Microservice & Prometheus Exporter`, desc: 'Collect application health metrics and expose OpenMetrics endpoints for scraping.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 7, labels: ['Backend', 'Metrics', 'API'], unassigned: true },
+              { title: `[${name}] [FE] Cluster Health Visualizer & Pod Log Streamer`, desc: 'Develop live streaming terminal component for container stdout logs using WebSockets.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 8, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Chaos Engineering & Node Failure Recovery Test`, desc: 'Execute Chaos Mesh experiments simulating worker node termination and verify zero-downtime.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Testing', 'Resilience'], unassigned: true },
+              { title: `[${name}] [DevOps] HashiCorp Vault Secrets Management & Cert-Manager SSL`, desc: 'Setup Vault agent injector for secrets injection and automated Let Encrypt TLS renewal.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 12, labels: ['DevOps', 'Security'], unassigned: true }
+            ],
+            dependencies: commonSprint2Deps
+          },
+          {
+            name: `${name} - Product Backlog`,
+            goal: 'Cloud scaling and automation backlog ready for AI load balancing and schedule optimization.',
+            maxStoryPoint: 50,
+            startDate: daysFromNow(10),
+            endDate: daysFromNow(24),
+            status: SprintStatus.PLANNED,
+            tasks: [
+              { title: `[${name}] [BE] Kubernetes Custom Resource Definition (CRD) Controller`, desc: 'Build Go/NestJS operator to automate dynamic staging environment lifecycles.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 0, labels: ['Backend', 'Kubernetes'], unassigned: true },
+              { title: `[${name}] [BE] Dynamic Resource Quotas & Multi-Tenant Namespace API`, desc: 'API endpoints to assign CPU/RAM limits per developer team workspace.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 2, labels: ['Backend', 'Cloud'], unassigned: true },
+              { title: `[${name}] [FE] Multi-Tenant Resource Consumption & Quota Viewer`, desc: 'Interactive bar charts showing namespace usage vs allocated ceiling.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 6, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Multi-Tenant Resource Isolation & Quota Boundary QA`, desc: 'Run stress tests attempting memory leaks across namespace boundaries.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 10, labels: ['QA', 'Testing'], unassigned: true },
+              { title: `[${name}] [DevOps] Automated Ingress Controller & AWS ALB Integration`, desc: 'Configure AWS Load Balancer Controller with automated SSL target group registration.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 0, labels: ['DevOps', 'Security'], unassigned: true },
+              { title: `[${name}] [DevOps] Redis Sentinel High Availability & Failover Automation`, desc: 'Deploy 3-node Redis sentinel cluster with automatic master failover.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 2, labels: ['DevOps', 'Database'], unassigned: true },
+              { title: `[${name}] [BE] Automated Database Backup & S3 Cold Storage Archive Cron`, desc: 'Scheduled cron taking pg_dump snapshots, gzip compression, and S3 Glacier upload.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 5, labels: ['Backend', 'Database'], unassigned: true },
+              { title: `[${name}] [QA] Disaster Recovery & Database Restoration Drill QA`, desc: 'Execute live drill restoring database from S3 snapshot within 15-minute RTO target.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 7, labels: ['QA', 'Resilience'], unassigned: true },
+              { title: `[${name}] [DevOps] CloudWatch Metric Alarms & PagerDuty Integration`, desc: 'Configure high-severity alerts for 5xx error spikes, node disk pressure, and CPU throttling.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 4, labels: ['DevOps', 'Monitoring'], unassigned: true },
+              { title: `[${name}] [DevOps] Terraform Drift Detection & Scheduled Audit Plan`, desc: 'Run scheduled CI checks comparing state files against live cloud infrastructure.', col: 'To Do', priority: TaskPriority.LOW, sp: 3, duration: 2, offset: 6, labels: ['DevOps', 'Terraform'], unassigned: true },
+              { title: `[${name}] [FE] Web-based Terminal Emulator for Pod Exec Access`, desc: 'Secure web terminal with xterm.js connecting to authorized Kubernetes pods.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 8, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Web Terminal Security & Command Sanitization QA`, desc: 'Audit terminal session timeouts, RBAC enforcement, and command injection safeguards.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 11, labels: ['QA', 'Security'], unassigned: true },
+              { title: `[${name}] [BE] Cloud Cost Allocation & FinOps Tagging Analyzer`, desc: 'Aggregate AWS Cost Explorer API metrics by project tags to identify wastage.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 8, labels: ['Backend', 'FinOps'], unassigned: true },
+              { title: `[${name}] [FE] Cloud Spend Breakdown Chart & Cost Anomaly Alerts`, desc: 'Visual breakdown of monthly compute, database, and egress network bandwidth expenses.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 10, labels: ['Frontend', 'Analytics'], unassigned: true }
+            ],
+            dependencies: commonSprint3Deps
+          }
+        ]
+      }
+
+      if (name === 'E-Commerce Redesign') {
+        return [
+          {
+            name: `${name} - Sprint 1 (Storefront Foundation)`,
+            goal: 'Setup Next.js 15 storefront, Prisma catalog schema, Tailwind components, and search API.',
+            maxStoryPoint: 35,
+            startDate: daysAgo(28),
+            endDate: daysAgo(14),
+            status: SprintStatus.COMPLETED,
+            tasks: [
+              { title: `[${name}] Storefront Infrastructure & Monorepo Setup`, desc: 'Setup Next.js 15 Turbopack, TailwindCSS v4, ESLint, and Docker Compose stack.', col: 'Done', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 0, labels: ['Setup', 'DevOps'] },
+              { title: `[${name}] Product Catalog & Category Prisma Schema`, desc: 'Model Products, Categories, Variants, Inventory and Images in PostgreSQL.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 3, labels: ['Database', 'Backend'] },
+              { title: `[${name}] Storefront Design System & Product Card Components`, desc: 'Design and build reusable ProductCard, PriceTag, Badge, and ImageGallery UI.', col: 'Done', priority: TaskPriority.MEDIUM, sp: 5, duration: 4, offset: 3, labels: ['UI/UX', 'Frontend'] },
+              { title: `[${name}] Product Catalog Search & Filtering REST API`, desc: 'Implement pagination, faceted search, category filtering and sorting endpoints.', col: 'Done', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 7, labels: ['API', 'Backend'] },
+              { title: `[${name}] Catalog Smoke Testing & Milestone Verification`, desc: 'Verify product catalog rendering, response times, and initial integration tests.', col: 'Done', priority: TaskPriority.LOW, sp: 3, duration: 3, offset: 11, labels: ['QA', 'Testing'] }
+            ],
+            dependencies: commonSprint1Deps
+          },
+          {
+            name: `${name} - Sprint 2 (Shopping Cart & Auth)`,
+            goal: 'Implement customer authentication, persistent shopping cart, and unassigned checkout tasks.',
+            maxStoryPoint: 40,
+            startDate: daysAgo(6),
+            endDate: daysFromNow(8),
+            status: SprintStatus.ACTIVE,
+            tasks: [
+              { title: `[${name}] Customer Auth Module & Social OAuth Login`, desc: 'Implement Google and GitHub OAuth, session management and customer profile API.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 3, offset: 0, labels: ['Auth', 'Security'] },
+              { title: `[${name}] Persistent Shopping Cart Backend & Sync Engine`, desc: 'Build Redis-backed cart sync for guest-to-authenticated customer cart migration.', col: 'In Review', priority: TaskPriority.HIGH, sp: 8, duration: 4, offset: 3, labels: ['Backend', 'API'] },
+              { title: `[${name}] Shopping Cart Drawer & Checkout Summary UI`, desc: 'Develop animated slide-over cart drawer with quantity steppers and promo code input.', col: 'In Progress', priority: TaskPriority.HIGH, sp: 8, duration: 5, offset: 3, labels: ['Frontend', 'UI/UX'] },
+              { title: `[${name}] [BE] Inventory Reservation & Concurrency Lock System`, desc: 'Implement distributed locking with Redis Redlock to prevent over-selling limited items.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 7, labels: ['Backend', 'Database', 'Redis'], unassigned: true },
+              { title: `[${name}] [FE] Animated Promo Code Bar & Discount Calculator Widget`, desc: 'Build responsive coupon application UI with animated savings badge and error toasts.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 8, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Cart Checkout Flow Automated QA & Regression Suite`, desc: 'Run Playwright E2E cart tests, coupon validation checks and payment calculations.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Testing', 'Playwright'], unassigned: true },
+              { title: `[${name}] [DevOps] Staging Release Verification & Load Readiness`, desc: 'Deploy cart service to staging Kubernetes, verify ingress latency and monitoring.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 12, labels: ['DevOps', 'Release'], unassigned: true }
+            ],
+            dependencies: commonSprint2Deps
+          },
+          {
+            name: `${name} - Product Backlog`,
+            goal: 'Storefront Backlog pool ready for AI Backlog grooming, DAG planning and workload balancing.',
+            maxStoryPoint: 50,
+            startDate: daysFromNow(9),
+            endDate: daysFromNow(23),
+            status: SprintStatus.PLANNED,
+            tasks: [
+              { title: `[${name}] [BE] Stripe Checkout & Webhook Handling Architecture`, desc: 'Build secure Stripe checkout session, webhook handler for payment success, and receipts.', col: 'To Do', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 0, labels: ['API', 'Backend'], unassigned: true },
+              { title: `[${name}] [FE] One-Page Checkout Step-by-Step UI Flow`, desc: 'Build seamless multi-step checkout form with shipping address, billing, and order review.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 4, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [BE] Order Management System (OMS) & Invoice PDF Generation`, desc: 'Build Order state machine (Pending, Paid, Shipped, Delivered) and PDF receipt generator.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 4, labels: ['Backend', 'API'], unassigned: true },
+              { title: `[${name}] [QA] Automated Checkout & Webhook Simulation QA Tests`, desc: 'Implement full simulated purchase journey with mock Stripe webhooks and invoice checks.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Testing'], unassigned: true },
+              { title: `[${name}] [BE] Customer Product Reviews & Rating System API`, desc: 'Implement verified buyer reviews, photo attachments, and average rating aggregation.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 3, offset: 0, labels: ['Backend', 'API'], unassigned: true },
+              { title: `[${name}] [FE] Customer Product Reviews & Star Rating UI Widget`, desc: 'Design rating breakdown widget, review submission modal with star rating picker.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 3, offset: 3, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [FE] Wishlist Feature & Price Drop Alert Notifications`, desc: 'Create customer wishlist toggle and automated email alerts when item price drops.', col: 'To Do', priority: TaskPriority.LOW, sp: 3, duration: 2, offset: 2, labels: ['Frontend', 'Notification'], unassigned: true },
+              { title: `[${name}] [BE] Promo Code Engine & Tiered Discount Rules`, desc: 'Build coupon validation engine supporting percentage, fixed discount, and free shipping.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 3, offset: 5, labels: ['Backend', 'Promotion'], unassigned: true },
+              { title: `[${name}] [QA] Automated Black Friday Load & Stress Testing`, desc: 'Simulate 10,000 concurrent checkout sessions with k6 and optimize Redis throughput.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 7, labels: ['QA', 'Performance'], unassigned: true },
+              { title: `[${name}] [DevOps] AWS CloudFront CDN Edge Caching & Asset Invalidation`, desc: 'Configure CloudFront distribution for image assets, WebP compression, and edge caching.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 6, labels: ['DevOps', 'Cloud'], unassigned: true },
+              { title: `[${name}] [FE] SEO OpenGraph & Schema.org Rich Product Snippets`, desc: 'Implement JSON-LD structured data for Google Shopping rich search results.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 8, labels: ['Frontend', 'SEO'], unassigned: true },
+              { title: `[${name}] [FE] Realtime Live Chat Support Widget for Shoppers`, desc: 'Embed customer support chat drawer with automated FAQ replies and live agent bridge.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 9, labels: ['Frontend', 'Chat'], unassigned: true },
+              { title: `[${name}] [BE] Abandoned Cart Recovery Email Automation Worker`, desc: 'Background cron identifying carts inactive for 2 hours and queuing reminder emails.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 9, labels: ['Backend', 'Worker'], unassigned: true },
+              { title: `[${name}] [DevOps] Multi-Region Read Replica Database Setup`, desc: 'Configure PostgreSQL read replica for storefront catalog queries and failover.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 11, labels: ['DevOps', 'Database'], unassigned: true }
+            ],
+            dependencies: commonSprint3Deps
+          }
+        ]
+      }
+
+      if (name === 'Fintech Payment Gateway & Wallet') {
+        return [
+          {
+            name: `${name} - Sprint 1 (Compliance & Security Foundation)`,
+            goal: 'Establish PCI-DSS encryption baseline, double-entry ledger database schema, and HMAC signing.',
+            maxStoryPoint: 35,
+            startDate: daysAgo(30),
+            endDate: daysAgo(16),
+            status: SprintStatus.COMPLETED,
+            tasks: [
+              { title: `[${name}] PCI-DSS Security Baseline & Tokenization Schema`, desc: 'Design card tokenization tables and AES-256 field encryption keys in Postgres.', col: 'Done', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 0, labels: ['Setup', 'Security'] },
+              { title: `[${name}] Bank Account & Double-Entry Ledger Database Architecture`, desc: 'Model Accounts, LedgerEntries, Transfers, and Balance snapshots with strict constraints.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 3, labels: ['Database', 'Backend'] },
+              { title: `[${name}] Financial Dashboard Wireframes & Transaction Flow UI`, desc: 'Create wallet layout, transfer flows, and security verification modals in Figma.', col: 'Done', priority: TaskPriority.MEDIUM, sp: 5, duration: 4, offset: 3, labels: ['UI/UX', 'Figma'] },
+              { title: `[${name}] HMAC-SHA256 Request Signing & Key Rotation API`, desc: 'Implement API signature verification middleware and secret key rotation scheduler.', col: 'Done', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 7, labels: ['API', 'Security'] },
+              { title: `[${name}] Compliance Smoke Test & Encryption Verification`, desc: 'Verify encryption at rest, secure transit, and OWASP API security top 10 compliance.', col: 'Done', priority: TaskPriority.LOW, sp: 3, duration: 3, offset: 11, labels: ['QA', 'Security'] }
+            ],
+            dependencies: commonSprint1Deps
+          },
+          {
+            name: `${name} - Sprint 2 (Wallet & Payment Orchestrator)`,
+            goal: 'Deploy banking webhook listeners, wallet balance UI, and unassigned QR payment tasks for role testing.',
+            maxStoryPoint: 40,
+            startDate: daysAgo(5),
+            endDate: daysFromNow(9),
+            status: SprintStatus.ACTIVE,
+            tasks: [
+              { title: `[${name}] PCI-DSS Data Encryption & Audit Logging Ledger`, desc: 'Implement immutable audit log entries for all financial operations and admin actions.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 3, offset: 0, labels: ['Backend', 'Security'] },
+              { title: `[${name}] Banking Webhook Listener & Idempotency Key Filter`, desc: 'Build idempotent webhook processor using Redis keys to prevent duplicate transaction credits.', col: 'In Review', priority: TaskPriority.HIGH, sp: 8, duration: 4, offset: 3, labels: ['Backend', 'API'] },
+              { title: `[${name}] Digital Wallet Balance & Transaction History View`, desc: 'Develop responsive wallet card, balance visibility toggles, and infinite scroll ledger.', col: 'In Progress', priority: TaskPriority.HIGH, sp: 8, duration: 5, offset: 3, labels: ['Frontend', 'UI/UX'] },
+              { title: `[${name}] [BE] Dynamic VietQR Generator & Realtime IPN Handler`, desc: 'Generate standardized EMVCo QR codes with dynamic transaction amounts and bank routing.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 7, labels: ['Backend', 'Fintech', 'API'], unassigned: true },
+              { title: `[${name}] [FE] Biometric Confirmation Dialog & PIN Code Keypad`, desc: 'Build numeric keypad component with scrambled digits for secure transaction authorization.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 8, labels: ['Frontend', 'UI/UX', 'Security'], unassigned: true },
+              { title: `[${name}] [QA] Automated Payment Idempotency & Concurrency Double-Spend QA`, desc: 'Execute race condition test suites attempting 10 concurrent withdrawals on 1 account.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Testing', 'Security'], unassigned: true },
+              { title: `[${name}] [DevOps] Kubernetes Network Policy & WAF DDoS Mitigation Rules`, desc: 'Isolate banking pods with strict egress rules and configure Cloudflare WAF rate limits.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 12, labels: ['DevOps', 'Security'], unassigned: true }
+            ],
+            dependencies: commonSprint2Deps
+          },
+          {
+            name: `${name} - Product Backlog`,
+            goal: 'Fintech payment scaling backlog ready for algorithmic scheduling and role assignment.',
+            maxStoryPoint: 50,
+            startDate: daysFromNow(10),
+            endDate: daysFromNow(24),
+            status: SprintStatus.PLANNED,
+            tasks: [
+              { title: `[${name}] [BE] Microservices Inter-Service Mutual TLS (mTLS)`, desc: 'Configure mTLS between wallet service and transaction ledger using Istio service mesh.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 0, labels: ['Backend', 'Security'], unassigned: true },
+              { title: `[${name}] [BE] Automated Settlement & Reconciliation Batch Worker`, desc: 'Nightly BullMQ batch worker reconciling bank statements against internal transactions.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 2, labels: ['Backend', 'Worker'], unassigned: true },
+              { title: `[${name}] [FE] Settlement Discrepancy Dashboard & Audit Log Explorer`, desc: 'Financial operator UI highlighting un-reconciled items with one-click adjustments.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 6, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Reconciliation Ledger Mathematical Proof & Rounding QA`, desc: 'Validate sub-cent rounding calculations and multi-currency foreign exchange rates.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 10, labels: ['QA', 'Testing'], unassigned: true },
+              { title: `[${name}] [BE] Risk Engine & Fraud Velocity Check Microservice`, desc: 'Evaluate velocity heuristics: flag accounts exceeding 5 transactions in 60 seconds.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 0, labels: ['Backend', 'Fintech'], unassigned: true },
+              { title: `[${name}] [FE] Fraud Alert Flagging & Suspicious Transaction Modal`, desc: 'Realtime compliance alert banner with quick freeze card and lock account triggers.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 4, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Simulated Fraudulent Attack Vectors & Rate Limit Tests`, desc: 'Run automated pen-testing attacks simulating card credential stuffing and replay attacks.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 6, labels: ['QA', 'Security'], unassigned: true },
+              { title: `[${name}] [DevOps] Automated Secret Zero Rotation via AWS Secrets Manager`, desc: 'Integrate automatic 30-day rotation for database master passwords and JWT signing keys.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 3, labels: ['DevOps', 'Security'], unassigned: true },
+              { title: `[${name}] [DevOps] High-Availability Redis Cluster for Transaction Locks`, desc: 'Deploy 6-node Redis cluster with Redlock support across 3 AWS Availability Zones.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 5, labels: ['DevOps', 'Redis'], unassigned: true },
+              { title: `[${name}] [FE] CSV & Excel Transaction Statement Export Interface`, desc: 'Custom date range picker with instant download of verified financial transaction statements.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 7, labels: ['Frontend', 'Export'], unassigned: true },
+              { title: `[${name}] [BE] Statement Generation Service with Digital Watermarking`, desc: 'Generate encrypted PDF bank statements with SHA-256 validation seal.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 8, labels: ['Backend', 'Report'], unassigned: true },
+              { title: `[${name}] [QA] Statement Number Precision & Tax Calculation QA`, desc: 'Audit VAT calculation accuracy and PDF layout integrity across Adobe and browser viewers.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 10, labels: ['QA', 'Finance'], unassigned: true },
+              { title: `[${name}] [BE] Multi-Currency Exchange Rate Sync & Spread Calculator`, desc: 'Fetch ECB realtime foreign currency feeds and apply dynamic spread margins.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 8, labels: ['Backend', 'Finance'], unassigned: true },
+              { title: `[${name}] [FE] Currency Converter Widget with Realtime Market Ticker`, desc: 'Interactive live currency converter with animated exchange rate fluctuation charts.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 10, labels: ['Frontend', 'UI/UX'], unassigned: true }
+            ],
+            dependencies: commonSprint3Deps
+          }
+        ]
+      }
+
+      if (name === 'Realtime Logistics & Order Dispatch') {
+        return [
+          {
+            name: `${name} - Sprint 1 (Map & Routing Baseline)`,
+            goal: 'Setup geolocation database models, Redis geospatial indexes, courier fleet schema, and map tokens.',
+            maxStoryPoint: 35,
+            startDate: daysAgo(30),
+            endDate: daysAgo(16),
+            status: SprintStatus.COMPLETED,
+            tasks: [
+              { title: `[${name}] Geolocation Schema & Redis Geospatial Setup`, desc: 'Configure Redis GEOADD/GEORADIUS commands for courier tracking and PostgreSQL coordinates.', col: 'Done', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 0, labels: ['Setup', 'DevOps'] },
+              { title: `[${name}] Courier Fleet Database Models & Shift Management`, desc: 'Model Courier, Vehicle, Shift, Order, and DeliveryRoute relations with Prisma.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 3, labels: ['Database', 'Backend'] },
+              { title: `[${name}] Dispatch Dashboard Wireframes & Map Pin Design Tokens`, desc: 'Design interactive courier pins, delivery radius polygons, and route line colors in Figma.', col: 'Done', priority: TaskPriority.MEDIUM, sp: 5, duration: 4, offset: 3, labels: ['UI/UX', 'Figma'] },
+              { title: `[${name}] Courier WebSocket Connection & Heartbeat Gateway`, desc: 'Implement WebSocket gateway receiving 5-second GPS updates with disconnect recovery.', col: 'Done', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 7, labels: ['API', 'Socket'] },
+              { title: `[${name}] Map Coordinates Accuracy & GPS Drift Smoke Test`, desc: 'Verify Haversine formula distance calculations and eliminate GPS jitter.', col: 'Done', priority: TaskPriority.LOW, sp: 3, duration: 3, offset: 11, labels: ['QA', 'Testing'] }
+            ],
+            dependencies: commonSprint1Deps
+          },
+          {
+            name: `${name} - Sprint 2 (Live Dispatching Engine)`,
+            goal: 'Implement automated dispatching, moving courier map view, and unassigned routing tasks for role assignment.',
+            maxStoryPoint: 40,
+            startDate: daysAgo(5),
+            endDate: daysFromNow(9),
+            status: SprintStatus.ACTIVE,
+            tasks: [
+              { title: `[${name}] Courier Location Ingestion via Redis Geospatial`, desc: 'Ingest 500+ courier locations/sec and update spatial indexes with low memory footprint.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 3, offset: 0, labels: ['Backend', 'Redis'] },
+              { title: `[${name}] Automated Order Dispatching Algorithm & Batching`, desc: 'Algorithm matching pending orders to closest active couriers within 3km radius.', col: 'In Review', priority: TaskPriority.HIGH, sp: 8, duration: 4, offset: 3, labels: ['Backend', 'Algorithm'] },
+              { title: `[${name}] Live Map View with Moving Courier Markers`, desc: 'Build Mapbox GL canvas with smooth interpolation of courier vehicle movement.', col: 'In Progress', priority: TaskPriority.HIGH, sp: 8, duration: 5, offset: 3, labels: ['Frontend', 'UI/UX', 'Map'] },
+              { title: `[${name}] [BE] ETA Prediction & Realtime Traffic Matrix Service`, desc: 'Integrate traffic API to compute dynamic delivery arrival estimates with weather factors.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 7, labels: ['Backend', 'Algorithm', 'API'], unassigned: true },
+              { title: `[${name}] [FE] Driver Order Acceptance Modal & Sound Alert System`, desc: 'Build mobile web driver modal with 30-second countdown timer and audio chime notification.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 8, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] GPS Route Simulation QA & Disconnect Reconnect Tests`, desc: 'Simulate simulated vehicle moving through tunnel with temporary 60-second connection loss.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Testing', 'Socket'], unassigned: true },
+              { title: `[${name}] [DevOps] Socket.io Redis Adapter Cluster & Horizontal Scaling`, desc: 'Setup Redis adapter allowing WebSockets to scale across 4 load-balanced backend containers.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 12, labels: ['DevOps', 'Scaling'], unassigned: true }
+            ],
+            dependencies: commonSprint2Deps
+          },
+          {
+            name: `${name} - Product Backlog`,
+            goal: 'Advanced routing algorithms and fleet operations pool ready for AI auto-planning.',
+            maxStoryPoint: 50,
+            startDate: daysFromNow(10),
+            endDate: daysFromNow(24),
+            status: SprintStatus.PLANNED,
+            tasks: [
+              { title: `[${name}] [BE] Multi-Stop Route Optimization using Dijkstra / TSP`, desc: 'Calculate optimal delivery drop-off sequence minimizing total fuel and travel distance.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 0, labels: ['Backend', 'Algorithm'], unassigned: true },
+              { title: `[${name}] [FE] Interactive Multi-Stop Waypoint Reordering UI`, desc: 'Drag-and-drop waypoint list allowing dispatchers to manually reorder route stops.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 4, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [QA] Routing Optimization Edge Cases & One-Way Road QA`, desc: 'Validate route sequence against city one-way traffic restrictions and bridge closures.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Algorithm'], unassigned: true },
+              { title: `[${name}] [BE] Proof of Delivery (POD) Image Upload & S3 Bucket Policy`, desc: 'Direct upload endpoint for customer signature and delivery parcel photo verification.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 0, labels: ['Backend', 'S3'], unassigned: true },
+              { title: `[${name}] [FE] Driver Camera Photo Capture & Customer Signature Canvas`, desc: 'Canvas signature component supporting touch stylus and native camera capture.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 2, labels: ['Frontend', 'Mobile'], unassigned: true },
+              { title: `[${name}] [QA] Signature Touch Latency & Offline Image Queue QA`, desc: 'Test signature capture responsiveness and offline SQLite queueing when signal is lost.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 4, labels: ['QA', 'Mobile'], unassigned: true },
+              { title: `[${name}] [BE] Automated Courier Fuel Surcharge & Payout Engine`, desc: 'Compute daily driver earnings based on completed deliveries, distance, and tips.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 3, labels: ['Backend', 'Fintech'], unassigned: true },
+              { title: `[${name}] [FE] Courier Earnings & Commission Breakdown Screen`, desc: 'Weekly payout summary screen with detailed line-item breakdown and bank withdrawal button.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 6, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [DevOps] Geolocation Tile Server Caching via NGINX & CDN`, desc: 'Cache map vector tiles on CloudFront CDN edge to reduce Mapbox API usage costs.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 5, labels: ['DevOps', 'Cloud'], unassigned: true },
+              { title: `[${name}] [DevOps] Realtime Fleet Metrics & OpenTelemetry Socket Dashboard`, desc: 'Monitor active WebSocket connections, message round-trip time, and packet drop rate.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 7, labels: ['DevOps', 'Monitoring'], unassigned: true },
+              { title: `[${name}] [FE] Customer Live Tracking Webview & SMS Notification Link`, desc: 'Lightweight mobile web page allowing recipients to watch delivery courier approaching.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 7, labels: ['Frontend', 'UI/UX'], unassigned: true },
+              { title: `[${name}] [BE] Twilio SMS Dispatch & Dynamic Shortlink Redirector`, desc: 'Send automated SMS notifications with branded shortlinks when delivery is 10 mins away.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 9, labels: ['Backend', 'Integration'], unassigned: true },
+              { title: `[${name}] [QA] High Load Simulated Driver Connections & Reconnects`, desc: 'Simulate 1,000 couriers broadcasting location concurrently with Locust.', col: 'To Do', priority: TaskPriority.LOW, sp: 3, duration: 2, offset: 11, labels: ['QA', 'Performance'], unassigned: true },
+              { title: `[${name}] [FE] Fleet Manager Heatmap Layer & Order Density Overlay`, desc: 'Visual density heatmap overlay showing historical order demand hotspots across districts.', col: 'To Do', priority: TaskPriority.LOW, sp: 2, duration: 2, offset: 11, labels: ['Frontend', 'Map'], unassigned: true }
+            ],
+            dependencies: commonSprint3Deps
+          }
+        ]
+      }
+
+      // Default for Design System & Marketing
+      return [
+        {
+          name: `${name} - Sprint 1 (Foundation)`,
+          goal: 'Core architecture, design specifications, component guidelines, and baseline infrastructure.',
+          maxStoryPoint: 35,
+          startDate: daysAgo(30),
+          endDate: daysAgo(16),
+          status: SprintStatus.COMPLETED,
+          tasks: [
+            { title: `[${name}] Repository Setup, ESLint & Storybook Config`, desc: 'Setup workspace tooling, documentation framework, and build scripts.', col: 'Done', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 0, labels: ['Setup', 'DevOps'] },
+            { title: `[${name}] Typography, Spacing & Color Token Definitions`, desc: 'Create semantic token aliases and export them to CSS variables and Tailwind theme.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 4, offset: 3, labels: ['Design', 'UI/UX'] },
+            { title: `[${name}] Atomic Component Wireframes & Accessibility Standards`, desc: 'Design atomic elements adhering to WCAG 2.1 AA accessibility guidelines.', col: 'Done', priority: TaskPriority.MEDIUM, sp: 5, duration: 4, offset: 3, labels: ['Figma', 'UI/UX'] },
+            { title: `[${name}] Component Build Engine & npm Package Bundler`, desc: 'Configure Vite library mode bundling with TypeScript declaration exports.', col: 'Done', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 7, labels: ['Build', 'DevOps'] },
+            { title: `[${name}] Initial Cross-Browser Smoke Testing & Milestone Signoff`, desc: 'Verify rendering across Safari, Chrome, and Firefox browsers.', col: 'Done', priority: TaskPriority.LOW, sp: 3, duration: 3, offset: 11, labels: ['QA', 'Testing'] }
+          ],
+          dependencies: commonSprint1Deps
+        },
+        {
+          name: `${name} - Sprint 2 (Core Library Implementation)`,
+          goal: 'Build interactive UI components, form controls, and unassigned tasks for technical role assignment.',
+          maxStoryPoint: 40,
+          startDate: daysAgo(5),
+          endDate: daysFromNow(9),
+          status: SprintStatus.ACTIVE,
+          tasks: [
+            { title: `[${name}] Core Button, Input & Badge UI Components`, desc: 'Implement primitives with variant props, focus states, and keyboard accessibility.', col: 'Done', priority: TaskPriority.CRITICAL, sp: 5, duration: 3, offset: 0, labels: ['Frontend', 'UI/UX'] },
+            { title: `[${name}] Modal Dialog & Slideover Drawer Primitives`, desc: 'Build accessible dialogs using Radix UI primitives with focus trapping.', col: 'In Review', priority: TaskPriority.HIGH, sp: 8, duration: 4, offset: 3, labels: ['Frontend', 'UI/UX'] },
+            { title: `[${name}] Component Showcase Documentation & Storybook Portal`, desc: 'Interactive component playground with live code copy and prop controls.', col: 'In Progress', priority: TaskPriority.HIGH, sp: 8, duration: 5, offset: 3, labels: ['Frontend', 'Documentation'] },
+            { title: `[${name}] [FE] Data Table Component with Sorting & Virtualization`, desc: 'High-performance table component supporting 10,000 rows with TanStack Virtual.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 7, labels: ['Frontend', 'Component'], unassigned: true },
+            { title: `[${name}] [FE] DatePicker & Time Range Selector Component`, desc: 'Dual-calendar view with preset date ranges (Today, This Sprint, This Month).', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 4, offset: 8, labels: ['Frontend', 'UI/UX'], unassigned: true },
+            { title: `[${name}] [QA] Accessibility WCAG 2.1 AA Compliance Automated Audit`, desc: 'Run axe-core automated audits on all components and fix any contrast violations.', col: 'To Do', priority: TaskPriority.HIGH, sp: 3, duration: 3, offset: 8, labels: ['QA', 'Accessibility'], unassigned: true },
+            { title: `[${name}] [DevOps] Chromatic Visual Regression CI/CD Pipeline`, desc: 'Automate visual regression screenshot comparisons on every pull request.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 12, labels: ['DevOps', 'CI/CD'], unassigned: true }
+          ],
+          dependencies: commonSprint2Deps
+        },
+        {
+          name: `${name} - Product Backlog`,
+          goal: 'Design system enhancement backlog ready for AI scheduling.',
+          maxStoryPoint: 50,
+          startDate: daysFromNow(10),
+          endDate: daysFromNow(24),
+          status: SprintStatus.PLANNED,
+          tasks: [
+            { title: `[${name}] [FE] Command Menu (Cmd+K) Palette Component`, desc: 'Accessible search palette with fuzzy filtering and keyboard navigation.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 0, labels: ['Frontend', 'Component'], unassigned: true },
+            { title: `[${name}] [FE] Toast & Notification Banner System`, desc: 'Stacked notification alerts with swipe-to-dismiss and auto-dismiss timer.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 2, labels: ['Frontend', 'UI/UX'], unassigned: true },
+            { title: `[${name}] [FE] File Dropzone with Image Preview & Upload Progress`, desc: 'Drag-and-drop file upload component with image thumbnail cropping.', col: 'To Do', priority: TaskPriority.HIGH, sp: 5, duration: 3, offset: 4, labels: ['Frontend', 'Component'], unassigned: true },
+            { title: `[${name}] [QA] Component Touch Target & Mobile Viewport Audit`, desc: 'Verify minimum 48px touch target on mobile screens across all controls.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 7, labels: ['QA', 'Testing'], unassigned: true },
+            { title: `[${name}] [DevOps] Automated Changelog & SemVer Release Tagging`, desc: 'Setup changesets action to automate npm package publishing on merge.', col: 'To Do', priority: TaskPriority.MEDIUM, sp: 3, duration: 2, offset: 9, labels: ['DevOps', 'Release'], unassigned: true }
+          ],
+          dependencies: commonSprint3Deps
+        }
+      ]
+    }
+
+    const sprintConfigs = getSprintConfigsForProject(proj.name)
 
     for (const sConf of sprintConfigs) {
       const sprint = await prisma.sprint.create({
@@ -701,9 +1027,58 @@ async function main() {
       })
 
       const projMembers = await prisma.projectMember.findMany({
-        where: { projectId: proj.id, status: ProjectMemberStatus.ACTIVE }
+        where: { projectId: proj.id, status: ProjectMemberStatus.ACTIVE },
+        include: { member: true }
       })
       const memberUserIds = projMembers.map((m) => m.memberId)
+
+      const findMemberBySkill = (labels: string[], title: string): string => {
+        const lowerTitle = title.toLowerCase()
+        const lowerLabels = labels.map((l) => l.toLowerCase())
+
+        let targetRole: TechnicalRole = TechnicalRole.FULLSTACK
+        if (
+          lowerLabels.some((l) => l.includes('front') || l.includes('ui') || l.includes('figma') || l.includes('design')) ||
+          /\b(ui|frontend|screen|css|component|ux|figma|tailwind|layout)\b/i.test(lowerTitle)
+        ) {
+          targetRole = TechnicalRole.FRONTEND
+        } else if (
+          lowerLabels.some((l) => l.includes('back') || l.includes('api') || l.includes('database') || l.includes('auth')) ||
+          /\b(backend|database|api|auth|endpoint|service|server|prisma|sql|redis|bullmq)\b/i.test(lowerTitle)
+        ) {
+          targetRole = TechnicalRole.BACKEND
+        } else if (
+          lowerLabels.some((l) => l.includes('qa') || l.includes('test')) ||
+          /\b(qa|test|testing|cypress|jest|smoke|audit|benchmark)\b/i.test(lowerTitle)
+        ) {
+          targetRole = TechnicalRole.QA_TEST
+        } else if (
+          lowerLabels.some((l) => l.includes('devops') || l.includes('cloud') || l.includes('docker') || l.includes('setup')) ||
+          /\b(devops|cloud|docker|kubernetes|helm|pipeline|ci\/cd|aws|terraform|vault)\b/i.test(lowerTitle)
+        ) {
+          targetRole = TechnicalRole.DEVOPS
+        }
+
+        // 1. Primary lookup: Match member with exact configured technicalRole in ProjectMember
+        const matched = projMembers.find((pm) => pm.technicalRole === targetRole)
+        if (matched) return matched.memberId
+
+        // 2. If target is FRONTEND, allow DESIGN
+        if (targetRole === TechnicalRole.FRONTEND) {
+          const designMatch = projMembers.find((pm) => pm.technicalRole === TechnicalRole.DESIGN)
+          if (designMatch) return designMatch.memberId
+        }
+
+        // 3. Fallback to FULLSTACK
+        const fullstackMatch = projMembers.find((pm) => pm.technicalRole === TechnicalRole.FULLSTACK)
+        if (fullstackMatch) return fullstackMatch.memberId
+
+        // 4. Any member except owner/viewer if possible
+        const memberMatch = projMembers.find((pm) => pm.technicalRole !== TechnicalRole.PRODUCT_OWNER)
+        if (memberMatch) return memberMatch.memberId
+
+        return memberUserIds[totalTasksCount % memberUserIds.length]
+      }
 
       let sortOrder = 1
       const createdMainTasks: any[] = []
@@ -711,7 +1086,8 @@ async function main() {
       for (let i = 0; i < sConf.tasks.length; i++) {
         const tTemp = sConf.tasks[i]
         const targetColId = createdCols[tTemp.col]
-        const assignedUserId = memberUserIds[totalTasksCount % memberUserIds.length]
+        const isUnassigned = !!tTemp.unassigned
+        const assignedUserId = isUnassigned ? null : findMemberBySkill(tTemp.labels, tTemp.title)
 
         const taskStart = addDays(sConf.startDate, tTemp.offset)
         const taskDue = addDays(taskStart, tTemp.duration)
@@ -739,16 +1115,16 @@ async function main() {
             startDate: taskStart,
             dueDate: taskDue,
             createdById: proj.ownerId,
-            labels: { create: tTemp.labels.map((lbl) => ({ label: lbl, createdById: proj.ownerId })) },
-            assignees: { create: [{ userId: assignedUserId, createdById: proj.ownerId }] },
+            labels: { create: tTemp.labels.map((lbl: string) => ({ label: lbl, createdById: proj.ownerId })) },
+            assignees: assignedUserId ? { create: [{ userId: assignedUserId, createdById: proj.ownerId }] } : undefined,
             boardColumnTaskOrders: { create: [{ boardColumnId: targetColId, sortOrder: sortOrder++ }] }
           }
         })
         totalTasksCount++
         createdMainTasks.push(task)
 
-        // Subtasks for the first task of each sprint
-        if (i === 0) {
+        // Subtasks for the first task of completed/active sprint
+        if (i === 0 && assignedUserId) {
           const subTask1 = await prisma.task.create({
             data: {
               sprintId: sprint.id,
@@ -790,7 +1166,7 @@ async function main() {
 
         // Add Realistic Comments and Attachments for active tasks
         if (tTemp.col === 'In Progress' || tTemp.col === 'In Review') {
-          const commentator = users.find((u) => u.id === assignedUserId) || users[0]
+          const commentator = allUsers.find((u) => u.id === assignedUserId) || users[0]
           await prisma.taskComment.create({
             data: {
               taskId: task.id,
@@ -837,7 +1213,7 @@ async function main() {
       }
     })
 
-    const chatSender = users.find((u) => u.id === proj.ownerId)!
+    const chatSender = allUsers.find((u) => u.id === proj.ownerId)!
     await prisma.projectChatMessage.create({
       data: {
         projectChatId: pChat.id,
@@ -890,19 +1266,21 @@ async function main() {
     { SystemRole: 'ADMIN', Name: adminUser.displayName, Email: adminUser.email, Password: defaultPassword }
   ])
 
-  console.log('\n👥 DEDICATED PROJECT OWNER ACCOUNTS [Requested by User]:')
+  console.log('\n👥 DEDICATED PROJECT OWNER ACCOUNTS [3 Projects Per Owner]:')
   console.table([
     {
       Email: 'nguyenthuan05.work@gmail.com',
       Name: userByEmail('nguyenthuan05.work@gmail.com').displayName,
-      OwnedProject: 'Sprintos Mobile App',
+      OwnedProjects: '1. Sprintos Mobile App\n2. Sprintos AI Intelligence Core\n3. Sprintos Cloud Infrastructure',
+      TotalProjects: 3,
       Password: defaultPassword,
       CrossoverStatus: 'EXCLUSIVE (No shared projects with sprintos.01062026@gmail.com)'
     },
     {
       Email: 'sprintos.01062026@gmail.com',
       Name: userByEmail('sprintos.01062026@gmail.com').displayName,
-      OwnedProject: 'E-Commerce Redesign',
+      OwnedProjects: '1. E-Commerce Redesign\n2. Fintech Payment Gateway & Wallet\n3. Realtime Logistics & Order Dispatch',
+      TotalProjects: 3,
       Password: defaultPassword,
       CrossoverStatus: 'EXCLUSIVE (No shared projects with nguyenthuan05.work@gmail.com)'
     }

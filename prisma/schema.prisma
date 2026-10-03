@@ -46,6 +46,17 @@ enum ProjectMemberStatus {
   PENDING
 }
 
+enum TechnicalRole {
+  BACKEND
+  FRONTEND
+  FULLSTACK
+  QA_TEST
+  DEVOPS
+  DESIGN
+  PRODUCT_OWNER
+  OTHER
+}
+
 enum SprintStatus {
   PLANNED
   ACTIVE
@@ -310,6 +321,7 @@ model ProjectMember {
   email       String
   roleId      String
   role        Role                 @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  technicalRole TechnicalRole       @default(FULLSTACK)
   status      ProjectMemberStatus @default(PENDING)
   inviteToken String?
   joinAt      DateTime?

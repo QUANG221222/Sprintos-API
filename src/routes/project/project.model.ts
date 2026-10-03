@@ -1,5 +1,5 @@
 import z from 'zod'
-import { ProjectMemberRole } from '~/shared/constants/project.constants'
+import { ProjectMemberRole, TechnicalRole } from '~/shared/constants/project.constants'
 import { ProjectSchema } from '~/shared/models/shared-project.model'
 
 export const GetListProjectResSchema = z.object({
@@ -20,7 +20,8 @@ export const CreateProjectBodySchema = z
       .array(
         z.object({
           email: z.string().email(),
-          role: z.nativeEnum(ProjectMemberRole)
+          role: z.nativeEnum(ProjectMemberRole),
+          technicalRole: z.nativeEnum(TechnicalRole).optional()
         })
       )
       .optional()

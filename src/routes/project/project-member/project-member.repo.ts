@@ -4,7 +4,7 @@ import { ProjectMemberStatus } from '~/generated/prisma/client'
 import { GetProjectMemberListQueryType, GetListProjectMemberResType } from './project-member.model'
 import { GetProjectMemberDetailResType } from '~/shared/models/shared-project-member.model'
 import { SharedRoleRepository } from '~/shared/repositories/shared-role.repo'
-import { ProjectMemberRole } from '~/shared/constants/project.constants'
+import { ProjectMemberRole, TechnicalRole } from '~/shared/constants/project.constants'
 
 @Injectable()
 export class ProjectMemberRepo {
@@ -101,8 +101,16 @@ export class ProjectMemberRepo {
     }
   }
 
-  async updateRole(id: string, roleName: string, updatedById: string) {
-    const roleId = await this.sharedRoleRepository.getRoleIdByName(roleName)
+  async updateRole(
+    id: string,
+    roleName: string | undefined,
+    updatedById: string,
+    technicalRole?: TechnicalRole
+  ) {
+    let roleId: string | undefined = undefined
+    if (roleName) {
+      roleId = await this.sharedRoleRepository.getRoleIdByName(roleName)
+    }
 
     const member = await this.prismaService.projectMember.update({
       where: {
@@ -110,7 +118,8 @@ export class ProjectMemberRepo {
         deletedAt: null
       },
       data: {
-        roleId,
+        ...(roleId ? { roleId } : {}),
+        ...(technicalRole ? { technicalRole } : {}),
         updatedById
       },
       include: {

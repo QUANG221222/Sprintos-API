@@ -61,7 +61,7 @@ export class ProjectMemberService {
     requesterId: string
   }) {
     try {
-      const { projectId, role } = body
+      const { projectId, role, technicalRole } = body
 
       const project = await this.projectMemberRepo.findProjectById(projectId)
       if (!project) {
@@ -84,21 +84,23 @@ export class ProjectMemberService {
         throw ProjectMemberNotFoundError
       }
 
-      if (targetMember.memberId === project.ownerId && role !== ProjectMemberRole.OWNER) {
-        throw ProjectMemberRoleChangeForbiddenError
+      if (role) {
+        if (targetMember.memberId === project.ownerId && role !== ProjectMemberRole.OWNER) {
+          throw ProjectMemberRoleChangeForbiddenError
+        }
+
+        if (
+          (role === ProjectMemberRole.OWNER ||
+            targetMember.role === ProjectMemberRole.OWNER ||
+            role === ProjectMemberRole.CO_OWNER ||
+            targetMember.role === ProjectMemberRole.CO_OWNER) &&
+          !isOwner
+        ) {
+          throw ProjectMemberRoleChangeForbiddenError
+        }
       }
 
-      if (
-        (role === ProjectMemberRole.OWNER ||
-          targetMember.role === ProjectMemberRole.OWNER ||
-          role === ProjectMemberRole.CO_OWNER ||
-          targetMember.role === ProjectMemberRole.CO_OWNER) &&
-        !isOwner
-      ) {
-        throw ProjectMemberRoleChangeForbiddenError
-      }
-
-      return await this.projectMemberRepo.updateRole(targetMember.id, role, requesterId)
+      return await this.projectMemberRepo.updateRole(targetMember.id, role, requesterId, technicalRole)
     } catch (error) {
       if (isNotFoundPrismaError(error)) {
         throw ProjectNotFoundError

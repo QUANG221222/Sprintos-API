@@ -86,67 +86,69 @@ export class TaskRepo {
     }
   }
 
+  private readonly taskDetailInclude = {
+    assignees: {
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            roleId: true,
+            totpSecret: true,
+            status: true,
+            phoneNumber: true,
+            address: true,
+            dob: true,
+            bio: true,
+            gender: true,
+            avatar: true,
+            avatarPublicId: true,
+            createdById: true,
+            updatedById: true,
+            deletedById: true,
+            createdAt: true,
+            updatedAt: true,
+            deletedAt: true
+          }
+        }
+      }
+    },
+    parent: true,
+    subTasks: {
+      where: {
+        deletedAt: null
+      }
+    },
+    predecessors: {
+      include: {
+        predecessor: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    },
+    successors: {
+      include: {
+        successor: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    }
+  }
+
   async findById(params: GetTaskParamType): Promise<TaskDetailType | null> {
     return (await this.prismaService.task.findFirst({
       where: {
         id: params.taskId,
         deletedAt: null
       },
-      include: {
-        assignees: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                displayName: true,
-                roleId: true,
-                totpSecret: true,
-                status: true,
-                phoneNumber: true,
-                address: true,
-                dob: true,
-                bio: true,
-                gender: true,
-                avatar: true,
-                avatarPublicId: true,
-                createdById: true,
-                updatedById: true,
-                deletedById: true,
-                createdAt: true,
-                updatedAt: true,
-                deletedAt: true
-              }
-            }
-          }
-        },
-        parent: true,
-        subTasks: {
-          where: {
-            deletedAt: null
-          }
-        },
-        predecessors: {
-          include: {
-            predecessor: {
-              select: {
-                id: true,
-                title: true
-              }
-            }
-          }
-        },
-        successors: {
-          include: {
-            successor: {
-              select: {
-                id: true,
-                title: true
-              }
-            }
-          }
-        }
-      }
+      include: this.taskDetailInclude
     })) as any
   }
 
@@ -164,7 +166,7 @@ export class TaskRepo {
       }
       boardColumnId = sprint.boardColumnIds[0]
     }
-    return await this.prismaService.task.create({
+    return (await this.prismaService.task.create({
       data: {
         ...taskData,
         boardColumnId,
@@ -174,8 +176,9 @@ export class TaskRepo {
             userId
           }))
         } : undefined
-      }
-    })
+      },
+      include: this.taskDetailInclude
+    })) as any
   }
 
   async getProjectIdBySprintId(sprintId: string): Promise<string | null> {
@@ -246,7 +249,7 @@ export class TaskRepo {
       }
     }
 
-    return await this.prismaService.task.update({
+    return (await this.prismaService.task.update({
       where: {
         id,
         deletedAt: null
@@ -261,8 +264,9 @@ export class TaskRepo {
           }))
         } : undefined,
         updatedAt: new Date()
-      }
-    })
+      },
+      include: this.taskDetailInclude
+    })) as any
   }
 
   async delete({ id, userId }: { id: string; userId: string }, isHard?: boolean): Promise<TaskType> {

@@ -52,7 +52,8 @@ const configSchema = z.object({
   CF_ACCESS_CLIENT_ID: z.string().optional(),
   DEFAULT_AI_MODEL: z.string(),
   OPENROUTER_API_KEY: z.string(),
-  OPENROUTER_BASE_URL: z.string()
+  OPENROUTER_BASE_URL: z.string(),
+  TAVILY_API_KEY: z.string().optional()
 })
 
 const configServer = configSchema.safeParse(process.env)

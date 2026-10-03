@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "seed:data": "ts-node --transpile-only initialScript/seed-data.ts",
+    "seed:data": "ts-node --transpile-only initialScript/seed-data.ts && npm run create-permissions",
     "seed:init": "ts-node --transpile-only initialScript/index.ts",
     "create-permissions": "ts-node --transpile-only initialScript/create-permissions.ts",
     "build": "nest build",
@@ -49,6 +49,7 @@
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@react-email/components": "^1.0.10",
+    "@tavily/core": "^0.7.13",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.2.0",
     "cookie": "^2.0.1",

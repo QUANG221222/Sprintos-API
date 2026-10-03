@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ProjectMemberRole, ProjectMemberStatus } from '../constants/project.constants'
+import { ProjectMemberRole, ProjectMemberStatus, TechnicalRole } from '../constants/project.constants'
 
 export const ProjectMemberSchema = z.object({
   id: z.string(),
@@ -7,6 +7,7 @@ export const ProjectMemberSchema = z.object({
   memberId: z.string(),
   email: z.string().email(),
   role: z.nativeEnum(ProjectMemberRole),
+  technicalRole: z.nativeEnum(TechnicalRole).default(TechnicalRole.FULLSTACK),
   status: z.nativeEnum(ProjectMemberStatus),
   inviteToken: z.string().nullable(),
   joinAt: z.date().nullable(),
@@ -28,6 +29,8 @@ export const CreateInvitationProjectMemberBodySchema = ProjectMemberSchema.pick(
   email: true,
   role: true,
   inviteToken: true
+}).extend({
+  technicalRole: z.nativeEnum(TechnicalRole).optional()
 })
 
 export type ProjectMemberType = z.infer<typeof ProjectMemberSchema>

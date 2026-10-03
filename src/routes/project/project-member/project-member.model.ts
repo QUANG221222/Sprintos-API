@@ -1,5 +1,5 @@
 import z from 'zod'
-import { ProjectMemberRole, ProjectMemberStatus } from '~/shared/constants/project.constants'
+import { ProjectMemberRole, ProjectMemberStatus, TechnicalRole } from '~/shared/constants/project.constants'
 import { GetListQuerySchema } from '~/shared/models/request.model'
 import { ProjectMemberSchema } from '~/shared/models/shared-project-member.model'
 
@@ -44,6 +44,7 @@ export const CreateProjectMemberBodySchema = z
     memberId: z.string(),
     email: z.string().email(),
     role: z.nativeEnum(ProjectMemberRole),
+    technicalRole: z.nativeEnum(TechnicalRole).optional(),
     status: z.nativeEnum(ProjectMemberStatus).optional(),
     inviteToken: z.string().nullable().optional(),
     joinAt: z.coerce.date().nullable().optional()
@@ -54,6 +55,7 @@ export const UpdateProjectMemberBodySchema = z
   .object({
     email: z.string().email().optional(),
     role: z.nativeEnum(ProjectMemberRole).optional(),
+    technicalRole: z.nativeEnum(TechnicalRole).optional(),
     status: z.nativeEnum(ProjectMemberStatus).optional(),
     inviteToken: z.string().nullable().optional(),
     joinAt: z.coerce.date().nullable().optional()
@@ -67,7 +69,8 @@ export const InviteProjectMemberBodySchema = z
       .array(
         z.object({
           email: z.string().email(),
-          role: z.nativeEnum(ProjectMemberRole)
+          role: z.nativeEnum(ProjectMemberRole),
+          technicalRole: z.nativeEnum(TechnicalRole).optional()
         })
       )
       .nonempty()
@@ -85,7 +88,8 @@ export const VerifyProjectMemberInviteBodySchema = z
 export const UpdateProjectMemberRoleBodySchema = z
   .object({
     projectId: z.string(),
-    role: z.nativeEnum(ProjectMemberRole)
+    role: z.nativeEnum(ProjectMemberRole).optional(),
+    technicalRole: z.nativeEnum(TechnicalRole).optional()
   })
   .strict()
 

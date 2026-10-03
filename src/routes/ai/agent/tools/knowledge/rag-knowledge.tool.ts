@@ -10,6 +10,8 @@ export class RagKnowledgeTool implements IAgentTool {
   readonly name = 'searchProjectKnowledge'
   readonly description =
     'Tìm kiếm ngữ nghĩa (RAG Vector Search) trong cơ sở tri thức của dự án: tìm tasks, tiêu chí nghiệm thu, mô tả kỹ thuật hoặc tài liệu liên quan đến câu hỏi.'
+  readonly category: ToolCategory = 'RAG'
+  readonly riskLevel: ToolRiskLevel = 'READ'
   readonly level: ToolActionLevel = 'READ'
   readonly parameters = {
     type: 'object',

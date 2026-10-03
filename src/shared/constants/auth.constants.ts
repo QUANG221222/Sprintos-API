@@ -42,5 +42,5 @@ export const cookieOptions = {
   sameSite: isProduction ? ('none' as const) : ('lax' as const), // CSRF protection
   path: '/', // cookie available for entire site
   domain: isProduction ? (envConfig.COOKIE_DOMAIN || undefined) : undefined, // set domain in production
-  maxAge: ms('1 days') // cookie expiry time
+  maxAge: ms('7 days') // cookie expiry time
 } as const

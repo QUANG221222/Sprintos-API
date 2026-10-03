@@ -17,6 +17,7 @@ import { SharedProjectMemberRepo } from './repositories/shared-project-member.re
 import { S3Service } from './services/S3.service'
 import { SharedSprintRepo } from './repositories/shared-sprint.repo'
 import { OpenRouterService } from './services/openrouter.service'
+import { RedisService } from './services/redis.service'
 
 const sharedServices = [
   PrismaService,
@@ -31,7 +32,8 @@ const sharedServices = [
   SharedProjectMemberService,
   SharedSprintRepo,
   S3Service,
-  OpenRouterService
+  OpenRouterService,
+  RedisService
 ]
 
 @Global()

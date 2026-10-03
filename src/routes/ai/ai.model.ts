@@ -82,7 +82,14 @@ export const AgentChatMessageSchema = z.object({
 export const AgentChatBodySchema = z.object({
   messages: z.array(AgentChatMessageSchema).min(1, 'Cần ít nhất 1 tin nhắn'),
   projectId: z.string().min(1, 'projectId là bắt buộc'),
-  sprintId: z.string().optional()
+  sprintId: z.string().optional(),
+  webSearchMode: z.enum(['auto', 'always', 'disabled']).optional().default('auto'),
+  currentScreen: z.enum(['KANBAN', 'ROADMAP', 'BACKLOG', 'CHAT', 'ALL']).optional().default('ALL'),
+  dryRun: z.boolean().optional().default(false)
+})
+
+export const AgentUndoBodySchema = z.object({
+  undoId: z.string().min(1, 'undoId là bắt buộc')
 })
 
 // Input cho AI Schedule Diagnosis
@@ -94,6 +101,45 @@ export const SyncProjectEmbeddingsBodySchema = z.object({
   projectId: z.string().min(1, 'projectId là bắt buộc')
 })
 
+export const ActionProposalTypeEnum = z.enum([
+  'CREATE_TASK',
+  'UPDATE_TASK',
+  'CREATE_SPRINT',
+  'ASSIGN_TASK',
+  'MOVE_TASK',
+  'DELETE_TASK',
+  'DELETE_SPRINT'
+])
+
+export const ActionProposalStatusEnum = z.enum(['PENDING', 'APPROVED', 'REJECTED'])
+
+export const ActionProposalSchema = z.object({
+  id: z.string(),
+  type: ActionProposalTypeEnum,
+  summary: z.string(),
+  payload: z.record(z.string(), z.any()),
+  status: ActionProposalStatusEnum.default('PENDING'),
+  createdAt: z.string().optional()
+})
+
+export type ActionProposal = z.infer<typeof ActionProposalSchema>
+
+// Input & Output cho Execute Proposal
+export const ExecuteProposalBodySchema = z.object({
+  proposalId: z.string().min(1, 'proposalId là bắt buộc'),
+  type: ActionProposalTypeEnum,
+  payload: z.record(z.string(), z.any()),
+  projectId: z.string().min(1, 'projectId là bắt buộc'),
+  sprintId: z.string().optional()
+})
+
+
+export const ExecuteProposalResSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  result: z.any().optional()
+})
+
 // DTOs cho Controller
 export class ParseExcelResDTO extends createZodDto(ParseExcelResSchema) {}
 export class CommitExcelImportBodyDTO extends createZodDto(CommitExcelImportBodySchema) {}
@@ -103,6 +149,10 @@ export class EnrichTaskResDTO extends createZodDto(EnrichTaskResSchema) {}
 export class AiHealthResDTO extends createZodDto(AiHealthResSchema) {}
 export class RagSearchBodyDTO extends createZodDto(RagSearchBodySchema) {}
 export class AgentChatBodyDTO extends createZodDto(AgentChatBodySchema) {}
+export class AgentUndoBodyDTO extends createZodDto(AgentUndoBodySchema) {}
+export class ExecuteProposalBodyDTO extends createZodDto(ExecuteProposalBodySchema) {}
+export class ExecuteProposalResDTO extends createZodDto(ExecuteProposalResSchema) {}
 export class ScheduleDiagnosisBodyDTO extends createZodDto(ScheduleDiagnosisBodySchema) {}
 export class SyncProjectEmbeddingsBodyDTO extends createZodDto(SyncProjectEmbeddingsBodySchema) {}
+
 

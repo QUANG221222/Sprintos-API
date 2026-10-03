@@ -4,7 +4,7 @@ import {
   CreateInvitationProjectMemberBodyType,
   GetProjectMemberDetailResType
 } from '../models/shared-project-member.model'
-import { ProjectMemberStatus, ProjectMemberRole } from '../constants/project.constants'
+import { ProjectMemberStatus, ProjectMemberRole, TechnicalRole } from '../constants/project.constants'
 import { SharedRoleRepository } from './shared-role.repo'
 
 @Injectable()
@@ -80,7 +80,8 @@ export class SharedProjectMemberRepo {
     id: string,
     inviteToken: string,
     role: (typeof ProjectMemberRole)[keyof typeof ProjectMemberRole],
-    invitedById?: string
+    invitedById?: string,
+    technicalRole?: TechnicalRole
   ): Promise<GetProjectMemberDetailResType> {
     const roleId = await this.sharedRoleRepository.getRoleIdByName(role)
     const member = await this.prismaService.projectMember.update({
@@ -91,6 +92,7 @@ export class SharedProjectMemberRepo {
       data: {
         inviteToken,
         roleId,
+        ...(technicalRole ? { technicalRole } : {}),
         invitedAt: new Date(),
         invitedById
       },
@@ -105,7 +107,7 @@ export class SharedProjectMemberRepo {
   }
 
   async createInvite(
-    body: CreateInvitationProjectMemberBodyType & { invitedById?: string }
+    body: CreateInvitationProjectMemberBodyType & { invitedById?: string; technicalRole?: TechnicalRole }
   ): Promise<GetProjectMemberDetailResType> {
     const roleId = await this.sharedRoleRepository.getRoleIdByName(body.role)
 
@@ -115,6 +117,7 @@ export class SharedProjectMemberRepo {
         memberId: body.memberId,
         email: body.email,
         roleId,
+        technicalRole: body.technicalRole || 'FULLSTACK',
         status: ProjectMemberStatus.PENDING,
         inviteToken: body.inviteToken,
         invitedById: body.invitedById
